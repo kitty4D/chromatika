@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Chromatika — Architecture (Section 1 Final)</title>
+  <style>
+    body { margin: 0; padding: 16px; font-family: system-ui, sans-serif; background: #0b0d12; color: #e2e8f0; }
+    .section h3 { color: #94a3b8; }
+    .section .subtitle { color: #64748b; font-size: 14px; }
+    .options { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+    .option {
+      display: flex; gap: 10px; align-items: flex-start; padding: 12px; border: 1px solid #334155;
+      border-radius: 8px; cursor: pointer; max-width: 280px; background: #111827;
+    }
+    .option.selected { border-color: #6366f1; box-shadow: 0 0 0 1px #6366f1; }
+    .option .letter { font-weight: bold; color: #a5b4fc; }
+    .option h3 { margin: 0 0 4px; font-size: 15px; color: #e2e8f0; }
+    .option p { margin: 0; font-size: 13px; color: #94a3b8; }
+  </style>
+</head>
+<body>
+<h2>Section 1: Architecture — Final</h2>
+<p class="subtitle">All decisions locked in. Ready to move to Section 2: Key Management &amp; Vault.</p>
+
+<div style="font-family: monospace; font-size: 12px; line-height: 1.6; background: #0f1117; border: 1px solid #2a2d3a; border-radius: 8px; padding: 20px; color: #e2e8f0; margin: 16px 0;">
+
+  <!-- UI Layer -->
+  <div style="border: 1px solid #6366f1; border-radius: 6px; padding: 12px; margin-bottom: 4px; background: #1a1b2e;">
+    <div style="color: #a5b4fc; font-weight: bold; margin-bottom: 4px;">🖥️ Side Panel (PRIMARY UI) &nbsp;+&nbsp; ⚡ Popup (QUICK ACTIONS)</div>
+    <div style="color:#94a3b8; font-size:11px;">Accounts · Send/Receive · Activity · NFT Gallery · Kiosks · IKA staking · dApps · Settings · Advanced mode · Network selector</div>
+    <div style="margin-top:6px; padding:5px 10px; background:#12102a; border-radius:4px; border-left:3px solid #f59e0b; font-size:10px; color:#fbbf24;">
+      🖼️ NFT renderer respects MediaSafetyMode &nbsp;|&nbsp; 🗂️ Chain network selector (built-in + custom) &nbsp;|&nbsp; ⚙️ Price source order editable in Settings → Advanced
+    </div>
+  </div>
+
+  <div style="text-align:center; color:#6366f1; font-size:10px; margin: 2px 0;">↕ tRPC over chrome.runtime.sendMessage</div>
+
+  <!-- Background SW -->
+  <div style="border: 2px solid #06b6d4; border-radius: 6px; padding: 14px; margin-bottom: 4px; background: #0c1a1f;">
+    <div style="color: #67e8f9; font-weight: bold; margin-bottom: 10px;">⚙️ Background Service Worker</div>
+
+    <!-- Core -->
+    <div style="display:grid; grid-template-columns: repeat(4,1fr); gap: 6px; font-size:11px; color:#94a3b8; margin-bottom:10px;">
+      <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">🔐 Vault<br/><span style="color:#475569; font-size:10px;">AES-256-GCM<br/>PBKDF2 900k</span></div>
+      <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">🔑 KeyringController<br/><span style="color:#475569; font-size:10px;">BIP39/44<br/>Ika DKG</span></div>
+      <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">📦 Presign Pool<br/><span style="color:#475569; font-size:10px;">IkaClient<br/>SuiClient</span></div>
+      <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">🔌 HW Wallets<br/><span style="color:#475569; font-size:10px;">Ledger (partial)<br/>Trezor planned</span></div>
+    </div>
+
+    <!-- Chain clients -->
+    <div style="border-top:1px solid #164e63; padding-top:8px; margin-bottom:10px;">
+      <div style="color:#67e8f9; font-size:10px; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">Chain Clients</div>
+      <div style="display:grid; grid-template-columns: repeat(5,1fr); gap:5px; text-align:center; font-size:10px; color:#94a3b8;">
+        <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #0e7490;">⟠ EVM<br/><span style="color:#475569;">ethers v6<br/>chain-agnostic</span></div>
+        <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">₿ Bitcoin<br/><span style="color:#475569;">bitcoinjs-lib<br/>segwit+taproot</span></div>
+        <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">◎ Solana<br/><span style="color:#475569;">@solana/web3.js</span></div>
+        <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">🌊 Sui<br/><span style="color:#475569;">@mysten/sui</span></div>
+        <div style="padding:6px; background:#071a20; border-radius:4px; border:1px solid #164e63;">▲ Aptos<br/><span style="color:#475569;">@aptos-labs/ts-sdk</span></div>
+      </div>
+    </div>
+
+    <!-- Network Registry -->
+    <div style="border-top:1px solid #0e7490; padding-top:8px; margin-bottom:10px;">
+      <div style="color:#67e8f9; font-size:10px; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">🗂️ Network Registry <span style="color:#0e7490; text-transform:none;">(Trust Wallet registry.json schema)</span></div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:10px; color:#475569;">
+        <div style="padding:6px; background:#051418; border-radius:4px; border:1px solid #164e63;">
+          <span style="color:#94a3b8;">Built-in:</span> ETH (coinId 60) · BTC (0) · SOL (501) · SUI (784) · APT (637) + L2s (Base, Arb, Op, Polygon, Monad…) + SOL/SUI/APT testnets + BTC signet
+        </div>
+        <div style="padding:6px; background:#051418; border-radius:4px; border:1px solid #0e7490;">
+          <span style="color:#94a3b8;">Custom:</span> Manual entry for ALL chain types · EVM: chainId + name + RPC + symbol + explorer · SOL/SUI/APT: name + RPC · BTC: name + Esplora URL · EVM shortcut: import from chainlist.org
+        </div>
+      </div>
+    </div>
+
+    <!-- Data Services -->
+    <div style="border-top:1px solid #4ade80; padding-top:8px; margin-bottom:10px;">
+      <div style="color:#4ade80; font-size:10px; text-transform:uppercase; letter-spacing:1px; margin-bottom:6px;">📊 Data Services</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:6px; font-size:10px; color:#475569;">
+
+        <div style="padding:8px; background:#071a0f; border-radius:4px; border:1px solid #166534;">
+          <div style="color:#4ade80; margin-bottom:4px; font-size:10px;">💱 PriceService</div>
+          <div style="color:#64748b; font-size:10px; margin-bottom:4px; font-style:italic;">Priority order user-configurable</div>
+          1. CoinGecko<br/>
+          2. DefiLlama<br/>
+          3. CoinMarketCap <span style="color:#f59e0b;">(needs VITE_CMC_API_KEY)</span><br/>
+          4. Pyth (EVM/SOL/SUI/APT)<br/>
+          5. Switchboard (SOL/SUI/APT) <span style="color:#f59e0b;">— stub</span><br/>
+          6. Chainlink (EVM) <span style="color:#f59e0b;">— stub</span><br/>
+          7. DEX TWAP <span style="color:#f59e0b;">— stub</span><br/>
+          <span style="color:#1e3a2f;">Shipped path: 1→2→3*→4 (*key optional)</span><br/>
+          <span style="color:#1e3a2f;">BTC: off-chain only</span><br/>
+          <span style="color:#1e3a2f;">TTL 60s · session cache</span>
+        </div>
+
+        <div style="padding:8px; background:#071a0f; border-radius:4px; border:1px solid #166534;">
+          <div style="color:#4ade80; margin-bottom:4px; font-size:10px;">🖼️ NFTService</div>
+          EVM: Alchemy → Moralis<br/>
+          SOL: Helius DAS<br/>
+          SUI: on-chain + Kiosk SDK<br/>
+          APT: Aptos indexer<br/>
+          BTC: Hiro Ordinals<br/>
+          <span style="color:#f59e0b; font-size:10px;">⚠ respects MediaSafetyMode</span>
+        </div>
+
+        <div style="padding:8px; background:#071a0f; border-radius:4px; border:1px solid #166534;">
+          <div style="color:#4ade80; margin-bottom:4px; font-size:10px;">🏪 SuiKioskService</div>
+          @mysten/kiosk SDK<br/>
+          Owned + managed kiosks<br/>
+          Listing prices<br/>
+          Transfer policies<br/>
+          Royalty status per item<br/>
+          <span style="color:#f59e0b; font-size:10px;">⚠ respects MediaSafetyMode</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Media Safety -->
+    <div style="border-top:1px solid #f59e0b; padding-top:8px;">
+      <div style="color:#f59e0b; font-size:10px; text-transform:uppercase; letter-spacing:1px; margin-bottom:5px;">🛡️ MediaSafetyMode</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:5px; font-size:10px; text-align:center;">
+        <div style="padding:5px; background:#1a1005; border-radius:4px; border:1px solid #78350f; color:#475569;">ALL<br/><span style="font-size:9px;">any URI</span></div>
+        <div style="padding:5px; background:#1a1005; border-radius:4px; border:2px solid #f59e0b; color:#fbbf24;">IPFS / ARWEAVE ★ default<br/><span style="font-size:9px;">hijack-safe</span></div>
+        <div style="padding:5px; background:#1a1005; border-radius:4px; border:1px solid #78350f; color:#475569;">NONE<br/><span style="font-size:9px;">no images</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; color:#64748b; font-size:10px; margin:2px 0;">↕ chrome.runtime.sendMessage (origin + source validated)</div>
+
+  <!-- Content + Injected -->
+  <div style="border:1px solid #374151; border-radius:6px; padding:10px; margin-bottom:4px; background:#111827;">
+    <div style="color:#9ca3af; font-weight:bold; font-size:11px; margin-bottom:5px;">📄 Content Script (all_frames) → 💉 dapp-interface.js (main world)</div>
+    <div style="display:grid; grid-template-columns:repeat(5,1fr); gap:5px; font-size:10px; color:#6b7280; text-align:center;">
+      <div style="padding:5px; border:1px solid #1f2937; border-radius:3px;">EIP-1193/6963<br/>+3085/3326<br/>Any EVM</div>
+      <div style="padding:5px; border:1px solid #1f2937; border-radius:3px;">window<br/>.bitcoin<br/>Bitcoin</div>
+      <div style="padding:5px; border:1px solid #1f2937; border-radius:3px;">Wallet Std<br/>Solana</div>
+      <div style="padding:5px; border:1px solid #1f2937; border-radius:3px;">Wallet Std<br/>Sui</div>
+      <div style="padding:5px; border:1px solid #1f2937; border-radius:3px;">window<br/>.aptos<br/>Aptos</div>
+    </div>
+  </div>
+
+  <div style="margin-top:8px; display:grid; grid-template-columns:1fr 1fr; gap:6px; font-size:10px; color:#64748b;">
+    <div>🔄 SharedWorker — syncs side panel + popup</div>
+    <div>📦 Offscreen doc — media cache <span style="color:#f59e0b;">target only (not in manifest yet)</span></div>
+  </div>
+</div>
+
+<script>
+function toggleSelect(el) {
+  document.querySelectorAll('.option').forEach(function (o) { o.classList.remove('selected'); });
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>

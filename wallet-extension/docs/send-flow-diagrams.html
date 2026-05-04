@@ -1,0 +1,718 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>chromatika - send flow diagrams</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #141720;
+    --border: rgba(255,255,255,0.08);
+    --text: #e8eaf6;
+    --muted: #7a7f94;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding: 36px 28px 72px;
+  }
+
+  h1 { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; margin-bottom: 6px; }
+  h2 { font-size: 16px; font-weight: 800; letter-spacing: -0.3px; margin: 36px 0 14px; }
+  .subtitle { font-size: 12px; color: var(--muted); margin-bottom: 28px; line-height: 1.6; max-width: 820px; }
+
+  /* --- legend --- */
+  .legend {
+    display: flex; gap: 14px; flex-wrap: wrap;
+    margin-bottom: 32px; padding: 12px 16px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 10px;
+  }
+  .leg { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--muted); }
+  .leg-dot { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
+
+  /* --- 3-col grid for sui-base chains --- */
+  .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+
+  /* --- card --- */
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+  }
+  .card-header {
+    padding: 14px 16px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: flex-start; justify-content: space-between; gap: 8px;
+  }
+  .card-title { font-size: 15px; font-weight: 800; letter-spacing: -0.3px; }
+  .card-sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  .badge {
+    font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px;
+    white-space: nowrap; flex-shrink: 0; margin-top: 2px;
+  }
+  .badge-live    { background: rgba(16,185,129,0.15); color: #34d399; border: 1px solid rgba(16,185,129,0.3); }
+  .badge-prealpha { background: rgba(251,113,133,0.15); color: #fb7185; border: 1px solid rgba(251,113,133,0.3); }
+
+  .card-body { padding: 16px 14px 18px; flex: 1; }
+
+  /* --- flow --- */
+  .flow { display: flex; flex-direction: column; }
+
+  .step {
+    display: flex; gap: 10px; align-items: flex-start;
+    position: relative;
+  }
+  .step:not(:last-child)::after {
+    content: ''; position: absolute; left: 14px; top: 30px;
+    width: 1px; height: calc(100% - 6px);
+    background: var(--border); z-index: 0;
+  }
+
+  .step-icon {
+    width: 28px; height: 28px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 800; flex-shrink: 0;
+    position: relative; z-index: 1; margin-bottom: 12px;
+  }
+
+  .step-content { flex: 1; padding-bottom: 4px; }
+  .step-label { font-size: 12px; font-weight: 700; margin-bottom: 3px; }
+  .step-detail { font-size: 11px; color: var(--muted); line-height: 1.5; }
+  .step-code {
+    font-family: 'Menlo', 'Consolas', monospace; font-size: 10px;
+    color: rgba(234,240,255,0.55); background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border); border-radius: 4px;
+    padding: 3px 7px; margin-top: 5px; display: inline-block;
+    line-height: 1.6; word-break: break-all;
+  }
+
+  /* layer colours */
+  .l-user  { background: rgba(124,58,237,0.22);  color: #c4b5fd; }
+  .l-ui    { background: rgba(37,99,235,0.22);   color: #93c5fd; }
+  .l-trpc  { background: rgba(8,145,178,0.22);   color: #67e8f9; }
+  .l-sw    { background: rgba(30,64,175,0.22);   color: #93c5fd; }
+  .l-ika   { background: rgba(217,119,6,0.22);   color: #fcd34d; }
+  .l-grpc  { background: rgba(168,85,247,0.22);  color: #d8b4fe; }
+  .l-chain { background: rgba(5,150,105,0.22);   color: #6ee7b7; }
+
+  .layer-chip {
+    display: inline-block; font-size: 9px; font-weight: 700;
+    letter-spacing: 0.4px; padding: 1px 5px; border-radius: 3px;
+    margin-bottom: 3px; text-transform: uppercase;
+  }
+  .lc-user  { background: rgba(124,58,237,0.22); color: #c4b5fd; }
+  .lc-ui    { background: rgba(37,99,235,0.22);  color: #93c5fd; }
+  .lc-trpc  { background: rgba(8,145,178,0.22);  color: #67e8f9; }
+  .lc-sw    { background: rgba(30,64,175,0.22);  color: #93c5fd; }
+  .lc-ika   { background: rgba(217,119,6,0.22);  color: #fcd34d; }
+  .lc-grpc  { background: rgba(168,85,247,0.22); color: #d8b4fe; }
+  .lc-chain { background: rgba(5,150,105,0.22);  color: #6ee7b7; }
+
+  /* diff note pill */
+  .diff-note {
+    display: inline-block; font-size: 10px; font-weight: 600;
+    padding: 2px 7px; border-radius: 5px; margin-top: 5px;
+    background: rgba(99,102,241,0.18); color: #a5b4fc;
+    border: 1px solid rgba(99,102,241,0.3);
+  }
+
+  /* bottom callout */
+  .callout {
+    margin-top: 28px; padding: 18px 22px;
+    background: rgba(217,119,6,0.07); border: 1px solid rgba(217,119,6,0.22);
+    border-radius: 12px; font-size: 12px; line-height: 1.75; color: rgba(234,240,255,0.72);
+  }
+  .callout strong { color: #fcd34d; }
+  .callout-prealpha {
+    margin-top: 18px; padding: 18px 22px;
+    background: rgba(251,113,133,0.06); border: 1px solid rgba(251,113,133,0.22);
+    border-radius: 12px; font-size: 12px; line-height: 1.75; color: rgba(234,240,255,0.72);
+  }
+  .callout-prealpha strong { color: #fb7185; }
+  code {
+    font-family: 'Menlo', monospace; font-size: 10.5px;
+    background: rgba(255,255,255,0.06); padding: 1px 5px; border-radius: 3px;
+  }
+
+  /* shared IKA steps annotation */
+  .shared-label {
+    font-size: 10px; font-weight: 700; color: rgba(217,119,6,0.8);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin: 10px 0 6px 0; padding-left: 2px;
+  }
+  .shared-label-grpc {
+    font-size: 10px; font-weight: 700; color: rgba(168,85,247,0.8);
+    text-transform: uppercase; letter-spacing: 0.6px;
+    margin: 10px 0 6px 0; padding-left: 2px;
+  }
+
+  /* signer / gas annotation (per vault) */
+  .wallet-note {
+    font-size: 10.5px; line-height: 1.55;
+    color: rgba(147,197,253,0.8);
+    background: rgba(37,99,235,0.07);
+    border: 1px solid rgba(37,99,235,0.18);
+    border-left: 2px solid rgba(37,99,235,0.45);
+    border-radius: 0 4px 4px 0;
+    padding: 5px 8px; margin-top: 6px;
+  }
+  .wallet-note strong { color: #93c5fd; }
+  .wallet-note code {
+    background: rgba(37,99,235,0.15); color: #bfdbfe;
+    padding: 1px 4px; border-radius: 3px;
+  }
+
+  /* per-vault-type table */
+  .vault-table {
+    margin-top: 14px; width: 100%; border-collapse: collapse;
+    font-size: 11px; color: rgba(234,240,255,0.78);
+  }
+  .vault-table th, .vault-table td {
+    text-align: left; padding: 8px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    vertical-align: top;
+  }
+  .vault-table th {
+    color: #fcd34d; font-weight: 700; font-size: 10px;
+    text-transform: uppercase; letter-spacing: 0.4px;
+    background: rgba(217,119,6,0.05);
+  }
+  .vault-table tr:last-child td { border-bottom: none; }
+  .vault-table code {
+    font-size: 10px; background: rgba(255,255,255,0.04);
+    color: rgba(234,240,255,0.72);
+  }
+</style>
+</head>
+<body>
+
+<h1>chromatika - send flow diagrams</h1>
+<p class="subtitle">
+  from "send" button to on-chain confirmation. on the <strong>sui ika base path</strong> (production), every dWallet signature - regardless of destination chain - is produced by ika MPC running on the <strong style="color:#fcd34d">sui chain</strong>. the three-step ika block is identical across all destination chains; only the presign pool and hash scheme differ.
+  <br/><br/>
+  <strong>step (2) signer varies per vault type</strong> - HD vaults sign with the mnemonic-derived sui keypair, hardware vaults sign on-device, passkey vaults sign via WebAuthn UV, etc. see the per-vault-type table at the bottom for who signs and who pays.
+  <br/><br/>
+  on the <strong>solana ika base path</strong> (pre-alpha, dev-mode mock signing), the architecture is different: no sui PTB, instead a Solana anchor program <code>approve_message</code> + ika gRPC <code>Sign</code>. covered in its own card below the sui-base flows.
+</p>
+
+<div class="legend">
+  <div class="leg"><div class="leg-dot" style="background:#7c3aed"></div> user action</div>
+  <div class="leg"><div class="leg-dot" style="background:#2563eb"></div> react ui</div>
+  <div class="leg"><div class="leg-dot" style="background:#0891b2"></div> trpc</div>
+  <div class="leg"><div class="leg-dot" style="background:#1e40af"></div> service worker</div>
+  <div class="leg"><div class="leg-dot" style="background:#d97706"></div> ika MPC (sui base, runs on sui)</div>
+  <div class="leg"><div class="leg-dot" style="background:#a855f7"></div> ika gRPC (solana base, mock signer)</div>
+  <div class="leg"><div class="leg-dot" style="background:#059669"></div> destination chain</div>
+  <div class="leg" style="margin-left:8px"><div class="leg-dot" style="background:#10b981;width:24px;border-radius:4px"></div> 🟢 live</div>
+  <div class="leg"><div class="leg-dot" style="background:#fb7185;width:24px;border-radius:4px"></div> 🚨 pre-alpha</div>
+  <div class="leg" style="margin-left:8px;padding:3px 8px;background:rgba(37,99,235,0.07);border:1px solid rgba(37,99,235,0.18);border-left:2px solid rgba(37,99,235,0.45);border-radius:0 4px 4px 0;color:rgba(147,197,253,0.8)">🔑 / 🤖 / 📡 step (2) signer varies per vault type - see table below</div>
+</div>
+
+<h2>sui ika base path (production)</h2>
+
+<div class="grid">
+
+  <!-- ETHEREUM -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">⬡ Ethereum (ETH)</div>
+        <div class="card-sub">EIP-1559 type-2 · secp256k1 · ECDSA · keccak256</div>
+      </div>
+      <div class="badge badge-live">🟢 live</div>
+    </div>
+    <div class="card-body">
+      <div class="flow">
+
+        <div class="step">
+          <div class="step-icon l-user">U</div>
+          <div class="step-content">
+            <div class="layer-chip lc-user">user</div>
+            <div class="step-label">fill send form</div>
+            <div class="step-detail">enter 0x… recipient + ETH amount · chain = evm · click "review &amp; send"</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-ui">UI</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ui">react ui</div>
+            <div class="step-label">encode value as wei hex</div>
+            <div class="step-detail">amountToHex(amount, 18) - converts decimal ETH string to hex wei</div>
+            <div class="step-code">1.5 ETH → 0x14d1120d7b160000</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-trpc">↑</div>
+          <div class="step-content">
+            <div class="layer-chip lc-trpc">trpc</div>
+            <div class="step-label">sendEvmTx.mutate()</div>
+            <div class="step-detail">chrome.runtime port to service worker · no approval popup - user is already in the wallet UI. (dapp <code>eth_sendTransaction</code> goes through a separate flow that DOES open an approval popup.)</div>
+            <div class="step-code">{ to, value, data: "0x" }</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">completeTxParams()</div>
+            <div class="step-detail">fetches nonce · estimates gas (+20% buffer) · gets EIP-1559 baseFee + priorityFee from active network RPC</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">build unsigned transaction</div>
+            <div class="step-detail">ethers Transaction type-2 (EIP-1559) · serialise to bytes</div>
+            <div class="step-code">tx.unsignedSerialized → Uint8Array</div>
+          </div>
+        </div>
+
+        <div class="shared-label">▼ ika mpc - same 3 steps on every sui-base chain</div>
+
+        <div class="step">
+          <div class="step-icon l-ika">①</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">take presign from pool</div>
+            <div class="step-detail">pool: <strong>SECP256K1_ECDSA</strong> · adapter.getPresignInParticularState(id, 'Completed') · waits for on-chain presign ceremony to finish</div>
+            <div class="wallet-note">🔑 draw = local memory read · zero gas at send time · presigns pre-created in background by the <strong>vault's step-(2) signer</strong> (auto-refill alarm every 5 min, low-water 2 per pool, refill count 3) · per-presign cost: <strong>dynamic per-tx via <code>getRequiredCoinAmounts(ikaClient)</code></strong> in SUI + IKA base units + sui network gas</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-ika">②</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">IkaTransaction PTB on Sui</div>
+            <div class="step-detail">approveMessage + verifyPresignCap + requestSign · ika applies keccak256 internally - pass unsignedSerialized bytes, do NOT pre-hash</div>
+            <div class="step-code">curve: SECP256K1 · hash: KECCAK256 · algo: ECDSA</div>
+            <div class="wallet-note">🤖 PTB signed by the <strong>vault's step-(2) signer</strong> (varies per vault type, see table below) · split-coin amounts come from <code>getRequiredCoinAmounts(ikaClient)</code> with a 10% buffer (never hardcoded)</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-ika">③</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">get 64-byte r||s output</div>
+            <div class="step-detail">adapter.getSignInParticularState(signId, 'Completed') · compact r(32) || s(32), no recovery bit</div>
+            <div class="diff-note">⚡ EVM only - try v=27 via recoverAddress; if ≠ sender address try v=28 · assemble full 65-byte sig</div>
+            <div class="wallet-note">📡 read-only RPC poll of sui objects - no sui transaction, zero gas</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-chain">⬡</div>
+          <div class="step-content">
+            <div class="layer-chip lc-chain">ethereum</div>
+            <div class="step-label">broadcast</div>
+            <div class="step-detail">provider.broadcastTransaction(signedTx) · returns txHash to UI</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- BITCOIN -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">₿ Bitcoin (BTC)</div>
+        <div class="card-sub">P2TR taproot · secp256k1 · ECDSA · doubleSHA256</div>
+      </div>
+      <div class="badge badge-live">🟢 live</div>
+    </div>
+    <div class="card-body">
+      <div class="flow">
+
+        <div class="step">
+          <div class="step-icon l-user">U</div>
+          <div class="step-content">
+            <div class="layer-chip lc-user">user</div>
+            <div class="step-label">fill send form</div>
+            <div class="step-detail">enter bc1p… (P2TR) or bc1q… (P2WPKH) recipient + BTC amount · chain = btc</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-trpc">↑</div>
+          <div class="step-content">
+            <div class="layer-chip lc-trpc">trpc</div>
+            <div class="step-label">sendBtcTx.mutate()</div>
+            <div class="step-detail">passes recipient address + satoshis</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">fetch UTXOs</div>
+            <div class="step-detail">GET /api/address/{addr}/utxo from Esplora API · coin selection to cover amount + fee</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">build PSBT</div>
+            <div class="step-detail">bitcoinjs-lib PSBT · one sighash per UTXO input · bitcoinMessageBytes() wraps each sighash before signing</div>
+            <div class="step-code">sighash bytes (32 bytes per input)</div>
+          </div>
+        </div>
+
+        <div class="shared-label">▼ ika mpc - same 3 steps on every sui-base chain</div>
+
+        <div class="step">
+          <div class="step-icon l-ika">①</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">take presign from pool (per input)</div>
+            <div class="step-detail">P2TR → pool: <strong>SECP256K1_TAPROOT</strong> · P2WPKH → pool: <strong>SECP256K1_ECDSA</strong> · one presign drawn per UTXO input</div>
+            <div class="wallet-note">🔑 draw = local memory read · zero gas at draw time · one draw per input · per-presign cost: dynamic per-tx via <code>getRequiredCoinAmounts(ikaClient)</code></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-ika">②</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">IkaTransaction PTB on Sui</div>
+            <div class="step-detail">same approveMessage + verifyPresignCap + requestSign PTB as ETH · hash scheme differs</div>
+            <div class="step-code">curve: SECP256K1 · hash: DoubleSHA256 · algo: ECDSA</div>
+            <div class="wallet-note">🤖 PTB signed by the <strong>vault's step-(2) signer</strong> · N inputs = N × PTB (each within its own policy-vault declared-value bucket) · dynamic pricing per call</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-ika">③</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">get 64-byte r||s output</div>
+            <div class="step-detail">same adapter.getSignInParticularState() poll as ETH</div>
+            <div class="diff-note">no v recovery needed - BTC PSBT witness carries the pubkey; signature injected directly into input witness stack</div>
+            <div class="wallet-note">📡 read-only RPC poll of sui objects - no sui transaction, zero gas</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">finalise PSBT</div>
+            <div class="step-detail">inject r||s into each input witness · psbt.finalizeAllInputs() · extract raw tx hex</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-chain">₿</div>
+          <div class="step-content">
+            <div class="layer-chip lc-chain">bitcoin</div>
+            <div class="step-label">broadcast</div>
+            <div class="step-detail">POST /api/tx to Esplora endpoint of active BTC network · returns txid</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- SOLANA -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">◎ Solana (SOL)</div>
+        <div class="card-sub">ed25519 · EdDSA · SHA-512</div>
+      </div>
+      <div class="badge badge-live">🟢 live</div>
+    </div>
+    <div class="card-body">
+      <div class="flow">
+
+        <div class="step">
+          <div class="step-icon l-user">U</div>
+          <div class="step-content">
+            <div class="layer-chip lc-user">user</div>
+            <div class="step-label">fill send form</div>
+            <div class="step-detail">enter base58 recipient + SOL amount · chain = solana</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-trpc">↑</div>
+          <div class="step-content">
+            <div class="layer-chip lc-trpc">trpc</div>
+            <div class="step-label">sendSolTx.mutate()</div>
+            <div class="step-detail">passes base58 recipient + lamports</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">build transaction</div>
+            <div class="step-detail">@solana/web3.js Transaction · SystemProgram.transfer · fetch recent blockhash via connection.getLatestBlockhash()</div>
+            <div class="step-code">tx.serialize({ requireAllSignatures: false }) → Uint8Array</div>
+          </div>
+        </div>
+
+        <div class="shared-label">▼ ika mpc - same 3 steps on every sui-base chain</div>
+
+        <div class="step">
+          <div class="step-icon l-ika">①</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">take presign from pool</div>
+            <div class="step-detail">pool: <strong>ED25519_EDDSA</strong> · adapter.getPresignInParticularState(id, 'Completed')</div>
+            <div class="wallet-note">🔑 draw = local memory read · zero gas at send time · presigns pre-created in background · per-presign cost: dynamic per-tx via <code>getRequiredCoinAmounts(ikaClient)</code></div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-ika">②</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">IkaTransaction PTB on Sui</div>
+            <div class="step-detail">same approveMessage + verifyPresignCap + requestSign PTB as ETH and BTC · different curve and hash</div>
+            <div class="step-code">curve: ED25519 · hash: SHA512 · algo: EdDSA</div>
+            <div class="wallet-note">🤖 PTB signed by the <strong>vault's step-(2) signer</strong> · dynamic pricing per call</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-ika">③</div>
+          <div class="step-content">
+            <div class="layer-chip lc-ika">ika mpc · sui chain</div>
+            <div class="step-label">get 64-byte EdDSA sig</div>
+            <div class="step-detail">same adapter.getSignInParticularState() poll as ETH and BTC</div>
+            <div class="diff-note">no v recovery - EdDSA is deterministic; (R, s) output has no signing ambiguity by construction</div>
+            <div class="wallet-note">📡 read-only RPC poll of sui objects - no sui transaction, zero gas</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">attach signature</div>
+            <div class="step-detail">tx.addSignature(pubkey, Buffer.from(sig64)) · transaction is now fully signed</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-chain">◎</div>
+          <div class="step-content">
+            <div class="layer-chip lc-chain">solana</div>
+            <div class="step-label">broadcast</div>
+            <div class="step-detail">connection.sendRawTransaction(tx.serialize()) · confirmed via HTTP-only polling (<code>confirmSolanaTxByPolling</code>; never <code>connection.confirmTransaction</code> in the SW)</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<h2>solana ika base path (pre-alpha)</h2>
+
+<div class="grid" style="grid-template-columns: 1fr;">
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">◎ Solana ika base (any destination chain)</div>
+        <div class="card-sub">no sui PTB · gRPC <code>approve_message</code> + Solana anchor program · mock signer</div>
+      </div>
+      <div class="badge badge-prealpha">🚨 pre-alpha · devnet · mock signer</div>
+    </div>
+    <div class="card-body">
+      <div class="flow">
+
+        <div class="step">
+          <div class="step-icon l-user">U</div>
+          <div class="step-content">
+            <div class="layer-chip lc-user">user</div>
+            <div class="step-label">fill send form (any chain)</div>
+            <div class="step-detail">solana ika base supports the same destination chains as sui base, but the signing layer is fundamentally different. mock signing only - never submit real-value transactions on this stack.</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-sw">SW</div>
+          <div class="step-content">
+            <div class="layer-chip lc-sw">service worker</div>
+            <div class="step-label">build unsigned bytes</div>
+            <div class="step-detail">same per-chain transaction construction as sui-base path (EVM ethers tx, BTC PSBT sighash, Solana versioned tx, etc.)</div>
+          </div>
+        </div>
+
+        <div class="shared-label-grpc">▼ solana-base ika - gRPC + anchor program (no sui PTB)</div>
+
+        <div class="step">
+          <div class="step-icon l-grpc">①</div>
+          <div class="step-content">
+            <div class="layer-chip lc-grpc">ika gRPC + solana</div>
+            <div class="step-label">presign (varies by curve)</div>
+            <div class="step-detail">
+              <strong>SECP256K1</strong>: pool-take from <code>SECP256K1_ECDSA</code> just like sui base - solana ika supports <code>PresignForDWallet</code> over gRPC for ECDSA, refilled by background alarm.<br/>
+              <strong>ED25519</strong>: <strong>never pools</strong>. RFC 8032 deterministic + pre-alpha gRPC <code>PresignForDWallet</code> rejects Curve25519 ("PresignForDWallet is only for imported ECDSA keys"). Instead, every Sign does a fresh per-call <code>requestPresign(curve, sigAlg)</code> over the global <code>DWalletRequest::Presign</code> variant.
+            </div>
+            <div class="wallet-note">🔑 fee-payer keypair (<code>ikaGrpcFeePayerSolSecretKeyB64</code> on the hardware vault record, or the Lazor <code>lazorIkaFeePayerSolSecretKeyB64</code>) pays the gRPC fee · funded with ~0.1 devnet SOL after vault create</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-grpc">②</div>
+          <div class="step-content">
+            <div class="layer-chip lc-grpc">ika gRPC + solana</div>
+            <div class="step-label">approve_message + Sign</div>
+            <div class="step-detail">chromatika-policy Solana anchor program <code>do_approve_message_cpi</code> (currently a stub until ika alpha 1 ships the CPI target) → ika gRPC <code>Sign</code> with the approved message + presign reference. Mock signer returns a single signature (NOT distributed MPC).</div>
+            <div class="step-code">curve: SECP256K1 / ED25519 · hash scheme per chain · scheme: <code>signature_scheme = Secp256k1</code> or EdDSA</div>
+            <div class="wallet-note">🤖 step (1) presign + step (2) approve_message both signed by the in-extension fee-payer keypair (<code>solanaFeeKeypairFromWalletSignature(signature, 1)</code> for MWA / WC / Seeker; SLIP10-derived for Lazor). Same Seeker on any device produces the same fee-payer address.</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-grpc">③</div>
+          <div class="step-content">
+            <div class="layer-chip lc-grpc">ika gRPC + solana</div>
+            <div class="step-label">poll for Sign output</div>
+            <div class="step-detail">gRPC poll for <code>Completed</code> state · returns signature bytes (mock signer output, single signature)</div>
+            <div class="diff-note">⚡ devnet wipes can drop dWallet state - operation-progress banner surfaces a "recreate dWallet" recovery action via <code>DWalletGoneError</code> when the gRPC returns "no key for dwallet ... or scheme X incompatible with curve Y"</div>
+            <div class="wallet-note">📡 gRPC poll · zero on-chain solana cost (no anchor tx for the polling itself)</div>
+          </div>
+        </div>
+
+        <div class="step">
+          <div class="step-icon l-chain">→</div>
+          <div class="step-content">
+            <div class="layer-chip lc-chain">destination chain</div>
+            <div class="step-label">broadcast</div>
+            <div class="step-detail">same per-chain broadcast step as sui base (EVM provider.broadcastTransaction, BTC Esplora POST, Solana sendRawTransaction with HTTP polling confirm, etc.)</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="callout-prealpha">
+  <strong>🚨 solana ika base is dev-mode mock signing.</strong> the disclaimers in the root README and on every solana-ika UI surface apply: signatures are produced by a single mock signer, not distributed MPC; the ika program + on-chain data will be wiped at alpha 1; the dWallet keys, trust model, and signing protocol are not final. <strong>do not submit real-value transactions on this stack.</strong> only flip <code>VITE_SOLANA_IKA_BASE=true</code> in dev builds.
+</div>
+
+<div class="callout">
+  <strong>🔑 the sui-base ika MPC block is identical on every destination chain - what changes is pool + hash</strong><br/>
+  steps ①②③ are always: draw presign id from pool → build &amp; execute <code>IkaTransaction</code> PTB on the <strong>sui chain</strong> → poll <code>getSignInParticularState('Completed')</code>.
+  the service worker never holds the raw private key - only the encrypted user share id.<br/><br/>
+
+  <strong>🤖 step (2) signer + payer varies per vault type.</strong> the table below lists who signs the on-chain sui PTB at step (2) and who pays the SUI + IKA + sui-network gas. presigns are pre-created in the background by the same signer, refilled every 5 min by a <code>chrome.alarms</code> job (low-water 2 per pool, refill count 3). step (3) is a read-only RPC poll - no gas, no transaction.<br/>
+
+  <table class="vault-table">
+    <thead>
+      <tr>
+        <th>vault type</th>
+        <th>step (2) signer</th>
+        <th>who pays SUI + IKA gas</th>
+        <th>notes</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>HD (mnemonic)</strong></td>
+        <td>BIP44-derived sui keypair at <code>m/44'/784'/0'/0'/{idx}'</code>, in session memory</td>
+        <td>same keypair (sui address)</td>
+        <td>auto-signed in the background, no user prompt per send</td>
+      </tr>
+      <tr>
+        <td><strong>imported privkey (sui)</strong></td>
+        <td>imported <code>suiprivkey...</code> Ed25519 keypair, in session memory</td>
+        <td>same keypair</td>
+        <td>auto-signed; same shape as HD</td>
+      </tr>
+      <tr>
+        <td><strong>passkey (sui)</strong></td>
+        <td>WebAuthn user-verification on the passkey credential (no hot key)</td>
+        <td>passkey-derived sui address (sip-9 scheme)</td>
+        <td>user verifies on the authenticator per send (touch / biometric); no extension-resident secret</td>
+      </tr>
+      <tr>
+        <td><strong>WaaP (sui)</strong></td>
+        <td>WaaP-managed sui keypair, signed via <code>@human.tech/waap-sdk</code> API</td>
+        <td>WaaP-managed sui address</td>
+        <td>off-device signing per send; no extension-resident secret</td>
+      </tr>
+      <tr>
+        <td><strong>Ledger (sui)</strong></td>
+        <td>Ledger sui app on-device, via WebHID popup</td>
+        <td>Ledger-derived sui address (<code>hardwareAccountId</code>)</td>
+        <td>opens <code>?hwsign=ID</code> popup per send; user approves on Ledger device. legacy <code>suiPrivateKeyBech32</code> fallback exists for old dev installs (tech debt; goal is Ledger-only)</td>
+      </tr>
+      <tr>
+        <td><strong>dWallet-anchored</strong></td>
+        <td>anchor dWallet's resolved owner sui keypair (mnemonic / privkey)</td>
+        <td>resolved owner address</td>
+        <td>same shape as the underlying owner record</td>
+      </tr>
+      <tr>
+        <td colspan="4" style="text-align:center; color: rgba(168,85,247,0.7); font-style: italic; padding-top: 14px;">
+          ↓ solana base vaults skip the sui PTB entirely (see solana ika base card above) ↓
+        </td>
+      </tr>
+      <tr>
+        <td><strong>HD (solana base)</strong></td>
+        <td>SLIP10 solana keypair at <code>m/44'/501'/{idx}'/0'</code></td>
+        <td>same keypair (pays gRPC <code>approve_message</code> fee in devnet SOL)</td>
+        <td>no sui PTB - gRPC + anchor program flow per the solana ika card above</td>
+      </tr>
+      <tr>
+        <td><strong>imported privkey (solana)</strong></td>
+        <td>imported 64-byte solana keypair</td>
+        <td>same keypair</td>
+        <td>same shape as HD solana</td>
+      </tr>
+      <tr>
+        <td><strong>Lazor (solana base)</strong></td>
+        <td>SLIP10-derived <code>lazorIkaFeePayerSolSecretKeyB64</code> (separate from the smart-wallet PDA)</td>
+        <td>fee-payer address (~0.01 devnet SOL)</td>
+        <td>passkey at lazor portal authorizes the smart wallet itself; chromatika-side fee payer is a separate keypair derived from the recovery phrase</td>
+      </tr>
+      <tr>
+        <td><strong>MWA local / remote (Seeker)</strong></td>
+        <td>deterministic <code>solanaFeeKeypairFromWalletSignature(signature, 1)</code> from Seeker's signature over <code>IKA_USK_DERIVATION_MESSAGE</code></td>
+        <td>fee-payer address (~0.1 devnet SOL); same Seeker on any device = same address</td>
+        <td>Seed Vault on phone signs every chain transaction; fee-payer keypair only signs ika gRPC fees</td>
+      </tr>
+      <tr>
+        <td><strong>WalletConnect (solana)</strong></td>
+        <td>same deterministic fee-payer keypair as MWA when WC wallet supports <code>solana_signMessage</code> over <code>IKA_USK_DERIVATION_MESSAGE</code>; otherwise recovery-words fallback</td>
+        <td>fee-payer address</td>
+        <td>canonical desktop solana hardware path today (Solana Mobile reflector is currently unreliable)</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <strong>⛽ gas per send (step 2):</strong> dynamic per call via <code>getRequiredCoinAmounts(ikaClient)</code> (reads <code>coordinatorInner.pricing_and_fee_manager.current.pricing_map</code> with a 10% buffer) + sui network gas (~0.005-0.02 SUI). never hardcoded - the on-chain pricing changes and chromatika queries it per send.
+  BTC sends with N UTXO inputs execute N separate (2) PTBs - total cost scales linearly.
+  presign pre-creation (background) carries the same per-presign structure.
+  <code>requireSuiAndIkaCoins()</code> confirms the fee payer holds both coin objects before any PTB is attempted.<br/><br/>
+
+  <strong>what varies per destination chain (sui-base):</strong> <strong>which pool</strong> (SECP256K1_ECDSA / SECP256K1_TAPROOT / ED25519_EDDSA),
+  <strong>which hash scheme</strong> (keccak256 / doubleSHA256 / SHA-512), and whether
+  <strong>v recovery is needed</strong> (ECDSA-based chains like EVM need it; EdDSA-based chains like Solana and Sui don't).
+  the IkaTransaction PTB always executes on sui regardless of destination chain.
+</div>
+
+</body>
+</html>
