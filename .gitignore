@@ -12,7 +12,9 @@ wallet-extension/blob-report/
 wallet-extension/.playwright/
 wallet-extension/coverage/
 
-wallet-extension/preview/
+# `wallet-extension/preview/` stays tracked: CI's `Build preview mockups` step
+# (.github/workflows/ci.yml) runs `pnpm run preview:build` which loads
+# `preview/build/vite.preview-build.config.ts`.
 
 website/DESIGN-BRIEF.md
 
