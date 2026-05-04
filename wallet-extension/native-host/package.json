@@ -1,0 +1,15 @@
+{
+  "name": "chromatika-mcp-host",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Chrome native messaging host bridging the chromatika wallet extension to external MCP-style clients.",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "setup": "node setup.mjs",
+    "start": "node chromatika-mcp-host.mjs"
+  },
+  "license": "UNLICENSED"
+}

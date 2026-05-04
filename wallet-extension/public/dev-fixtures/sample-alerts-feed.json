@@ -1,0 +1,53 @@
+{
+  "v": 1,
+  "generatedAtMs": 1777527858341,
+  "alerts": [
+    {
+      "v": 1,
+      "id": "demo-critical-1777527858341",
+      "severity": "critical",
+      "timestampMs": 1777527858341,
+      "expiresAtMs": 1778132658341,
+      "affectedDomains": [
+        "drainer-uniswapv4.app",
+        "fake-uniswap.io"
+      ],
+      "affectedChains": [
+        "evm"
+      ],
+      "titleShort": "phishing uniswap clone draining USDC",
+      "bodyLong": "Two domains are running an exact uniswap v4 clone with a malicious approval contract. Connecting your wallet and confirming the \"swap\" prompts setApprovalForAll for USDC to 0x4242deadbeef... which then sweeps balances. If you signed an approval to that contract in the last 24h, revoke immediately.",
+      "publisherKeyB64": "+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=",
+      "signatureB64": "SsA1vcZTjkrd1KSmmT3Muq1wD5IaeIgAGif5yOel3Xu9XjZpHqx7f+QQQVtsRE1WvdndKO4K5GJyFU3xBCg7DA=="
+    },
+    {
+      "v": 1,
+      "id": "demo-warning-1777527858341",
+      "severity": "warning",
+      "timestampMs": 1777527858341,
+      "expiresAtMs": 1778132658341,
+      "affectedDomains": [
+        "shady-mintsite.xyz"
+      ],
+      "affectedChains": [
+        "solana"
+      ],
+      "titleShort": "sketchy NFT mint site flagged by community",
+      "bodyLong": "Multiple users report this site triggers a versioned tx that includes a hidden token-account close + ATA drain instruction alongside the mint. Treat as suspicious.",
+      "publisherKeyB64": "+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=",
+      "signatureB64": "q+AXJ9lAh1UnBByf0ZH2F++oLeM2t0SWuunnO8IOHdui3wnpzmukO3SShRGbEP5piHfPdMm+KO+GNyRJJoy8Ag=="
+    },
+    {
+      "v": 1,
+      "id": "demo-info-1777527858341",
+      "severity": "info",
+      "timestampMs": 1777527858341,
+      "expiresAtMs": 1778132658341,
+      "affectedDomains": [],
+      "titleShort": "reminder: revoke unused token approvals",
+      "bodyLong": "Periodically review token approvals on revoke.cash or similar tools. Old infinite approvals to dead protocols are a common compromise vector.",
+      "publisherKeyB64": "+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=",
+      "signatureB64": "55GAUl82itCHxLAIMX+5CSwCSNHQqiOfNtrV+pO3AW0GmPlpsG7vbIzGB4gS+nkihwxdCRNjYYHJlqW6a/nuAQ=="
+    }
+  ]
+}

@@ -1,0 +1,369 @@
+/**
+ * Chromatika theme: data-ika-chain (sui | solana) × data-appearance (light | dark)
+ * All palette decisions live here; wallet / mode-selector / onboarding consume vars only.
+ */
+
+@import './theme-flash.css';
+
+/* ----- shared: severity tints for banners (AlertBanner, OperationProgressBanner) -----
+ * appearance-independent today (dark-only at the call sites). add a light-mode override
+ * below when a light-mode banner ships.
+ */
+:root {
+  --theme-banner-error-bg: rgba(220, 38, 38, 0.18);
+  --theme-banner-error-fg: #fca5a5;
+  --theme-banner-warn-bg: rgba(251, 191, 36, 0.18);
+  --theme-banner-warn-fg: #fcd34d;
+  --theme-banner-info-bg: rgba(56, 132, 250, 0.16);
+  --theme-banner-info-fg: #93c5fd;
+  --theme-banner-success-bg: rgba(34, 197, 94, 0.16);
+  --theme-banner-success-fg: #86efac;
+  --theme-banner-running-bg: rgba(99, 102, 241, 0.16);
+  --theme-banner-running-fg: #a5b4fc;
+}
+
+/* ----- shared: chain shape (radius, font, default dark sp-border tint) ----- */
+html[data-ika-chain='sui'],
+html:not([data-ika-chain]) {
+  --theme-chain-border: rgba(74, 162, 255, 0.5);
+  --theme-chain-border-soft: rgba(74, 162, 255, 0.28);
+  --theme-radius-panel: 22px;
+  --theme-radius-surface: 18px;
+  --theme-radius-control: 14px;
+  --theme-radius-pill: 999px;
+  --theme-radius-sm: 10px;
+  --theme-radius-xs: 6px;
+  --theme-font-body: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  /* display / hero type: paired with DM Sans body */
+  --theme-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
+  --theme-font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+  /* keyboard focus ring (inputs, icon buttons); overridden in light appearance */
+  --theme-focus-ring: rgba(124, 92, 252, 0.72);
+}
+
+html[data-ika-chain='solana'] {
+  --theme-chain-border: rgba(20, 241, 149, 0.55);
+  --theme-chain-border-soft: rgba(20, 241, 149, 0.25);
+  --theme-radius-panel: 0;
+  --theme-radius-surface: 0;
+  --theme-radius-control: 0;
+  --theme-radius-pill: 0;
+  --theme-radius-sm: 0;
+  --theme-radius-xs: 0;
+  --theme-font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --theme-font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  --theme-font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
+  --theme-focus-ring: rgba(34, 244, 168, 0.88);
+}
+
+/* ----- dark + Sui: deep indigo / cyan aurora (wallet default) ----- */
+html[data-appearance='dark'][data-ika-chain='sui'],
+html[data-appearance='dark']:not([data-ika-chain]),
+html:not([data-appearance])[data-ika-chain='sui'],
+html:not([data-appearance]):not([data-ika-chain]) {
+  --theme-page-text: rgba(234, 240, 255, 0.95);
+  --theme-page-muted: rgba(214, 222, 255, 0.72);
+  --sp-bg: #0b1220;
+  --sp-text: rgba(234, 240, 255, 0.95);
+  --sp-muted: rgba(200, 210, 240, 0.62);
+  --sp-border: rgba(255, 255, 255, 0.1);
+  --sp-surface: rgba(255, 255, 255, 0.05);
+  --theme-wc-root-bg: radial-gradient(1200px circle at 10% -20%, rgba(132, 94, 247, 0.38), transparent 46%),
+    radial-gradient(900px circle at 92% 8%, rgba(20, 184, 166, 0.28), transparent 48%),
+    radial-gradient(700px circle at 50% 120%, rgba(59, 130, 246, 0.12), transparent 45%),
+    linear-gradient(185deg, #0c1424 0%, #080d18 48%, #060a12 100%);
+  --theme-sp-root-bg: radial-gradient(900px circle at 8% -8%, rgba(124, 92, 252, 0.26), transparent 52%),
+    radial-gradient(700px circle at 96% 4%, rgba(20, 184, 166, 0.16), transparent 50%),
+    var(--sp-bg);
+  --theme-wc-hero-bg: radial-gradient(800px circle at 18% -8%, rgba(132, 94, 247, 0.38), transparent 56%),
+    radial-gradient(640px circle at 100% 0%, rgba(20, 184, 166, 0.26), transparent 55%),
+    rgba(255, 255, 255, 0.045);
+  --theme-wc-section-bg: rgba(6, 10, 22, 0.55);
+  --theme-wc-input-bg: rgba(4, 8, 18, 0.55);
+  --theme-wc-btn-bg: rgba(255, 255, 255, 0.06);
+  --theme-wc-btn-hover-bg: rgba(255, 255, 255, 0.11);
+  --theme-wc-btn-hover-border: rgba(255, 255, 255, 0.22);
+  --theme-wc-btn-primary-bg: linear-gradient(135deg, rgba(132, 94, 247, 0.92), rgba(20, 184, 166, 0.78));
+  --theme-wc-btn-primary-border: rgba(255, 255, 255, 0.28);
+  --theme-wc-pill-bg: rgba(8, 12, 24, 0.5);
+  --theme-wc-action-btn-bg: rgba(255, 255, 255, 0.06);
+  --theme-wc-asset-row-border: rgba(255, 255, 255, 0.08);
+  --theme-sp-unlock-box-bg: rgba(255, 255, 255, 0.06);
+  --theme-setup-card-bg-popup: rgba(255, 255, 255, 0.06);
+  --theme-setup-card-bg-side: rgba(255, 255, 255, 0.06);
+  --theme-setup-card-bg-onboard: rgba(12, 16, 28, 0.72);
+  --theme-chrome-popup-bg: rgba(0, 0, 0, 0.22);
+  --theme-chrome-sidepanel-bg: rgba(8, 10, 18, 0.58);
+  --theme-chrome-onboarding-bg: rgba(6, 8, 14, 0.78);
+  --theme-chrome-border-soft: rgba(255, 255, 255, 0.08);
+  --theme-scrollbar-thumb: linear-gradient(180deg, rgba(124, 92, 252, 0.5), rgba(20, 184, 166, 0.4));
+  --theme-scrollbar-thumb-hover: linear-gradient(180deg, rgba(124, 92, 252, 0.7), rgba(20, 184, 166, 0.55));
+  --theme-scrollbar-track: rgba(255, 255, 255, 0.04);
+  --theme-chip-active-bg: rgba(124, 92, 252, 0.22);
+  --theme-chip-active-border: rgba(124, 92, 252, 0.5);
+  --theme-chip-active-text: rgba(210, 200, 255, 0.95);
+  --theme-network-badge-bg: rgba(124, 92, 252, 0.22);
+  --theme-network-badge-border: rgba(124, 92, 252, 0.4);
+  --theme-network-badge-text: rgba(200, 185, 255, 0.95);
+  --theme-sp-btn-ghost-hover: rgba(255, 255, 255, 0.09);
+  --theme-sp-nft-placeholder-bg: rgba(0, 0, 0, 0.28);
+  --theme-ob-page-bg: radial-gradient(ellipse 120% 80% at 10% -20%, rgba(124, 240, 196, 0.12), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 100% 10%, rgba(99, 102, 241, 0.16), transparent 50%),
+    linear-gradient(165deg, #07080f, #12152a 45%, #0a0c14 100%);
+  --ob-text: rgba(240, 244, 255, 0.94);
+  --ob-muted: rgba(210, 218, 245, 0.65);
+  --ob-accent: #7cf0c4;
+  --ob-accent-dim: rgba(124, 240, 196, 0.15);
+  --ob-line: rgba(255, 255, 255, 0.1);
+  --theme-elev-card:
+    0 1px 0 rgba(255, 255, 255, 0.09) inset,
+    0 0 0 1px rgba(100, 140, 255, 0.08) inset,
+    0 18px 56px rgba(0, 0, 0, 0.48);
+  /* help bubbles — user-picked base #174b38 (dark forest); border/icon tuned for contrast */
+  --theme-help-bubble-bg: #174b38;
+  --theme-help-bubble-border: rgba(134, 239, 172, 0.32);
+  --theme-help-bubble-icon: rgba(204, 251, 220, 0.92);
+  --theme-help-bubble-bento-bg: #174b38;
+  --theme-help-bubble-bento-border: rgba(167, 243, 208, 0.38);
+  --theme-help-bubble-bento-icon: rgba(220, 252, 231, 0.95);
+}
+
+/* ----- dark + Solana: terminal charcoal + mint / violet gas ----- */
+html[data-appearance='dark'][data-ika-chain='solana'],
+html:not([data-appearance])[data-ika-chain='solana'] {
+  --theme-page-text: rgba(236, 253, 245, 0.94);
+  --theme-page-muted: rgba(168, 210, 190, 0.68);
+  --sp-bg: #070d0c;
+  --sp-text: rgba(236, 253, 245, 0.94);
+  --sp-muted: rgba(160, 200, 180, 0.62);
+  --sp-border: rgba(20, 241, 149, 0.14);
+  --sp-surface: rgba(20, 241, 149, 0.07);
+  --theme-wc-root-bg: radial-gradient(1000px circle at 12% -18%, rgba(20, 241, 149, 0.14), transparent 48%),
+    radial-gradient(800px circle at 88% 6%, rgba(153, 69, 255, 0.1), transparent 50%),
+    linear-gradient(188deg, #050a09 0%, #0a1210 42%, #060c0b 100%);
+  --theme-sp-root-bg: radial-gradient(880px circle at 6% -6%, rgba(20, 241, 149, 0.12), transparent 54%),
+    radial-gradient(600px circle at 100% 0%, rgba(153, 69, 255, 0.08), transparent 52%),
+    var(--sp-bg);
+  --theme-wc-hero-bg: radial-gradient(720px circle at 16% -6%, rgba(20, 241, 149, 0.2), transparent 58%),
+    radial-gradient(560px circle at 100% 0%, rgba(153, 69, 255, 0.12), transparent 55%),
+    rgba(10, 22, 18, 0.65);
+  --theme-wc-section-bg: rgba(4, 18, 14, 0.72);
+  --theme-wc-input-bg: rgba(2, 12, 10, 0.65);
+  --theme-wc-btn-bg: rgba(20, 241, 149, 0.08);
+  --theme-wc-btn-hover-bg: rgba(20, 241, 149, 0.14);
+  --theme-wc-btn-hover-border: rgba(20, 241, 149, 0.35);
+  --theme-wc-btn-primary-bg: linear-gradient(135deg, rgba(20, 241, 149, 0.88), rgba(5, 122, 85, 0.92));
+  --theme-wc-btn-primary-border: rgba(20, 241, 149, 0.45);
+  --theme-wc-pill-bg: rgba(6, 24, 18, 0.75);
+  --theme-wc-action-btn-bg: rgba(20, 241, 149, 0.07);
+  --theme-wc-asset-row-border: rgba(20, 241, 149, 0.1);
+  --theme-sp-unlock-box-bg: rgba(20, 241, 149, 0.06);
+  --theme-setup-card-bg-popup: rgba(12, 22, 18, 0.75);
+  --theme-setup-card-bg-side: rgba(12, 22, 18, 0.72);
+  --theme-setup-card-bg-onboard: rgba(8, 18, 14, 0.78);
+  --theme-chrome-popup-bg: rgba(4, 14, 11, 0.92);
+  --theme-chrome-sidepanel-bg: rgba(5, 16, 12, 0.88);
+  --theme-chrome-onboarding-bg: rgba(4, 12, 10, 0.88);
+  --theme-chrome-border-soft: rgba(20, 241, 149, 0.12);
+  --theme-scrollbar-thumb: linear-gradient(180deg, rgba(20, 241, 149, 0.55), rgba(153, 69, 255, 0.35));
+  --theme-scrollbar-thumb-hover: linear-gradient(180deg, rgba(20, 241, 149, 0.75), rgba(153, 69, 255, 0.5));
+  --theme-scrollbar-track: rgba(20, 241, 149, 0.05);
+  --theme-chip-active-bg: rgba(20, 241, 149, 0.16);
+  --theme-chip-active-border: rgba(20, 241, 149, 0.45);
+  --theme-chip-active-text: rgba(210, 255, 235, 0.95);
+  --theme-network-badge-bg: rgba(20, 241, 149, 0.14);
+  --theme-network-badge-border: rgba(20, 241, 149, 0.38);
+  --theme-network-badge-text: rgba(200, 255, 230, 0.92);
+  --theme-sp-btn-ghost-hover: rgba(20, 241, 149, 0.1);
+  --theme-sp-nft-placeholder-bg: rgba(0, 20, 14, 0.45);
+  --theme-ob-page-bg: radial-gradient(ellipse 120% 80% at 8% -18%, rgba(20, 241, 149, 0.14), transparent 54%),
+    radial-gradient(ellipse 85% 55% at 100% 8%, rgba(153, 69, 255, 0.12), transparent 52%),
+    linear-gradient(168deg, #040807, #0c1612 48%, #070d0b 100%);
+  --ob-text: rgba(236, 253, 245, 0.94);
+  --ob-muted: rgba(170, 210, 190, 0.68);
+  --ob-accent: #14f195;
+  --ob-accent-dim: rgba(20, 241, 149, 0.14);
+  --ob-line: rgba(20, 241, 149, 0.12);
+  --theme-elev-card:
+    0 1px 0 rgba(20, 241, 149, 0.16) inset,
+    0 0 0 1px rgba(20, 241, 149, 0.1) inset,
+    0 16px 48px rgba(0, 0, 0, 0.58);
+  /* help: hero — dusty plum (not mint) */
+  --theme-help-bubble-bg: oklch(0.25 0.05 305);
+  --theme-help-bubble-border: oklch(0.44 0.09 305);
+  --theme-help-bubble-icon: oklch(0.72 0.14 305);
+  --theme-help-bubble-bento-bg: oklch(0.32 0.065 295);
+  --theme-help-bubble-bento-border: oklch(0.46 0.085 295);
+  --theme-help-bubble-bento-icon: oklch(0.76 0.14 295);
+}
+
+/* ----- light + Sui: cool paper + soft azure glass ----- */
+html[data-appearance='light'][data-ika-chain='sui'],
+html[data-appearance='light']:not([data-ika-chain]) {
+  --theme-page-text: #0f172a;
+  --theme-page-muted: rgba(15, 23, 42, 0.58);
+  --sp-bg: #f5f8fc;
+  --sp-text: #0f172a;
+  --sp-muted: rgba(15, 23, 42, 0.52);
+  --sp-border: rgba(15, 23, 42, 0.1);
+  --sp-surface: rgba(59, 130, 246, 0.07);
+  --theme-wc-root-bg: radial-gradient(1000px circle at 12% -20%, rgba(59, 130, 246, 0.12), transparent 50%),
+    radial-gradient(800px circle at 92% 4%, rgba(20, 184, 166, 0.1), transparent 52%),
+    linear-gradient(185deg, #fbfcfe 0%, #eef2f8 45%, #e2e8f0 100%);
+  --theme-sp-root-bg: radial-gradient(900px circle at 6% -8%, rgba(59, 130, 246, 0.1), transparent 54%),
+    radial-gradient(700px circle at 98% 2%, rgba(45, 212, 191, 0.08), transparent 52%),
+    var(--sp-bg);
+  --theme-wc-hero-bg: radial-gradient(700px circle at 18% -6%, rgba(59, 130, 246, 0.14), transparent 58%),
+    radial-gradient(560px circle at 100% 0%, rgba(20, 184, 166, 0.12), transparent 56%),
+    rgba(255, 255, 255, 0.72);
+  --theme-wc-section-bg: rgba(255, 255, 255, 0.78);
+  --theme-wc-input-bg: rgba(255, 255, 255, 0.92);
+  --theme-wc-btn-bg: rgba(255, 255, 255, 0.85);
+  --theme-wc-btn-hover-bg: rgba(59, 130, 246, 0.1);
+  --theme-wc-btn-hover-border: rgba(37, 99, 235, 0.35);
+  --theme-wc-btn-primary-bg: linear-gradient(135deg, rgba(79, 70, 229, 0.92), rgba(20, 184, 166, 0.85));
+  --theme-wc-btn-primary-border: rgba(37, 99, 235, 0.35);
+  --theme-wc-pill-bg: rgba(241, 245, 249, 0.95);
+  --theme-wc-action-btn-bg: rgba(255, 255, 255, 0.88);
+  --theme-wc-asset-row-border: rgba(15, 23, 42, 0.08);
+  --theme-sp-unlock-box-bg: rgba(255, 255, 255, 0.88);
+  --theme-setup-card-bg-popup: rgba(255, 255, 255, 0.9);
+  --theme-setup-card-bg-side: rgba(255, 255, 255, 0.88);
+  --theme-setup-card-bg-onboard: rgba(255, 255, 255, 0.92);
+  --theme-chrome-popup-bg: rgba(255, 255, 255, 0.92);
+  --theme-chrome-sidepanel-bg: rgba(248, 250, 252, 0.96);
+  --theme-chrome-onboarding-bg: rgba(255, 255, 255, 0.94);
+  --theme-chrome-border-soft: rgba(15, 23, 42, 0.08);
+  --theme-scrollbar-thumb: linear-gradient(180deg, rgba(79, 70, 229, 0.45), rgba(20, 184, 166, 0.4));
+  --theme-scrollbar-thumb-hover: linear-gradient(180deg, rgba(79, 70, 229, 0.6), rgba(20, 184, 166, 0.52));
+  --theme-scrollbar-track: rgba(15, 23, 42, 0.06);
+  --theme-chip-active-bg: rgba(59, 130, 246, 0.14);
+  --theme-chip-active-border: rgba(37, 99, 235, 0.45);
+  --theme-chip-active-text: rgba(30, 64, 175, 0.95);
+  --theme-network-badge-bg: rgba(59, 130, 246, 0.12);
+  --theme-network-badge-border: rgba(37, 99, 235, 0.35);
+  --theme-network-badge-text: rgba(30, 58, 138, 0.9);
+  --theme-sp-btn-ghost-hover: rgba(15, 23, 42, 0.06);
+  --theme-sp-nft-placeholder-bg: rgba(241, 245, 249, 0.95);
+  --theme-ob-page-bg: radial-gradient(ellipse 120% 80% at 10% -20%, rgba(59, 130, 246, 0.1), transparent 55%),
+    radial-gradient(ellipse 90% 60% at 100% 10%, rgba(45, 212, 191, 0.1), transparent 50%),
+    linear-gradient(165deg, #fbfcff, #eef2f9 45%, #e2e8f0 100%);
+  --ob-text: #0f172a;
+  --ob-muted: rgba(15, 23, 42, 0.58);
+  --ob-accent: #0d9488;
+  --ob-accent-dim: rgba(13, 148, 136, 0.12);
+  --ob-line: rgba(15, 23, 42, 0.1);
+  --theme-elev-card:
+    0 1px 0 rgba(255, 255, 255, 0.85) inset,
+    0 0 0 1px rgba(15, 23, 42, 0.06) inset,
+    0 14px 40px rgba(15, 23, 42, 0.1);
+  --theme-focus-ring: rgba(67, 56, 202, 0.92);
+  --theme-help-bubble-bg: oklch(0.97 0.032 78);
+  --theme-help-bubble-border: oklch(0.82 0.075 78);
+  --theme-help-bubble-icon: oklch(0.48 0.13 78);
+  --theme-help-bubble-bento-bg: oklch(0.96 0.04 285);
+  --theme-help-bubble-bento-border: oklch(0.84 0.07 285);
+  --theme-help-bubble-bento-icon: oklch(0.45 0.14 285);
+}
+
+/* light: chain border contrast (on top of light block) */
+html[data-appearance='light'][data-ika-chain='sui'],
+html[data-appearance='light']:not([data-ika-chain]) {
+  --theme-chain-border: rgba(37, 99, 235, 0.55);
+  --theme-chain-border-soft: rgba(37, 99, 235, 0.22);
+}
+
+/* ----- light + Solana: warm paper + mint wash ----- */
+html[data-appearance='light'][data-ika-chain='solana'] {
+  --theme-page-text: #0c1a15;
+  --theme-page-muted: rgba(12, 26, 21, 0.55);
+  --sp-bg: #faf8f5;
+  --sp-text: #0c1a15;
+  --sp-muted: rgba(12, 26, 21, 0.5);
+  --sp-border: rgba(5, 122, 85, 0.15);
+  --sp-surface: rgba(16, 185, 129, 0.09);
+  --theme-wc-root-bg: radial-gradient(980px circle at 10% -18%, rgba(16, 185, 129, 0.12), transparent 50%),
+    radial-gradient(760px circle at 95% 6%, rgba(180, 160, 120, 0.08), transparent 52%),
+    linear-gradient(185deg, #fdfcfa 0%, #f3f0ea 48%, #ebe6de 100%);
+  --theme-sp-root-bg: radial-gradient(880px circle at 4% -6%, rgba(16, 185, 129, 0.1), transparent 54%),
+    radial-gradient(680px circle at 100% 0%, rgba(139, 92, 246, 0.06), transparent 52%),
+    var(--sp-bg);
+  --theme-wc-hero-bg: radial-gradient(680px circle at 16% -4%, rgba(16, 185, 129, 0.15), transparent 58%),
+    radial-gradient(520px circle at 100% 0%, rgba(124, 58, 237, 0.08), transparent 56%),
+    rgba(255, 255, 255, 0.82);
+  --theme-wc-section-bg: rgba(255, 255, 255, 0.88);
+  --theme-wc-input-bg: rgba(255, 255, 255, 0.95);
+  --theme-wc-btn-bg: rgba(255, 255, 255, 0.9);
+  --theme-wc-btn-hover-bg: rgba(16, 185, 129, 0.12);
+  --theme-wc-btn-hover-border: rgba(5, 122, 85, 0.35);
+  --theme-wc-btn-primary-bg: linear-gradient(135deg, rgba(16, 185, 129, 0.92), rgba(5, 122, 85, 0.9));
+  --theme-wc-btn-primary-border: rgba(5, 122, 85, 0.35);
+  --theme-wc-pill-bg: rgba(247, 244, 239, 0.95);
+  --theme-wc-action-btn-bg: rgba(255, 255, 255, 0.9);
+  --theme-wc-asset-row-border: rgba(12, 26, 21, 0.08);
+  --theme-sp-unlock-box-bg: rgba(255, 255, 255, 0.9);
+  --theme-setup-card-bg-popup: rgba(255, 255, 255, 0.92);
+  --theme-setup-card-bg-side: rgba(255, 255, 255, 0.9);
+  --theme-setup-card-bg-onboard: rgba(255, 255, 255, 0.94);
+  --theme-chrome-popup-bg: rgba(255, 255, 255, 0.95);
+  --theme-chrome-sidepanel-bg: rgba(252, 250, 247, 0.98);
+  --theme-chrome-onboarding-bg: rgba(255, 253, 250, 0.96);
+  --theme-chrome-border-soft: rgba(5, 122, 85, 0.12);
+  --theme-scrollbar-thumb: linear-gradient(180deg, rgba(16, 185, 129, 0.5), rgba(124, 58, 237, 0.35));
+  --theme-scrollbar-thumb-hover: linear-gradient(180deg, rgba(16, 185, 129, 0.65), rgba(124, 58, 237, 0.48));
+  --theme-scrollbar-track: rgba(12, 26, 21, 0.05);
+  --theme-chip-active-bg: rgba(16, 185, 129, 0.16);
+  --theme-chip-active-border: rgba(5, 122, 85, 0.42);
+  --theme-chip-active-text: rgba(6, 78, 59, 0.95);
+  --theme-network-badge-bg: rgba(16, 185, 129, 0.12);
+  --theme-network-badge-border: rgba(5, 122, 85, 0.32);
+  --theme-network-badge-text: rgba(6, 78, 59, 0.88);
+  --theme-sp-btn-ghost-hover: rgba(16, 185, 129, 0.1);
+  --theme-sp-nft-placeholder-bg: rgba(240, 235, 228, 0.9);
+  --theme-ob-page-bg: radial-gradient(ellipse 120% 80% at 8% -18%, rgba(16, 185, 129, 0.12), transparent 54%),
+    radial-gradient(ellipse 88% 58% at 100% 8%, rgba(180, 150, 200, 0.08), transparent 52%),
+    linear-gradient(168deg, #fdfcfa, #f2efe8 45%, #e8e4db 100%);
+  --ob-text: #0c1a15;
+  --ob-muted: rgba(12, 26, 21, 0.55);
+  --ob-accent: #059669;
+  --ob-accent-dim: rgba(5, 150, 105, 0.12);
+  --ob-line: rgba(5, 122, 85, 0.14);
+  --theme-chain-border: rgba(5, 150, 105, 0.55);
+  --theme-chain-border-soft: rgba(5, 150, 105, 0.25);
+  --theme-elev-card:
+    0 1px 0 rgba(255, 255, 255, 0.9) inset,
+    0 0 0 1px rgba(5, 122, 85, 0.1) inset,
+    0 12px 36px rgba(12, 26, 21, 0.08);
+  --theme-focus-ring: rgba(5, 122, 85, 0.92);
+  --theme-help-bubble-bg: oklch(0.96 0.04 52);
+  --theme-help-bubble-border: oklch(0.78 0.085 52);
+  --theme-help-bubble-icon: oklch(0.5 0.15 52);
+  --theme-help-bubble-bento-bg: oklch(0.97 0.035 300);
+  --theme-help-bubble-bento-border: oklch(0.85 0.07 300);
+  --theme-help-bubble-bento-icon: oklch(0.48 0.15 300);
+}
+
+/* ----- light: input fills (shared tweak) ----- */
+html[data-appearance='light'] .wc-input,
+html[data-appearance='light'] .wc-card input,
+html[data-appearance='light'] .wc-card textarea,
+html[data-appearance='light'] .wc-approvalSheet input,
+html[data-appearance='light'] .wc-approvalSheet textarea {
+  background: rgba(15, 23, 42, 0.03);
+}
+
+html[data-appearance='light'][data-ika-chain='solana'] .wc-input,
+html[data-appearance='light'][data-ika-chain='solana'] .wc-card input,
+html[data-appearance='light'][data-ika-chain='solana'] .wc-card textarea,
+html[data-appearance='light'][data-ika-chain='solana'] .wc-approvalSheet input,
+html[data-appearance='light'][data-ika-chain='solana'] .wc-approvalSheet textarea {
+  background: rgba(12, 26, 21, 0.03);
+}
+
+html[data-appearance='light'] .sp-input {
+  background: rgba(15, 23, 42, 0.04);
+}
+
+html[data-appearance='light'][data-ika-chain='solana'] .sp-input {
+  background: rgba(12, 26, 21, 0.04);
+}

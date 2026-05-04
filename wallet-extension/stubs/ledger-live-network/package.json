@@ -1,0 +1,19 @@
+{
+  "name": "chromatika-ledger-live-network-stub",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Stub for @ledgerhq/live-network. Replaces upstream via pnpm.overrides because (a) live-network's main module eagerly calls require('https') which crashes in MV3 service workers, and (b) chromatika never actually invokes its functions - it's pulled in transitively by @ledgerhq/ledger-trust-service + ledger-cal-service (themselves pulled by @ledgerhq/hw-app-sui via @mysten/ledgerjs-hw-app-sui), neither of which we call. See `wallet-extension/docs/STATUS.md` for context.",
+  "type": "module",
+  "main": "./index.cjs",
+  "module": "./index.mjs",
+  "exports": {
+    ".": {
+      "import": "./index.mjs",
+      "require": "./index.cjs"
+    },
+    "./cache": {
+      "import": "./cache.mjs",
+      "require": "./cache.cjs"
+    }
+  }
+}

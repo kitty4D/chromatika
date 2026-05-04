@@ -1,0 +1,990 @@
+/* choose step: hero logo + modern action buttons (popup / side panel / onboarding) */
+
+.ws-choose {
+  --ws-accent-a: rgba(132, 94, 247, 0.95);
+  --ws-accent-b: rgba(20, 184, 166, 0.88);
+  --ws-glass: rgba(255, 255, 255, 0.07);
+  --ws-border: rgba(255, 255, 255, 0.14);
+  --ws-muted: rgba(234, 240, 255, 0.68);
+}
+
+.ws-choose-brand {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.ws-choose--addVault .ws-choose-brand {
+  margin-bottom: 10px;
+}
+
+.ws-choose-chainFoot {
+  margin-top: 8px;
+  padding: 14px 12px 4px;
+  border-top: 1px solid var(--ws-border, rgba(255, 255, 255, 0.12));
+}
+
+.ws-choose-chainFoot-scope,
+.ws-choose-chainFoot-switch {
+  margin: 0 0 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--ws-muted);
+  text-align: center;
+}
+
+.ws-choose-chainFoot-switch {
+  margin-bottom: 0;
+}
+
+.ws-choose-advanced-chainHint {
+  margin: 0 0 12px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--ws-muted);
+  text-align: center;
+}
+
+.ws-choose-inlineLink {
+  padding: 0;
+  border: none;
+  background: none;
+  color: rgba(124, 240, 196, 0.95);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.ws-choose-inlineLink:hover {
+  color: #a7fae0;
+}
+
+.ws-choose-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  object-fit: contain;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 48px rgba(124, 92, 252, 0.15);
+}
+
+.ws-choose--onboarding .ws-choose-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
+}
+
+.ws-choose-lead {
+  margin: 0 0 20px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ws-muted);
+  text-align: center;
+  overflow-wrap: break-word;
+}
+
+.ws-choose-lead strong {
+  color: rgba(234, 240, 255, 0.95);
+  font-weight: 700;
+}
+
+.ws-choose-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0; /* form element: avoid UA default margin */
+}
+
+.ws-choose-selectWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  margin: 0;
+  cursor: default;
+}
+
+.ws-choose-selectLabel {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  text-align: center;
+  color: var(--ws-muted);
+}
+
+.ws-choose-selectLabel--sentence {
+  text-transform: none;
+  letter-spacing: 0.02em;
+}
+
+.ws-choose-select {
+  width: 100%;
+  min-height: 46px;
+  /* right padding = 16px (arrow gap from right edge) + 12px (arrow width) + 10px (arrow→text gap) */
+  padding: 12px 38px 12px 16px;
+  border-radius: var(--theme-radius-control, 14px);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  box-sizing: border-box;
+  color: rgba(234, 240, 255, 0.95);
+  border: 2px solid transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23eaf0ff' stroke-opacity='0.78' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 16px center padding-box,
+    linear-gradient(var(--ws-glass), var(--ws-glass)) padding-box,
+    linear-gradient(var(--ws-border), var(--ws-border)) border-box;
+  background-clip: padding-box, padding-box, border-box;
+  -webkit-background-clip: padding-box, padding-box, border-box;
+  background-origin: padding-box, padding-box, border-box;
+  backdrop-filter: blur(8px);
+  transition:
+    transform 140ms ease,
+    box-shadow 180ms ease,
+    filter 140ms ease;
+}
+
+/* opaque dark fill blocks the conic from bleeding into the interior — only the 2px border
+ * strip shows the color traversal (matches the primary button pattern). */
+.ws-choose-select:hover,
+.ws-choose-select:focus-visible {
+  --ws-proceed-border-angle: 0deg;
+  background:
+    url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1L6 6L11 1' stroke='%23eaf0ff' stroke-opacity='0.9' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 16px center padding-box,
+    linear-gradient(rgba(22, 30, 54, 0.96), rgba(14, 20, 38, 0.96)) padding-box,
+    conic-gradient(
+      from var(--ws-proceed-border-angle),
+      #7cf0c4,
+      #6366f1,
+      #f472b6,
+      #fbbf24,
+      #7cf0c4
+    ) border-box;
+  background-clip: padding-box, padding-box, border-box;
+  -webkit-background-clip: padding-box, padding-box, border-box;
+  background-origin: padding-box, padding-box, border-box;
+  box-shadow: 0 3px 12px rgba(124, 92, 252, 0.45);
+  text-decoration-line: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.75);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  animation: ws-proceed-border-hue 2.8s linear infinite;
+}
+
+.ws-choose-select:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.ws-choose-select option {
+  background: #0c1020;
+  color: rgba(234, 240, 255, 0.95);
+}
+
+.ws-choose-btn {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 16px;
+  border-radius: var(--theme-radius-control, 14px);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  transition:
+    transform 140ms ease,
+    box-shadow 180ms ease,
+    border-color 140ms ease,
+    background 140ms ease,
+    opacity 140ms ease;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+}
+
+.ws-choose-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+/* same stack + animated conic border as .ws-password-btn--primary (see @property --ws-proceed-border-angle below) */
+.ws-choose-btn--primary {
+  color: rgba(248, 250, 255, 0.98);
+  border: 2px solid transparent;
+  background:
+    linear-gradient(135deg, var(--ws-accent-a), var(--ws-accent-b)) padding-box,
+    linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.22)) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  transition:
+    transform 140ms ease,
+    box-shadow 180ms ease,
+    filter 140ms ease;
+}
+
+.ws-choose-btn--primary:hover,
+.ws-choose-btn--primary:focus-visible {
+  --ws-proceed-border-angle: 0deg;
+  background:
+    linear-gradient(135deg, var(--ws-accent-a), var(--ws-accent-b)) padding-box,
+    conic-gradient(
+      from var(--ws-proceed-border-angle),
+      #7cf0c4,
+      #6366f1,
+      #f472b6,
+      #fbbf24,
+      #7cf0c4
+    ) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: 0 4px 14px rgba(124, 92, 252, 0.5);
+  filter: brightness(1.05);
+  text-decoration-line: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.75);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  animation: ws-proceed-border-hue 2.8s linear infinite;
+}
+
+.ws-choose-btn--secondary {
+  color: rgba(234, 240, 255, 0.95);
+  border: 2px solid transparent;
+  background:
+    linear-gradient(var(--ws-glass), var(--ws-glass)) padding-box,
+    linear-gradient(var(--ws-border), var(--ws-border)) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  backdrop-filter: blur(8px);
+  transition:
+    transform 140ms ease,
+    box-shadow 180ms ease,
+    filter 140ms ease;
+}
+
+.ws-choose-btn--secondary:hover,
+.ws-choose-btn--secondary:focus-visible {
+  --ws-proceed-border-angle: 0deg;
+  background:
+    linear-gradient(rgba(22, 30, 54, 0.96), rgba(14, 20, 38, 0.96)) padding-box,
+    conic-gradient(
+      from var(--ws-proceed-border-angle),
+      #7cf0c4,
+      #6366f1,
+      #f472b6,
+      #fbbf24,
+      #7cf0c4
+    ) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: 0 3px 12px rgba(124, 92, 252, 0.45);
+  text-decoration-line: underline;
+  text-decoration-color: rgba(255, 255, 255, 0.75);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  animation: ws-proceed-border-hue 2.8s linear infinite;
+}
+
+.ws-choose-btn--soon {
+  color: rgba(234, 240, 255, 0.45);
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.08);
+  cursor: not-allowed;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.ws-choose-btn--soon:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ws-choose-tagline {
+  margin: 16px 0 0;
+  font-size: 10px;
+  line-height: 1.45;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  color: rgba(234, 240, 255, 0.42);
+  text-align: center;
+  font-weight: 500;
+}
+
+/* section header above the sui-row and solana-row primary ctas */
+.ws-choose-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 0 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(234, 240, 255, 0.55);
+}
+
+.ws-choose-section::before,
+.ws-choose-section::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: rgba(234, 240, 255, 0.1);
+}
+
+.ws-choose-section--first {
+  margin-top: 4px;
+}
+
+/* sub-copy on a primary cta (e.g. "face id · fingerprint · pin"). placed inside the button */
+.ws-choose-btn-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  line-height: 1.25;
+}
+
+.ws-choose-btn-sub {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  opacity: 0.78;
+  text-transform: lowercase;
+}
+
+/* "advanced ▾" disclosure — small text-button that flips to "advanced ▴" when expanded */
+.ws-choose-advanced-toggle {
+  appearance: none;
+  background: none;
+  border: 0;
+  margin: 12px auto 4px;
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: rgba(234, 240, 255, 0.55);
+  cursor: pointer;
+  transition: color 140ms ease;
+}
+
+.ws-choose-advanced-toggle:hover,
+.ws-choose-advanced-toggle:focus-visible {
+  color: rgba(234, 240, 255, 0.92);
+}
+
+.ws-choose-advanced-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 0 4px;
+  border-top: 1px dashed rgba(234, 240, 255, 0.1);
+  animation: ws-advanced-fade 220ms ease;
+}
+
+@keyframes ws-advanced-fade {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----- shared password step (create + import paths) ----- */
+
+/* animate conic *phase* so colors run around the border strip (not a spinning overlay) */
+@property --ws-proceed-border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes ws-proceed-border-hue {
+  to {
+    --ws-proceed-border-angle: 360deg;
+  }
+}
+
+.ws-password {
+  --ws-accent-a: rgba(132, 94, 247, 0.95);
+  --ws-accent-b: rgba(20, 184, 166, 0.88);
+}
+
+.ws-password-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 22px;
+}
+
+.ws-password-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  object-fit: contain;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 48px rgba(124, 92, 252, 0.15);
+  margin-bottom: 16px;
+}
+
+.ws-password--onboarding .ws-password-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
+}
+
+.ws-password-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.1rem, 2.8vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  color: var(--theme-page-text, rgba(234, 240, 255, 0.96));
+}
+
+.ws-password-sub {
+  margin: 0;
+  max-width: 28rem;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.72));
+}
+
+.ws-password-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-bottom: 6px;
+}
+
+.ws-password-label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.ws-password-label > span {
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.75));
+}
+
+.ws-password-inputWrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.ws-password-inputWrap .ws-password-input,
+.ws-password-inputWrap .sp-input {
+  padding-right: 40px;
+}
+
+.ws-password-toggle {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 16px;
+  line-height: 1;
+  padding: 4px;
+  color: rgba(255, 255, 255, 0.55);
+  transition: color 0.15s;
+}
+
+.ws-password-toggle:hover {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.ws-password-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 11px 13px;
+  border-radius: var(--theme-radius-sm, 10px);
+  border: 1px solid var(--theme-chain-border, rgba(74, 162, 255, 0.35));
+  background: var(--theme-wc-input-bg, rgba(4, 8, 18, 0.55));
+  color: var(--theme-page-text, rgba(234, 240, 255, 0.95));
+  font-size: 14px;
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ws-password-input:focus {
+  border-color: var(--theme-chain-border, rgba(74, 162, 255, 0.55));
+  box-shadow: 0 0 0 3px rgba(124, 92, 252, 0.12);
+}
+
+.ws-password-label .sp-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ws-password-error {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 99, 132, 0.95);
+}
+
+.ws-password-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.ws-password-btn {
+  appearance: none;
+  min-height: 44px;
+  padding: 10px 18px;
+  border-radius: var(--theme-radius-control, 14px);
+  font-size: 13px;
+  font-weight: 650;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  border: 1px solid transparent;
+  box-sizing: border-box;
+  transition:
+    transform 120ms ease,
+    box-shadow 160ms ease,
+    border-color 140ms ease,
+    background 140ms ease,
+    filter 140ms ease;
+}
+
+.ws-password-btn:active:not(:disabled) {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+
+.ws-password-btn--ghost {
+  margin-right: auto;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.8));
+  background: transparent;
+  border-color: var(--theme-chain-border-soft, rgba(74, 162, 255, 0.28));
+}
+
+.ws-password-btn--ghost:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--theme-chain-border, rgba(74, 162, 255, 0.45));
+  color: var(--theme-page-text, rgba(234, 240, 255, 0.95));
+}
+
+/* gradient fill + border in one stack — border is literally the 2px edge (no rotating pseudo) */
+.ws-password-btn--primary {
+  color: rgba(248, 250, 255, 0.98);
+  border: 2px solid transparent;
+  background:
+    linear-gradient(135deg, var(--ws-accent-a), var(--ws-accent-b)) padding-box,
+    linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.22)) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  padding-inline: 20px;
+  transition:
+    transform 120ms ease,
+    box-shadow 160ms ease,
+    filter 140ms ease;
+}
+
+.ws-password-btn--primary:hover,
+.ws-password-btn--primary:focus-visible {
+  --ws-proceed-border-angle: 0deg;
+  background:
+    linear-gradient(135deg, var(--ws-accent-a), var(--ws-accent-b)) padding-box,
+    conic-gradient(
+      from var(--ws-proceed-border-angle),
+      #7cf0c4,
+      #6366f1,
+      #f472b6,
+      #fbbf24,
+      #7cf0c4
+    ) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  filter: brightness(1.06);
+  box-shadow: 0 6px 26px rgba(124, 92, 252, 0.32);
+  animation: ws-proceed-border-hue 2.8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ws-choose-btn--primary:hover,
+  .ws-choose-btn--primary:focus-visible,
+  .ws-choose-btn--secondary:hover,
+  .ws-choose-btn--secondary:focus-visible,
+  .ws-choose-select:hover,
+  .ws-choose-select:focus-visible,
+  .ws-password-btn--primary:hover,
+  .ws-password-btn--primary:focus-visible {
+    animation: none;
+  }
+
+  .ws-choose-btn:active:not(:disabled),
+  .ws-choose-select:active:not(:disabled),
+  .ws-password-btn:active:not(:disabled) {
+    transform: none;
+  }
+}
+
+/* ----- import step (mnemonic) — same visual language as password / backup ----- */
+
+.ws-import {
+  --ws-accent-a: rgba(132, 94, 247, 0.95);
+  --ws-accent-b: rgba(20, 184, 166, 0.88);
+}
+
+.ws-import-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.ws-import-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  object-fit: contain;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 48px rgba(124, 92, 252, 0.15);
+  margin-bottom: 16px;
+}
+
+.ws-import--onboarding .ws-import-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
+}
+
+.ws-import-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.1rem, 2.8vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  color: var(--theme-page-text, rgba(234, 240, 255, 0.96));
+}
+
+.ws-import-sub {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.72));
+}
+
+.ws-import-lead {
+  margin: 0 auto 16px;
+  max-width: 24rem;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.68));
+  text-align: center;
+}
+
+.ws-import-phrase {
+  max-width: 22rem;
+  width: 100%;
+  margin: 0 auto 14px;
+}
+
+.ws-import-phrase-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.75));
+}
+
+.ws-import-keyFormatRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+  justify-content: center;
+}
+
+.ws-import-keyFormatRow .ws-password-btn {
+  flex: 1;
+  min-width: 140px;
+  font-size: 11px;
+  padding: 8px 10px;
+}
+
+.ws-import-mnemonic {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 108px;
+  padding: 14px 16px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  font-family:
+    ui-monospace,
+    'SF Mono',
+    'Cascadia Code',
+    'Segoe UI Mono',
+    'Roboto Mono',
+    Consolas,
+    monospace;
+  border-radius: 12px;
+  border: 1px solid var(--theme-chain-border, rgba(74, 162, 255, 0.38));
+  background: linear-gradient(180deg, rgba(8, 12, 24, 0.95) 0%, rgba(4, 8, 18, 0.55) 100%);
+  color: rgba(234, 240, 255, 0.96);
+  resize: vertical;
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  word-break: break-word;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ws-import-mnemonic::placeholder {
+  color: rgba(214, 222, 255, 0.38);
+}
+
+.ws-import-mnemonic:focus {
+  border-color: var(--theme-chain-border, rgba(74, 162, 255, 0.55));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 3px rgba(124, 92, 252, 0.12);
+}
+
+.ws-import-mnemonic:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.ws-import-phrase .sp-input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.ws-import-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.78));
+}
+
+.ws-import-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.ws-import-actions .ws-password-btn--primary {
+  width: 100%;
+  justify-content: center;
+}
+
+.ws-import-actions .ws-password-btn--ghost {
+  width: 100%;
+  margin-right: 0;
+  justify-content: center;
+}
+
+/* ----- backup step (mnemonic) - matches password / choose visual language ----- */
+
+.ws-backup {
+  --ws-accent-a: rgba(132, 94, 247, 0.95);
+  --ws-accent-b: rgba(20, 184, 166, 0.88);
+}
+
+.ws-backup-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 18px;
+}
+
+.ws-backup-logo {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  object-fit: contain;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 48px rgba(124, 92, 252, 0.15);
+  margin-bottom: 16px;
+}
+
+.ws-backup--onboarding .ws-backup-logo {
+  width: 100px;
+  height: 100px;
+  border-radius: 24px;
+}
+
+.ws-backup-title {
+  margin: 0 0 8px;
+  font-size: clamp(1.1rem, 2.8vw, 1.35rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  line-height: 1.25;
+  color: var(--theme-page-text, rgba(234, 240, 255, 0.96));
+}
+
+.ws-backup-sub {
+  margin: 0;
+  max-width: 26rem;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.72));
+}
+
+.ws-backup-lead {
+  margin: 0 auto 16px;
+  max-width: 24rem;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.68));
+  text-align: center;
+}
+
+.ws-backup-phrase {
+  max-width: 22rem;
+  width: 100%;
+  margin: 0 auto 16px;
+}
+
+.ws-backup-phrase-label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.06em;
+  text-transform: lowercase;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.75));
+}
+
+.ws-backup-mnemonic {
+  display: block;
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 108px;
+  padding: 14px 16px;
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  letter-spacing: 0.02em;
+  font-family:
+    ui-monospace,
+    'SF Mono',
+    'Cascadia Code',
+    'Segoe UI Mono',
+    'Roboto Mono',
+    Consolas,
+    monospace;
+  border-radius: 12px;
+  border: 1px solid var(--theme-chain-border, rgba(74, 162, 255, 0.38));
+  background: linear-gradient(180deg, rgba(8, 12, 24, 0.95) 0%, rgba(4, 8, 18, 0.55) 100%);
+  color: rgba(234, 240, 255, 0.96);
+  resize: none;
+  outline: none;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.05),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+  word-break: break-word;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ws-backup-mnemonic:focus {
+  border-color: var(--theme-chain-border, rgba(74, 162, 255, 0.55));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.06),
+    0 0 0 3px rgba(124, 92, 252, 0.12);
+}
+
+.ws-backup-confirm {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 auto 14px;
+  max-width: 24rem;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--theme-page-text, rgba(234, 240, 255, 0.9));
+  cursor: pointer;
+  user-select: none;
+  position: relative;
+  z-index: 5; /* avoid getting painted under popup/card layers */
+}
+
+.ws-backup-confirm input {
+  margin-top: 2px;
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: rgba(124, 92, 252, 0.95);
+  cursor: pointer;
+}
+
+.ws-backup-confirm input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ws-backup-confirm span {
+  position: relative;
+  z-index: 6;
+}
+
+.ws-backup-hint {
+  margin: 0 0 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--theme-page-muted, rgba(214, 222, 255, 0.78));
+}
+
+.ws-backup-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.ws-backup-actions .ws-password-btn--primary {
+  width: 100%;
+  justify-content: center;
+}
+
+.ws-backup-actions .ws-password-btn--ghost {
+  width: 100%;
+  margin-right: 0;
+  justify-content: center;
+}

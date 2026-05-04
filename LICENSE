@@ -1,0 +1,96 @@
+# chromatika source-available license
+
+based on the Business Source License 1.1 (BUSL 1.1) by MariaDB Corporation Ab.
+this is the project license. read it before using or copying any of this code.
+
+## parameters
+
+- **licensor:** kitty4d
+- **licensed work:** Chromatika, version 0 (pre-release). copyright (c) 2026 kitty4d.
+- **additional use grant:** see "use grant" below.
+- **change date:** 2030-05-03 (four years after the date this license was first applied)
+- **change license:** Apache License, Version 2.0, as published by the Apache Software Foundation, available at https://www.apache.org/licenses/LICENSE-2.0
+
+## terms
+
+### 1. license
+
+the licensor grants you a non-exclusive, non-transferable, royalty-free, worldwide license to copy, modify, create derivative works of, redistribute, and make non-production use of the licensed work, subject to the limitations and conditions in this license.
+
+effective on the change date, or the fourth anniversary of the first publicly available distribution of a specific version of the licensed work under this license (whichever comes first), the licensor irrevocably grants you rights under the terms of the change license. the change license then governs your use of the licensed work for that version, and this license terminates with respect to that version.
+
+if your use of the licensed work does not comply with the requirements currently in effect as described in this license, you must purchase a commercial license from the licensor, its affiliates, or its assigns, or you must refrain from using the licensed work.
+
+### 2. use grant (the "additional use grant")
+
+you may make any use of the licensed work, **except**:
+
+you may not use the licensed work, in whole or in substantial part, to distribute, host, sell, sublicense, or operate a **cryptocurrency wallet**. for the purposes of this license, a "cryptocurrency wallet" means any product or service whose primary purpose is to let end users hold, store, send, receive, or sign blockchain transactions for cryptocurrency, tokens, NFTs, or other on-chain digital assets, in any form factor (browser extension, mobile app, desktop app, web app, hardware device, or any other delivery surface).
+
+reuse of code from the licensed work in any other kind of product or service **is permitted** under this additional use grant, with or without attribution, and including inside commercial products. this explicitly includes (without limitation) custody services, transaction signing services, key management services, MPC infrastructure, blockchain explorers, dapps, exchanges, indexers, agents, developer tools, libraries, SDKs, research code, and educational material - none of those are blocked by this grant. only end-user cryptocurrency wallets are.
+
+merely studying, learning from, or referencing the licensed work for educational or research purposes is also permitted.
+
+### 3. notice
+
+each licensee is responsible for ensuring that all copies of the licensed work that the licensee distributes include this license file in full. if you receive the licensed work from any source under terms that conflict with this license, those terms do not apply.
+
+### 4. trademarks
+
+this license does not grant you any right to use the licensor's name, logo, or trademarks. "chromatika" is a name used by the licensor for the licensed work; you may not use the name or any associated branding except as needed to give attribution.
+
+### 5. as is
+
+**the licensed work is provided "as is", without warranty of any kind, express or implied, including but not limited to the warranties of merchantability, fitness for a particular purpose, non-infringement, security, accuracy, completeness, availability, or title.** the licensor does not warrant that the licensed work will be uninterrupted, error-free, secure, free of vulnerabilities, free of malicious code, or compatible with any particular system, wallet, hardware device, blockchain, dapp, or third-party service.
+
+### 6. no liability
+
+**to the maximum extent permitted by applicable law, in no event will the licensor or any contributor to the licensed work be liable to you or any third party for any damages of any kind**, including but not limited to:
+
+- direct, indirect, incidental, special, exemplary, consequential, or punitive damages,
+- loss of cryptocurrency, tokens, NFTs, or other digital assets,
+- loss of access to wallets, accounts, addresses, or keys,
+- loss or theft of seed phrases, private keys, passkeys, or other authentication material,
+- loss of profits, revenue, data, use, goodwill, or other intangible losses,
+- damages resulting from unauthorized access to or alteration of your transmissions or data,
+- damages resulting from any third-party service the licensed work connects to (including blockchains, RPC providers, indexers, oracles, dapps, hardware wallets, mobile wallets, native messaging hosts, and any other external system),
+- damages resulting from bugs, exploits, smart-contract failures, oracle failures, network outages, censorship, regulatory action, phishing, social engineering, or any other event,
+
+even if the licensor has been advised of the possibility of such damages and even if a remedy set forth herein is found to have failed of its essential purpose. you assume the entire risk of using the licensed work.
+
+### 7. not financial advice
+
+nothing in the licensed work, its source code, its user interface, its documentation, or any communication from the licensor is investment advice, legal advice, tax advice, accounting advice, or financial advice of any kind. you are solely responsible for evaluating the suitability and legality of using the licensed work in your jurisdiction, and for any decisions you make about cryptocurrency, tokens, or other digital assets.
+
+### 8. pre-release status
+
+at the time this license is first applied, the licensed work is **pre-release software** and has not been audited, formally verified, or shipped to end users. it is not intended for production use or for managing real-value funds. the licensor makes no representation that the licensed work is suitable for any particular use, and recommends that you do not load real funds into it.
+
+### 9. covenants
+
+if you commercially distribute the licensed work, you must include a copy of this license with your distribution and a prominent notice that the licensed work is governed by this license.
+
+if you violate this license, your rights under it terminate automatically and immediately. termination of your rights does not relieve you of any obligations that survive termination, including obligations under the as-is, no-liability, trademarks, and notice sections.
+
+### 10. governing law
+
+this license shall be governed by and construed in accordance with the laws applicable to the licensor, without regard to conflicts-of-law principles. any disputes arising out of or relating to this license shall be subject to the exclusive jurisdiction of the courts located in the licensor's residence, unless the licensor agrees otherwise in writing.
+
+### 11. severability
+
+if any provision of this license is held to be unenforceable or invalid, that provision will be modified to the minimum extent necessary to make it enforceable, and the remaining provisions will remain in full force and effect.
+
+---
+
+## summary (non-binding)
+
+this is **not the license**. the binding text is sections 1 through 11 above. this summary is just a tl;dr.
+
+- you can read the source, run it locally, learn from it, and reuse code (small fragments or larger chunks) in any project that isn't itself a cryptocurrency wallet.
+- the only thing the additional use grant blocks is **shipping an end-user cryptocurrency wallet** built on this code. custody services, signing services, key management services, MPC infra, dapps, indexers, libraries, agents, dev tools, research projects, etc. are all fine - take whatever helps.
+- on **2030-05-03** the entire codebase auto-converts to Apache License 2.0, after which everything in this repo is permissively licensed (no restrictions at all).
+- chromatika is provided as is. the licensor and contributors are not liable for any losses, lost funds, leaked keys, missed transactions, exploited bugs, or any other damages from using or being unable to use chromatika. you assume 100% of the risk.
+- nothing here is financial advice.
+- chromatika is pre-release. don't use real funds.
+
+if you want to ship a wallet built on chromatika, contact the licensor for a commercial license.

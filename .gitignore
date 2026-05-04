@@ -1,0 +1,59 @@
+# dependencies
+node_modules/
+
+# build output
+wallet-extension/dist/
+wallet-extension/.vite/
+
+# test artifacts
+wallet-extension/test-results/
+wallet-extension/playwright-report/
+wallet-extension/blob-report/
+wallet-extension/.playwright/
+wallet-extension/coverage/
+
+wallet-extension/docs/
+wallet-extension/preview/
+
+website/DESIGN-BRIEF.md
+
+# env / secrets (track .env.example, ignore real .env and per-env overrides)
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# local / scratch / credentials
+local/
+
+# editor + agent configs and caches (per-user, not shared)
+.claude/
+.cursor/
+.superpowers/
+.vscode/
+.impeccable.md
+
+# agent skills catalog (local reference only)
+skills/
+
+# os junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# misc
+*.tsbuildinfo
+.vite/
+
+# skill audit local state
+.skill-audit.json
+
+CLAUDE.md

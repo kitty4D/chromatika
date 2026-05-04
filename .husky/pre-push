@@ -1,0 +1,55 @@
+#!/usr/bin/env sh
+# chromatika pre-push gate.
+#
+# fast path: `vitest --changed=<base>` runs only test files whose dep graph
+# touches the diff being pushed. typical work hits 1-3 test files; gate
+# clears in seconds. base = origin/main, which is correct for:
+#   - branch-vs-main pushes (diffs all branch changes)
+#   - main-itself pushes (diffs the commits about to ship)
+#   - new branches with no upstream (still compares to main)
+#
+# fallback: full fast suite (`pnpm test:fast`) if origin/main can't be
+# resolved (shallow clone, missing remote, fresh repo) or `--changed` errors.
+#
+# CI still runs the full-fat suite (`pnpm test`) on push/PR via
+# `.github/workflows/ci.yml`, so production-cost Argon2id remains the gate
+# before merge - the local hook only catches obvious breakage early.
+#
+# escape hatch: `git push --no-verify` skips this entirely. don't make it
+# a habit, but don't suffer over a 30-second doc-only push either. <3
+set -e
+
+REPO_ROOT="$(git rev-parse --show-toplevel)"
+cd "$REPO_ROOT/wallet-extension" || {
+  echo "[chromatika pre-push] could not cd to wallet-extension/ - skipping" >&2
+  exit 0
+}
+
+if ! command -v pnpm >/dev/null 2>&1; then
+  echo "[chromatika pre-push] pnpm not on PATH - skipping (install pnpm to enable the gate)" >&2
+  exit 0
+fi
+
+# resolve a diff base. preference order: origin/main -> origin/HEAD -> empty
+# (empty = skip --changed mode, fall through to full fast suite).
+BASE=""
+if git rev-parse --verify --quiet origin/main >/dev/null 2>&1; then
+  BASE="origin/main"
+elif git rev-parse --verify --quiet origin/HEAD >/dev/null 2>&1; then
+  BASE="origin/HEAD"
+fi
+
+if [ -n "$BASE" ]; then
+  echo "[chromatika pre-push] running tests changed since $BASE (fast KDF)..."
+  # pnpm 10 forwards trailing args directly to the script - NO `--` separator
+  # (pnpm 10 passes `--` through literally, which vitest treats as a positional
+  # sentinel that disables the flag parser; result: filter ignored, full suite
+  # runs). zero matches = exit 0 = push proceeds.
+  if pnpm test:fast --changed="$BASE"; then
+    exit 0
+  fi
+  echo "[chromatika pre-push] --changed mode failed; falling through to full fast suite" >&2
+fi
+
+echo "[chromatika pre-push] running full fast suite..."
+exec pnpm test:fast

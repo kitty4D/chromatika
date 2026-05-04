@@ -1,0 +1,23 @@
+[features]
+seeds = false
+skip-lint = false
+
+[programs.devnet]
+chromatika_policy = "ChrPo1icyVau1tProgramID11111111111111111111"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "devnet"
+wallet = "~/.config/solana/id.json"
+
+[scripts]
+test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
+
+# NOTE: program id above is a placeholder. After `anchor build`, copy the actual
+# program id from `target/deploy/chromatika_policy-keypair.json`'s pubkey into:
+#   1. this file (programs.devnet entry)
+#   2. lib.rs declare_id!(...)
+#   3. wallet-extension chrome extension Settings -> Security -> "On-chain spend caps + panic"
+#      (parallel slot for Solana base, separate from the Sui package id)

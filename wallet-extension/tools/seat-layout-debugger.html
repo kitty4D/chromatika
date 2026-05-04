@@ -1,0 +1,534 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>rocket seat layout debugger</title>
+<style>
+  :root {
+    --bg: #0c0e14;
+    --panel: #14161e;
+    --border: rgba(255,255,255,0.1);
+    --text: rgba(234,240,255,0.88);
+    --muted: rgba(234,240,255,0.5);
+    --accent: rgba(132,94,247,0.9);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 24px 16px;
+    gap: 20px;
+  }
+  h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+  .preview-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px;
+    width: 100%;
+    max-width: 520px;
+  }
+  .preview-wrap svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.3);
+  }
+  .controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px 20px;
+    width: 100%;
+    max-width: 520px;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 16px 20px;
+  }
+  .ctrl-group {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+  }
+  .ctrl-group label {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    font-family: ui-monospace, monospace;
+    display: flex;
+    justify-content: space-between;
+  }
+  .ctrl-group label span { color: var(--accent); }
+  input[type=range] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 5px;
+    border-radius: 3px;
+    background: rgba(255,255,255,0.08);
+    outline: none;
+  }
+  input[type=range]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--accent);
+    cursor: grab;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+  select {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    font-family: ui-monospace, monospace;
+    font-size: 12px;
+    padding: 5px 8px;
+    outline: none;
+  }
+  .output-code {
+    grid-column: 1 / -1;
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 12px 14px;
+    font-family: ui-monospace, monospace;
+    font-size: 11px;
+    line-height: 1.6;
+    color: rgba(180,255,200,0.9);
+    white-space: pre-wrap;
+    user-select: all;
+    cursor: text;
+  }
+  .section-label {
+    grid-column: 1 / -1;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    border-top: 1px solid var(--border);
+    padding-top: 8px;
+    margin-top: 2px;
+  }
+  .section-label:first-child { border-top: none; margin-top: 0; }
+  .grid-line { stroke: rgba(255,255,255,0.06); stroke-width: 0.5; }
+  .crosshair { stroke: rgba(248,113,113,0.4); stroke-width: 0.5; stroke-dasharray: 3,3; }
+</style>
+</head>
+<body>
+<h1>rocket seat layout debugger</h1>
+
+<div class="preview-wrap">
+  <svg id="stage" viewBox="0 0 320 140" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <symbol id="head-astronaut" viewBox="0 0 32 32">
+        <ellipse cx="16" cy="14" rx="10" ry="9" fill="currentColor" opacity="0.92" />
+        <rect x="6" y="18" width="20" height="10" rx="3" fill="currentColor" opacity="0.75" />
+        <ellipse cx="16" cy="13" rx="6" ry="5" fill="rgba(20,24,40,0.35)" />
+      </symbol>
+      <symbol id="head-cat" viewBox="0 0 32 32">
+        <path d="M8 20 L10 8 L14 12 L18 12 L22 8 L24 20 Q16 26 8 20Z" fill="currentColor" opacity="0.9" />
+        <polygon points="10,8 8,4 12,7" fill="currentColor" />
+        <polygon points="22,8 24,4 20,7" fill="currentColor" />
+      </symbol>
+      <symbol id="head-doge" viewBox="0 0 32 32">
+        <ellipse cx="16" cy="16" rx="11" ry="9" fill="currentColor" opacity="0.88" />
+        <ellipse cx="11" cy="14" rx="2" ry="2.5" fill="rgba(20,24,40,0.5)" />
+        <ellipse cx="21" cy="14" rx="2" ry="2.5" fill="rgba(20,24,40,0.5)" />
+      </symbol>
+      <symbol id="head-robot" viewBox="0 0 32 32">
+        <rect x="8" y="10" width="16" height="14" rx="3" fill="currentColor" opacity="0.85" />
+        <rect x="11" y="14" width="4" height="4" fill="rgba(120,240,255,0.9)" />
+        <rect x="17" y="14" width="4" height="4" fill="rgba(120,240,255,0.9)" />
+        <rect x="13" y="4" width="6" height="6" rx="1" fill="currentColor" opacity="0.7" />
+      </symbol>
+      <symbol id="head-pilot-adeniyi" viewBox="0 0 64 64">
+        <image href="../public/pilots/adeniyi-b.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+      </symbol>
+      <symbol id="head-pilot-david" viewBox="0 0 64 64">
+        <image href="../public/pilots/david-b.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+      </symbol>
+      <symbol id="head-pilot-toly" viewBox="0 0 64 64">
+        <image href="../public/pilots/toly-b.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+      </symbol>
+    </defs>
+
+    <!-- grid -->
+    <g id="gridLayer" opacity="0.5"></g>
+
+    <!-- layer 1: cockpit dashboard (furthest - background) -->
+    <image id="cockpitImg" href="../public/pilots/blockpit.png"
+      x="0" y="0" width="320" height="140" preserveAspectRatio="xMidYMid meet" />
+
+    <!-- layer 2: heads (pilots in front of dashboard) -->
+    <g id="crosshairs"></g>
+    <g id="pilotOuter">
+      <g id="pilotInner">
+        <use id="pilotUse" href="#head-pilot-adeniyi" width="32" height="32" fill="rgba(230,240,255,0.92)" />
+      </g>
+    </g>
+    <g id="passengerOuter">
+      <g id="passengerInner">
+        <use id="passengerUse" href="#head-cat" width="32" height="32" fill="rgba(230,240,255,0.92)" />
+      </g>
+    </g>
+
+    <!-- layer 3: fuel gauge (on dashboard, between heads and seats) -->
+    <g id="gaugeGroup">
+      <text x="64" y="-4" text-anchor="middle" fill="rgba(234,240,255,0.45)" font-size="9" font-weight="600">fuel</text>
+      <g transform="translate(0, 10)">
+        <text x="0" y="14" fill="rgba(234,240,255,0.55)" font-size="14">&#9981;</text>
+        <rect x="22" y="4" width="108" height="14" rx="4" fill="rgba(0,0,0,0.35)" stroke="rgba(255,255,255,0.12)" />
+        <rect id="gaugeFill" x="24" y="6" width="72" height="10" rx="3" fill="rgba(52,211,153,0.88)" />
+      </g>
+    </g>
+
+    <!-- layer 4: seats (closest to viewer - seat backs) -->
+    <image id="seatLeft" href="../public/pilots/seat.png"
+      x="10" y="20" width="120" height="120" preserveAspectRatio="xMidYMid meet" opacity="0.92" />
+    <image id="seatRight" href="../public/pilots/seat.png"
+      x="190" y="20" width="120" height="120" preserveAspectRatio="xMidYMid meet" opacity="0.92" />
+
+    <!-- layer 5: balance pills (floating on seat backs, topmost) -->
+    <g id="pillLeft">
+      <rect x="0" y="0" width="78" height="22" rx="11" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.14)" />
+      <text x="39" y="15" text-anchor="middle" fill="rgba(240,244,255,0.88)" font-size="10" font-weight="600">0.42 SUI</text>
+    </g>
+    <g id="pillRight">
+      <rect x="0" y="0" width="78" height="22" rx="11" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.14)" />
+      <text x="39" y="15" text-anchor="middle" fill="rgba(240,244,255,0.88)" font-size="10" font-weight="600">1.05 IKA</text>
+    </g>
+  </svg>
+</div>
+
+<div class="controls">
+  <div class="section-label" style="border-top:none;margin-top:0">left seat (seat.png)</div>
+
+  <div class="ctrl-group">
+    <label>x <span id="slXVal">10</span></label>
+    <input type="range" id="slX" min="-20" max="160" value="10">
+  </div>
+  <div class="ctrl-group">
+    <label>y <span id="slYVal">20</span></label>
+    <input type="range" id="slY" min="-20" max="120" value="20">
+  </div>
+  <div class="ctrl-group">
+    <label>w <span id="slWVal">120</span></label>
+    <input type="range" id="slW" min="40" max="200" value="120">
+  </div>
+  <div class="ctrl-group">
+    <label>h <span id="slHVal">120</span></label>
+    <input type="range" id="slH" min="40" max="200" value="120">
+  </div>
+
+  <div class="section-label">right seat (seat.png)</div>
+
+  <div class="ctrl-group">
+    <label>x <span id="srXVal">190</span></label>
+    <input type="range" id="srX" min="120" max="320" value="190">
+  </div>
+  <div class="ctrl-group">
+    <label>y <span id="srYVal">20</span></label>
+    <input type="range" id="srY" min="-20" max="120" value="20">
+  </div>
+  <div class="ctrl-group">
+    <label>w <span id="srWVal">120</span></label>
+    <input type="range" id="srW" min="40" max="200" value="120">
+  </div>
+  <div class="ctrl-group">
+    <label>h <span id="srHVal">120</span></label>
+    <input type="range" id="srH" min="40" max="200" value="120">
+  </div>
+
+  <div class="section-label">pilot head (left)</div>
+
+  <div class="ctrl-group">
+    <label>head <span id="pilotHeadVal">pilot-adeniyi</span></label>
+    <select id="pilotHead">
+      <option value="head-pilot-adeniyi">pilot-adeniyi</option>
+      <option value="head-pilot-david">pilot-david</option>
+      <option value="head-pilot-toly">pilot-toly</option>
+      <option value="head-astronaut">astronaut</option>
+      <option value="head-cat">cat</option>
+      <option value="head-doge">doge</option>
+      <option value="head-robot">robot</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>size <span id="pilotSzVal">32</span></label>
+    <input type="range" id="pilotSz" min="16" max="96" value="32">
+  </div>
+  <div class="ctrl-group">
+    <label>x <span id="pilotXVal">54</span></label>
+    <input type="range" id="pilotX" min="0" max="160" value="54">
+  </div>
+  <div class="ctrl-group">
+    <label>y <span id="pilotYVal">20</span></label>
+    <input type="range" id="pilotY" min="-20" max="120" value="20">
+  </div>
+  <div class="ctrl-group">
+    <label>scale <span id="pilotScVal">0.90</span></label>
+    <input type="range" id="pilotSc" min="20" max="250" value="90">
+  </div>
+
+  <div class="section-label">passenger head (right)</div>
+
+  <div class="ctrl-group">
+    <label>head <span id="passHeadVal">cat</span></label>
+    <select id="passHead">
+      <option value="head-cat">cat</option>
+      <option value="head-astronaut">astronaut</option>
+      <option value="head-doge">doge</option>
+      <option value="head-robot">robot</option>
+      <option value="head-pilot-adeniyi">pilot-adeniyi</option>
+      <option value="head-pilot-david">pilot-david</option>
+      <option value="head-pilot-toly">pilot-toly</option>
+    </select>
+  </div>
+  <div class="ctrl-group">
+    <label>size <span id="passSzVal">32</span></label>
+    <input type="range" id="passSz" min="16" max="96" value="32">
+  </div>
+  <div class="ctrl-group">
+    <label>x <span id="passXVal">238</span></label>
+    <input type="range" id="passX" min="120" max="320" value="238">
+  </div>
+  <div class="ctrl-group">
+    <label>y <span id="passYVal">20</span></label>
+    <input type="range" id="passY" min="-20" max="120" value="20">
+  </div>
+  <div class="ctrl-group">
+    <label>scale <span id="passScVal">0.90</span></label>
+    <input type="range" id="passSc" min="20" max="250" value="90">
+  </div>
+
+  <div class="section-label">pills + gauge</div>
+
+  <div class="ctrl-group">
+    <label>left pill x <span id="lpXVal">18</span></label>
+    <input type="range" id="lpX" min="0" max="160" value="18">
+  </div>
+  <div class="ctrl-group">
+    <label>left pill y <span id="lpYVal">80</span></label>
+    <input type="range" id="lpY" min="0" max="130" value="80">
+  </div>
+  <div class="ctrl-group">
+    <label>right pill x <span id="rpXVal">224</span></label>
+    <input type="range" id="rpX" min="120" max="320" value="224">
+  </div>
+  <div class="ctrl-group">
+    <label>right pill y <span id="rpYVal">80</span></label>
+    <input type="range" id="rpY" min="0" max="130" value="80">
+  </div>
+  <div class="ctrl-group">
+    <label>gauge x <span id="gXVal">96</span></label>
+    <input type="range" id="gX" min="0" max="220" value="96">
+  </div>
+  <div class="ctrl-group">
+    <label>gauge y <span id="gYVal">42</span></label>
+    <input type="range" id="gY" min="0" max="130" value="42">
+  </div>
+
+  <div class="section-label">visuals</div>
+
+  <div class="ctrl-group">
+    <label>seat opacity <span id="seatOpVal">0.92</span></label>
+    <input type="range" id="seatOp" min="0" max="100" value="92">
+  </div>
+  <div class="ctrl-group">
+    <label>cockpit opacity <span id="cockOpVal">1.00</span></label>
+    <input type="range" id="cockOp" min="0" max="100" value="100">
+  </div>
+  <div class="ctrl-group">
+    <label>gauge fill % <span id="gaugePctVal">70</span></label>
+    <input type="range" id="gaugePct" min="0" max="100" value="70">
+  </div>
+  <div class="ctrl-group">
+    <label>show grid <span id="gridVal">on</span></label>
+    <input type="range" id="gridToggle" min="0" max="1" value="1">
+  </div>
+  <div class="ctrl-group">
+    <label>crosshairs <span id="crossVal">on</span></label>
+    <input type="range" id="crossToggle" min="0" max="1" value="1">
+  </div>
+
+  <div class="section-label">copy to RocketSeatGauge.tsx</div>
+  <pre class="output-code" id="codeOut"></pre>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+
+// build 20px grid
+const gridLayer = $('gridLayer');
+for (let x = 0; x <= 320; x += 20) {
+  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', x); l.setAttribute('y1', '0');
+  l.setAttribute('x2', x); l.setAttribute('y2', '140');
+  l.setAttribute('class', 'grid-line');
+  gridLayer.appendChild(l);
+}
+for (let y = 0; y <= 140; y += 20) {
+  const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  l.setAttribute('x1', '0'); l.setAttribute('y1', y);
+  l.setAttribute('x2', '320'); l.setAttribute('y2', y);
+  l.setAttribute('class', 'grid-line');
+  gridLayer.appendChild(l);
+}
+
+function update() {
+  // seats
+  const slx = +$('slX').value, sly = +$('slY').value;
+  const slw = +$('slW').value, slh = +$('slH').value;
+  const srx = +$('srX').value, sry = +$('srY').value;
+  const srw = +$('srW').value, srh = +$('srH').value;
+
+  // heads
+  const pX = +$('pilotX').value, pY = +$('pilotY').value;
+  const pSc = +$('pilotSc').value / 100;
+  const pSz = +$('pilotSz').value;
+  const paX = +$('passX').value, paY = +$('passY').value;
+  const paSc = +$('passSc').value / 100;
+  const paSz = +$('passSz').value;
+
+  // pills + gauge
+  const lpx = +$('lpX').value, lpy = +$('lpY').value;
+  const rpx = +$('rpX').value, rpy = +$('rpY').value;
+  const gx = +$('gX').value, gy = +$('gY').value;
+
+  // visuals
+  const seatOp = +$('seatOp').value / 100;
+  const cockOp = +$('cockOp').value / 100;
+  const gaugePct = +$('gaugePct').value;
+  const showGrid = +$('gridToggle').value;
+  const showCross = +$('crossToggle').value;
+
+  // apply seats
+  $('seatLeft').setAttribute('x', slx);
+  $('seatLeft').setAttribute('y', sly);
+  $('seatLeft').setAttribute('width', slw);
+  $('seatLeft').setAttribute('height', slh);
+  $('seatLeft').setAttribute('opacity', seatOp);
+  $('seatRight').setAttribute('x', srx);
+  $('seatRight').setAttribute('y', sry);
+  $('seatRight').setAttribute('width', srw);
+  $('seatRight').setAttribute('height', srh);
+  $('seatRight').setAttribute('opacity', seatOp);
+
+  // apply heads
+  $('pilotUse').setAttribute('href', '#' + $('pilotHead').value);
+  $('pilotUse').setAttribute('width', pSz);
+  $('pilotUse').setAttribute('height', pSz);
+  $('passengerUse').setAttribute('href', '#' + $('passHead').value);
+  $('passengerUse').setAttribute('width', paSz);
+  $('passengerUse').setAttribute('height', paSz);
+  $('pilotOuter').setAttribute('transform', `translate(${pX}, ${pY}) scale(${pSc})`);
+  $('passengerOuter').setAttribute('transform', `translate(${paX}, ${paY}) scale(${paSc})`);
+
+  // pills + gauge
+  $('pillLeft').setAttribute('transform', `translate(${lpx}, ${lpy})`);
+  $('pillRight').setAttribute('transform', `translate(${rpx}, ${rpy})`);
+  $('gaugeGroup').setAttribute('transform', `translate(${gx}, ${gy})`);
+  $('gaugeFill').setAttribute('width', Math.max(4, (104 * gaugePct) / 100));
+
+  // cockpit
+  $('cockpitImg').setAttribute('opacity', cockOp);
+
+  // grid + crosshairs
+  gridLayer.style.display = showGrid ? '' : 'none';
+  const ch = $('crosshairs');
+  ch.innerHTML = '';
+  if (showCross) {
+    [[pX, pY, pSz * pSc], [paX, paY, paSz * paSc]].forEach(([cx, cy, sz]) => {
+      const mx = cx + sz / 2, my = cy + sz / 2;
+      const h = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      h.setAttribute('x1', mx - 14); h.setAttribute('y1', my);
+      h.setAttribute('x2', mx + 14); h.setAttribute('y2', my);
+      h.setAttribute('class', 'crosshair');
+      ch.appendChild(h);
+      const v = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      v.setAttribute('x1', mx); v.setAttribute('y1', my - 14);
+      v.setAttribute('x2', mx); v.setAttribute('y2', my + 14);
+      v.setAttribute('class', 'crosshair');
+      ch.appendChild(v);
+    });
+  }
+
+  // value labels
+  $('slXVal').textContent = slx; $('slYVal').textContent = sly;
+  $('slWVal').textContent = slw; $('slHVal').textContent = slh;
+  $('srXVal').textContent = srx; $('srYVal').textContent = sry;
+  $('srWVal').textContent = srw; $('srHVal').textContent = srh;
+  $('pilotHeadVal').textContent = $('pilotHead').value.replace('head-', '');
+  $('pilotXVal').textContent = pX; $('pilotYVal').textContent = pY;
+  $('pilotScVal').textContent = pSc.toFixed(2); $('pilotSzVal').textContent = pSz;
+  $('passHeadVal').textContent = $('passHead').value.replace('head-', '');
+  $('passXVal').textContent = paX; $('passYVal').textContent = paY;
+  $('passScVal').textContent = paSc.toFixed(2); $('passSzVal').textContent = paSz;
+  $('lpXVal').textContent = lpx; $('lpYVal').textContent = lpy;
+  $('rpXVal').textContent = rpx; $('rpYVal').textContent = rpy;
+  $('gXVal').textContent = gx; $('gYVal').textContent = gy;
+  $('seatOpVal').textContent = seatOp.toFixed(2);
+  $('cockOpVal').textContent = cockOp.toFixed(2);
+  $('gaugePctVal').textContent = gaugePct;
+  $('gridVal').textContent = showGrid ? 'on' : 'off';
+  $('crossVal').textContent = showCross ? 'on' : 'off';
+
+  // code output
+  $('codeOut').textContent =
+`{/* layer 1: seats */}
+<image href="/pilots/seat.png"
+  x="${slx}" y="${sly}" width="${slw}" height="${slh}"
+  preserveAspectRatio="xMidYMid meet"
+  className="cv-seatImage" />
+<image href="/pilots/seat.png"
+  x="${srx}" y="${sry}" width="${srw}" height="${srh}"
+  preserveAspectRatio="xMidYMid meet"
+  className="cv-seatImage" />
+
+{/* layer 2: heads */}
+<g transform="translate(${pX}, ${pY}) scale(${pSc})">
+  <use ... width="${pSz}" height="${pSz}" />
+</g>
+<g transform="translate(${paX}, ${paY}) scale(${paSc})">
+  <use ... width="${paSz}" height="${paSz}" />
+</g>
+
+{/* layer 3: pills */}
+translate(${lpx}, ${lpy})  {/* left */}
+translate(${rpx}, ${rpy})  {/* right */}
+
+{/* layer 4: cockpit */}
+<image href="/pilots/blockpit.png"
+  x="0" y="0" width="320" height="140"
+  className="cv-cockpitImage" />
+
+{/* layer 5: gauge */}
+translate(${gx}, ${gy})
+
+seat opacity: ${seatOp.toFixed(2)}
+cockpit opacity: ${cockOp.toFixed(2)}`;
+}
+
+document.querySelectorAll('input, select').forEach(el => {
+  el.addEventListener('input', update);
+});
+update();
+</script>
+</body>
+</html>

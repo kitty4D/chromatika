@@ -1,0 +1,2242 @@
+@import './theme.css';
+
+/* --- extension shell: no document-level scrollbars; scroll only inside designated tracks --- */
+.ch-ext,
+.ch-ext body {
+  box-sizing: border-box;
+}
+
+/* popup: fixed viewport so chrome doesn’t grow a page scrollbar; wider than default shrink-wrap */
+.ch-ext--popup,
+.ch-ext--popup body {
+  margin: 0;
+  padding: 0;
+  width: 420px;
+  min-width: 420px;
+  max-width: 420px;
+  height: 600px;
+  max-height: 600px;
+  overflow: hidden;
+}
+
+.ch-ext--popup #root {
+  display: block;
+  width: 100%;
+  height: 100%;
+  max-height: 100%;
+  overflow: hidden;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* approval popups: match chrome window height instead of fixed 600px document */
+.ch-ext--popup.ch-ext--approval-popup,
+.ch-ext--popup.ch-ext--approval-popup body {
+  height: 100%;
+  min-height: 200px;
+  max-height: none;
+  overflow: hidden;
+}
+
+.ch-ext--popup.ch-ext--approval-popup #root {
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ch-ext--popup.ch-ext--approval-popup .wc-root.ckm-shellWithHeader,
+.ch-ext--popup.ch-ext--approval-popup .sp-root.sp-popupDocumentShell {
+  height: 100%;
+  max-height: none;
+  min-height: 0;
+}
+
+.ch-ext--popup.ch-ext--approval-popup .wc-popupBody,
+.ch-ext--popup.ch-ext--approval-popup .sp-bodyScroll {
+  justify-content: flex-start;
+}
+
+.ch-ext--popup.ch-ext--approval-popup .wc-popupScroll,
+.ch-ext--popup.ch-ext--approval-popup .sp-contentTrack {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* side panel: fill host; no horizontal or outer vertical scroll */
+.ch-ext--sidepanel,
+.ch-ext--sidepanel body {
+  margin: 0;
+  min-width: 280px;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.ch-ext--sidepanel #root {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  min-height: 0;
+  box-sizing: border-box;
+}
+
+/* themed scrollbar on inner scrollers (padding lives on outer shell so bar isn’t flush to edge) */
+.ch-scrollbar {
+  scrollbar-width: none;
+}
+
+.ch-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* subtle film grain on wallet surfaces (popup + side panel) */
+.ch-ext--popup .wc-root,
+.ch-ext--popup .sp-root,
+.ch-ext--sidepanel .sp-root {
+  position: relative;
+  isolation: isolate;
+}
+
+.ch-ext--popup .wc-root::before,
+.ch-ext--popup .sp-root::before,
+.ch-ext--sidepanel .sp-root::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.038;
+  z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+.ch-ext--popup .wc-root > *,
+.ch-ext--popup .sp-root > *,
+.ch-ext--sidepanel .sp-root > * {
+  position: relative;
+  z-index: 1;
+}
+
+/* top chrome must stack above main scroll so vault picker / dWallet menus aren’t covered by .sp-content */
+.ch-ext--popup .sp-root > .sp-titleBarMeasureWrap,
+.ch-ext--sidepanel .sp-root > .sp-titleBarMeasureWrap {
+  z-index: 30;
+}
+
+.ch-ext--popup .sp-root > .cv-contextHeader,
+.ch-ext--sidepanel .sp-root > .cv-contextHeader {
+  z-index: 20;
+}
+
+.ch-ext--popup .sp-root > .cv-dwalletBar,
+.ch-ext--sidepanel .sp-root > .cv-dwalletBar {
+  z-index: 19;
+}
+
+.wc-root {
+  min-height: 100vh;
+  padding: 12px;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  background: var(--theme-wc-root-bg);
+  color: var(--theme-page-text);
+  font-family: var(--theme-font-body);
+}
+
+.ch-ext--popup .wc-root {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* main wallet popup: same shell as side panel (.sp-root), fixed viewport from html/body */
+.ch-ext--popup .sp-root {
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+/* popup: setup / unlock / approval / hw — title + scroll column under fixed viewport */
+.ch-ext--popup .sp-root.sp-popupDocumentShell {
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+}
+
+/* column shell (popup + header): must stretch cross-axis or width:100% on .wc-card resolves to 0 in shrink-wrapped popups */
+.wc-root.ckm-shellWithHeader {
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.ch-ext--popup .wc-root.ckm-shellWithHeader {
+  min-width: 0;
+  max-width: 100%;
+}
+
+/* popup: header fixed; body fills; 94% column with equal inset left/right of scrollbar */
+.wc-popupBody {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.wc-popupTrackShell {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: var(--ch-content-pad) 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  position: relative;
+}
+
+/* Scroll indicators (fade in/out gradients) */
+.wc-popupTrackShell::before,
+.wc-popupTrackShell::after,
+.sp-contentTrackShell::before,
+.sp-contentTrackShell::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 24px;
+  pointer-events: none;
+  z-index: 10;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.wc-popupTrackShell::before,
+.sp-contentTrackShell::before {
+  top: 0;
+  background: linear-gradient(to bottom, var(--theme-chrome-popup-bg, var(--theme-chrome-sidepanel-bg)), transparent);
+}
+
+.wc-popupTrackShell::after,
+.sp-contentTrackShell::after {
+  bottom: 0;
+  background: linear-gradient(to top, var(--theme-chrome-popup-bg, var(--theme-chrome-sidepanel-bg)), transparent);
+}
+
+.wc-popupScroll {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  padding-inline: 0;
+}
+
+.ch-ext--popup .wc-popupScroll {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+/* fill scroll track width; min-width:0 so flex min-content doesn’t exceed track + get clipped */
+.ch-ext--popup .wc-popupScroll > * {
+  align-self: stretch;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* popup wallet: cockpit + vault strip spans full extension width above padded .wc-card */
+.ch-ext--popup .wc-popupVaultBleed {
+  align-self: stretch;
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+}
+
+.ch-ext--popup .ckm-shellWithHeader {
+  height: 100%;
+  max-height: 100%;
+  min-height: 0;
+}
+
+/* popup: column under title bar — scroll area + bottom nav (last child of .ckm-shellWithHeader must flex) */
+.wc-popupMainColumn {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+.wc-popupMainColumn > .cv-contextHeader {
+  flex-shrink: 0;
+}
+
+.wc-popupMainColumn > .cv-dwalletBar {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.sp-root > .cv-contextHeader {
+  flex-shrink: 0;
+}
+
+.sp-root > .cv-dwalletBar {
+  flex-shrink: 0;
+  width: 100%;
+}
+
+.wc-card {
+  width: 100%;
+  max-width: 420px;
+  border-radius: var(--theme-radius-panel);
+  box-sizing: border-box;
+  border: 1px solid var(--theme-chain-border-soft);
+  box-shadow: var(--theme-elev-card, 0 16px 48px rgba(0, 0, 0, 0.4));
+}
+
+/* approval / hw-sign popups: no bottom nav — content sits on window chrome, not a nested card */
+.wc-approvalSheet {
+  width: 100%;
+  max-width: 420px;
+  box-sizing: border-box;
+  margin: 0;
+  padding: var(--wc-popup-card-pad-y) var(--wc-popup-card-pad-x);
+  font-family: var(--theme-font-body);
+  color: var(--theme-page-text);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+
+.wc-muted {
+  color: var(--theme-page-muted);
+}
+
+.wc-titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.wc-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.wc-title img {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--theme-radius-sm);
+}
+
+.wc-btn {
+  appearance: none;
+  border: 1px solid var(--theme-chain-border-soft);
+  background: var(--theme-wc-btn-bg);
+  color: var(--theme-page-text);
+  border-radius: var(--theme-radius-control);
+  padding: 10px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.22s ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wc-btn {
+    transition:
+      background 0.18s ease,
+      border-color 0.18s ease,
+      box-shadow 0.22s ease;
+  }
+
+  .wc-btn:hover:not(:disabled) {
+    transform: none;
+  }
+}
+
+.wc-btn:hover:not(:disabled) {
+  background: var(--theme-wc-btn-hover-bg);
+  border-color: var(--theme-wc-btn-hover-border);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+}
+
+.wc-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.wc-btnPrimary {
+  background: var(--theme-wc-btn-primary-bg);
+  border-color: var(--theme-wc-btn-primary-border);
+  color: #fff;
+}
+
+.wc-input,
+.wc-card input,
+.wc-card textarea,
+.wc-card select,
+.wc-approvalSheet input,
+.wc-approvalSheet textarea,
+.wc-approvalSheet select {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border-radius: var(--theme-radius-control);
+  border: 1px solid var(--theme-chain-border-soft);
+  background: var(--theme-wc-input-bg);
+  color: var(--theme-page-text);
+  outline: none;
+}
+
+.wc-input:focus-visible,
+.wc-card input:focus-visible,
+.wc-card textarea:focus-visible,
+.wc-card select:focus-visible,
+.wc-approvalSheet input:focus-visible,
+.wc-approvalSheet textarea:focus-visible,
+.wc-approvalSheet select:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--theme-focus-ring);
+}
+
+/* popup: any stray text fields (not checkbox/radio) — same border-box + shrink contract as .wc-card */
+.ch-ext--popup input:not([type='checkbox']):not([type='radio']):not([type='range']),
+.ch-ext--popup textarea,
+.ch-ext--popup select {
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.wc-input::placeholder {
+  color: var(--theme-page-muted);
+}
+
+.wc-section {
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: var(--theme-radius-surface);
+  border: 1px solid var(--theme-chain-border);
+  background: var(--theme-wc-section-bg);
+  box-shadow: var(--theme-elev-card, 0 16px 48px rgba(0, 0, 0, 0.4));
+}
+
+.wc-hero {
+  padding: 14px;
+  border-radius: var(--theme-radius-surface);
+  border: 1px solid var(--theme-chain-border);
+  background: var(--theme-wc-hero-bg);
+  box-shadow: var(--theme-elev-card, 0 16px 48px rgba(0, 0, 0, 0.4));
+}
+
+.wc-balanceTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wc-balanceTotal {
+  font-size: 30px;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.wc-subgrid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.wc-pill {
+  padding: 6px 10px;
+  border-radius: var(--theme-radius-pill);
+  border: 1px solid var(--theme-chain-border-soft);
+  background: var(--theme-wc-pill-bg);
+  font-size: 11px;
+  color: var(--theme-page-text);
+  opacity: 0.92;
+}
+
+.wc-actionGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.wc-actionBtn {
+  padding: 10px 10px;
+  border-radius: var(--theme-radius-surface);
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.1;
+  border: 1px solid var(--theme-chain-border-soft);
+  background: var(--theme-wc-action-btn-bg);
+}
+
+.wc-actionBtn svg {
+  width: 18px;
+  height: 18px;
+  margin-bottom: 6px;
+}
+
+.wc-assetRow {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 10px;
+  padding: 10px 6px;
+  border-top: 1px solid var(--theme-wc-asset-row-border);
+}
+
+.wc-assetRow:first-child {
+  border-top: none;
+}
+
+.wc-assetIcon {
+  width: 22px;
+  height: 22px;
+  border-radius: var(--theme-radius-sm);
+  background: rgba(255, 255, 255, 0.10);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+}
+
+.wc-details summary {
+  cursor: pointer;
+  user-select: none;
+  font-size: 12px;
+}
+
+.wc-details > div,
+.wc-details p {
+  color: var(--theme-page-muted);
+}
+
+/* ============================================================
+   SIDE PANEL — sp-* classes
+   ============================================================ */
+
+:root {
+  --sp-bg: #0b1220;
+  --sp-surface: rgba(255,255,255,0.05);
+  --sp-border: rgba(255,255,255,0.10);
+  --sp-text: rgba(234,240,255,0.95);
+  --sp-muted: rgba(234,240,255,0.60);
+  --sp-primary: #7c5cfc;
+  --sp-ok: #10b981;
+  --sp-warn: #f59e0b;
+  --sp-danger: #ef4444;
+  --sp-header-h: 48px;
+  --sp-nav-h: 56px;
+  /* vertical inset for scroll shells; horizontal gutter lives on .sp-page / inner cards */
+  --ch-content-pad: 12px;
+  /* legacy wc-card / approval sheet horizontal rhythm */
+  --wc-popup-card-pad-x: 16px;
+  --wc-popup-card-pad-y: 16px;
+  /* horizontal inset inside the scroller on both sides (stays even when no scrollbar; also clears scrollbar) */
+  --ch-scrollbar-content-gap: 12px;
+}
+
+.sp-root {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  max-height: 100%;
+  overflow: hidden;
+  overflow-x: hidden;
+  background: var(--theme-sp-root-bg);
+  color: var(--sp-text);
+  font-family: var(--theme-font-body);
+  font-size: 14px;
+}
+
+/* side panel: never use 100vh on .sp-root — chrome’s side panel host lies about vh; chain height:100% from html/body/#root instead */
+
+/* middle region: header + nav pin; only inner track scrolls */
+.sp-bodyScroll {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+.sp-contentTrackShell {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  overflow: hidden;
+  box-sizing: border-box;
+  padding: var(--ch-content-pad) 0;
+  position: relative;
+}
+
+.sp-contentTrackShell:has(.sp-page--walletHome) {
+  padding-bottom: 2px;
+}
+
+.sp-contentTrack {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding-inline: 0;
+}
+
+.sp-contentTrack--center {
+  align-items: center;
+  justify-content: center;
+}
+
+.sp-contentTrack > * {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+}
+
+/* header */
+.sp-header {
+  height: var(--sp-header-h);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--sp-border);
+  flex-shrink: 0;
+}
+.sp-headerBrand { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.sp-headerTitle {
+  font-weight: 800;
+  font-size: 15px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.sp-networkBadge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 99px;
+  background: var(--theme-network-badge-bg);
+  border: 1px solid var(--theme-network-badge-border);
+  color: var(--theme-network-badge-text);
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-headerVaultRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.sp-vaultPicker {
+  position: relative;
+  z-index: 5;
+}
+
+.sp-vaultPickerBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  width: 100%;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--theme-chain-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--theme-page-text);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sp-vaultPickerBtn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.sp-vaultPickerLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-vaultPickerChev {
+  flex-shrink: 0;
+  font-size: 9px;
+  opacity: 0.7;
+}
+
+.sp-vaultPickerMenu {
+  position: absolute;
+  /* align to trigger’s left edge so the panel doesn’t extend past .sp-root (overflow hidden) */
+  left: 0;
+  right: auto;
+  top: calc(100% + 4px);
+  min-width: 200px;
+  max-width: 280px;
+  padding: 4px;
+  border-radius: 10px;
+  border: 1px solid var(--theme-chain-border);
+  /* opaque surface — --theme-setup-card-bg-side is ~0.06 alpha in dark themes */
+  background: var(--sp-bg);
+  color: var(--theme-page-text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.sp-vaultPickerItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.sp-vaultPickerItemLabel {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-vaultPickerItem:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.sp-vaultPickerItemActive {
+  font-weight: 700;
+}
+
+.sp-vaultPickerMeta {
+  flex-shrink: 0;
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.7;
+  text-transform: lowercase;
+}
+
+.sp-vaultPickerMeta--count {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.88;
+  text-transform: none;
+}
+
+.sp-vaultPickerMetaIcon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.sp-vaultAvatar {
+  flex-shrink: 0;
+  border-radius: 999px;
+  object-fit: cover;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+}
+
+.sp-vaultAvatarWrap {
+  position: relative;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+.sp-vaultAvatarChainBg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  object-position: center;
+  opacity: 0.42;
+  transform: scale(1.12);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.sp-vaultAvatarWrap .sp-vaultAvatar {
+  position: relative;
+  z-index: 1;
+}
+
+.sp-vaultAvatar--img {
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.sp-vaultAvatar--fallback {
+  background: color-mix(in srgb, var(--sp-bg) 58%, rgba(255, 255, 255, 0.12));
+  color: var(--theme-page-text);
+  font-weight: 700;
+  line-height: 1;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+/* chain-tinted rings: light blue for sui, neon purple for solana.
+   applied to the outer wrap (chain-bg layer) and to the inner avatar so the
+   tint shows whether or not we have a chain logo backplate. */
+.sp-vaultAvatarWrap.sp-vaultAvatar--ring-sui,
+.sp-vaultAvatar.sp-vaultAvatar--ring-sui {
+  border: 2px solid #7dd3fc;
+  box-shadow: 0 0 6px rgba(125, 211, 252, 0.55);
+}
+
+.sp-vaultAvatarWrap.sp-vaultAvatar--ring-solana,
+.sp-vaultAvatar.sp-vaultAvatar--ring-solana {
+  border: 2px solid #c084fc;
+  box-shadow: 0 0 8px rgba(192, 132, 252, 0.7);
+}
+
+/* when wrap has the ring, inner avatar should not double-ring */
+.sp-vaultAvatarWrap.sp-vaultAvatar--ring-sui .sp-vaultAvatar,
+.sp-vaultAvatarWrap.sp-vaultAvatar--ring-solana .sp-vaultAvatar {
+  border: none;
+  box-shadow: none;
+}
+
+.sp-vaultTag {
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.85;
+  margin-top: 4px;
+  letter-spacing: 0.02em;
+}
+
+/* main tab column: scroll inside .sp-contentTrack within padded .sp-contentTrackShell */
+.sp-content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: hidden;
+  overflow-x: hidden;
+}
+
+.sp-page {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  box-sizing: border-box;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.sp-contentTrack .sp-page {
+  width: 100%;
+  padding: 12px var(--ch-content-pad) 14px;
+  box-sizing: border-box;
+}
+
+/* wallet home: vault cockpit + card flush to panel edges; bento below stays inset */
+.sp-contentTrack .sp-page.sp-page--walletHome {
+  padding-inline: 0;
+  padding-top: 0;
+  padding-bottom: 24px;
+}
+
+/* dWallet tab: fill scroll height so assets slab background reaches the bottom nav */
+.sp-contentTrack:has(.sp-dwalletTabFill) > * {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-self: stretch;
+}
+
+.sp-contentTrack .sp-dwalletTabFill {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.sp-contentTrack .sp-page.sp-page--dwalletHome {
+  padding-inline: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+}
+
+.sp-contentTrack .sp-page.sp-page--walletHome .wallet-bento {
+  padding-inline: var(--ch-content-pad);
+  box-sizing: border-box;
+}
+
+/* near-black bases for wallet hero (match first gradient stop + bento slab) */
+html[data-ika-chain='sui'],
+html:not([data-ika-chain]) {
+  --wallet-home-bento-bg: #05030d;
+}
+
+html[data-ika-chain='solana'] {
+  --wallet-home-bento-bg: #0a0618;
+}
+
+/* main wallet tab: hero gradient on chrome column (vault strip sits on gradient; bento uses solid near-black) */
+html[data-ika-chain='sui'] .sp-content:has(.sp-page--walletHome),
+html:not([data-ika-chain]) .sp-content:has(.sp-page--walletHome) {
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    royalblue 40px,
+    rgb(47 0 189 / 40%) 100px,
+    midnightblue 100%
+  );
+}
+
+html[data-ika-chain='solana'] .sp-content:has(.sp-page--walletHome) {
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    #7c3aed 42px,
+    rgba(167 139 250 / 0.35) 88px,
+    rgba(74 222 128 / 0.14) 130px,
+    #1a0d2e 100%
+  );
+}
+
+/* dWallet tab: same hero gradient treatment as vault home */
+html[data-ika-chain='sui'] .sp-content:has(.sp-page--dwalletHome),
+html:not([data-ika-chain]) .sp-content:has(.sp-page--dwalletHome) {
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    royalblue 40px,
+    rgb(47 0 189 / 40%) 100px,
+    midnightblue 100%
+  );
+}
+
+html[data-ika-chain='solana'] .sp-content:has(.sp-page--dwalletHome) {
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    #7c3aed 42px,
+    rgba(167 139 250 / 0.35) 88px,
+    rgba(74 222 128 / 0.14) 130px,
+    #1a0d2e 100%
+  );
+}
+
+html[data-appearance='light'][data-ika-chain='sui'] .sp-content:has(.sp-page--dwalletHome),
+html[data-appearance='light']:not([data-ika-chain]) .sp-content:has(.sp-page--dwalletHome) {
+  --wallet-home-bento-bg: #f4f6fc;
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    #93c5fd 36px,
+    rgb(59 130 246 / 22%) 100px,
+    #e0e7ff 100%
+  );
+}
+
+html[data-appearance='light'][data-ika-chain='solana'] .sp-content:has(.sp-page--dwalletHome) {
+  --wallet-home-bento-bg: #f5f3ff;
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    #c4b5fd 40px,
+    rgba(167 139 250 / 0.28) 90px,
+    rgba(134 239 172 / 0.2) 120px,
+    #ede9fe 100%
+  );
+}
+
+.sp-contentTrack .sp-page.sp-page--walletHome .wallet-bento--two {
+  background: var(--wallet-home-bento-bg);
+  border-radius: 0;
+  padding-block: 4px 2px;
+  box-sizing: border-box;
+}
+
+/* light: soften hero + bento so it does not fight bright chrome */
+html[data-appearance='light'][data-ika-chain='sui'] .sp-content:has(.sp-page--walletHome),
+html[data-appearance='light']:not([data-ika-chain]) .sp-content:has(.sp-page--walletHome) {
+  --wallet-home-bento-bg: #f4f6fc;
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    #93c5fd 36px,
+    rgb(59 130 246 / 22%) 100px,
+    #e0e7ff 100%
+  );
+}
+
+html[data-appearance='light'][data-ika-chain='solana'] .sp-content:has(.sp-page--walletHome) {
+  --wallet-home-bento-bg: #f5f3ff;
+  background: linear-gradient(
+    to bottom,
+    var(--wallet-home-bento-bg) 0px,
+    #c4b5fd 40px,
+    rgba(167 139 250 / 0.28) 90px,
+    rgba(134 239 172 / 0.2) 120px,
+    #ede9fe 100%
+  );
+}
+
+.sp-pageTitle {
+  font-family: var(--theme-font-display);
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  letter-spacing: -0.3px;
+}
+
+/* solana: monospace for on-chain strings */
+html[data-ika-chain='solana'] .sp-address,
+html[data-ika-chain='solana'] .sp-addressSmall,
+html[data-ika-chain='solana'] .sp-txHash,
+html[data-ika-chain='solana'] .sp-activityDigest,
+html[data-ika-chain='solana'] .sp-swapQuoteVal,
+html[data-ika-chain='solana'] .sp-swapDigest,
+html[data-ika-chain='solana'] .sp-kioskId,
+html[data-ika-chain='solana'] .sp-kioskItemId,
+html[data-ika-chain='solana'] .cv-baseCard-addr,
+html[data-ika-chain='solana'] .cv-contextAddr,
+html[data-ika-chain='solana'] .cv-contextBaseAddr {
+  font-family: var(--theme-font-mono);
+}
+
+/* wallet home: responsive bento */
+.wallet-bento {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+  width: 100%;
+  min-width: 0;
+  container-type: inline-size;
+  container-name: walletbento;
+}
+
+.wallet-bento__span {
+  grid-column: 1 / -1;
+}
+
+@container walletbento (min-width: 340px) {
+  .wallet-bento--two {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .wallet-bento--two .wallet-bento__actions {
+    grid-column: 1 / -1;
+  }
+}
+
+.sp-titleBarMeasureWrap {
+  flex-shrink: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+/* bottom nav + optional shortcut drawer (matches measured title bar height) */
+.sp-bottomNavShell {
+  position: relative;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+  border-top: 1px solid var(--sp-border);
+}
+
+.sp-bottomNavReveal {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px 14px;
+  background: color-mix(in srgb, var(--sp-bg) 88%, transparent);
+  backdrop-filter: blur(12px) saturate(1.05);
+  -webkit-backdrop-filter: blur(12px) saturate(1.05);
+}
+
+.sp-bottomNavShell--gateOnly {
+  flex-shrink: 0;
+}
+
+.sp-bottomNavShell--drawerOpen .sp-bottomNav {
+  border-top-color: color-mix(in srgb, var(--sp-border) 55%, transparent);
+}
+
+.sp-bottomNavRevealToggle {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 20px;
+  margin: 0;
+  padding: 2px 0 3px;
+  border: none;
+  border-radius: 0;
+  background: color-mix(in srgb, var(--sp-bg) 90%, transparent);
+  color: var(--sp-muted);
+  cursor: pointer;
+  transition: color 0.15s ease, background 0.15s ease;
+}
+
+.sp-bottomNavRevealToggle:hover {
+  color: var(--sp-text);
+  background: color-mix(in srgb, var(--sp-bg) 94%, transparent);
+}
+
+.sp-bottomNavRevealInner {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+/* bottom nav */
+.sp-bottomNav {
+  position: relative;
+  height: var(--sp-nav-h);
+  display: flex;
+  border-top: 1px solid var(--sp-border);
+  flex-shrink: 0;
+  background: rgba(11, 18, 32, 0.9);
+  background: color-mix(in srgb, var(--sp-bg) 86%, transparent);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+}
+
+.sp-bottomNavShell .sp-bottomNav {
+  border-top: 1px solid color-mix(in srgb, var(--sp-border) 75%, transparent);
+}
+.sp-navBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  background: none;
+  border: none;
+  color: var(--sp-muted);
+  cursor: pointer;
+  transition: color 0.18s ease;
+  padding: 6px 0;
+  position: relative;
+}
+.sp-navBtn:hover { color: var(--sp-text); }
+.sp-navBtn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--theme-radius-sm);
+}
+.sp-navBtnActive { color: var(--sp-primary) !important; }
+.sp-navIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 0;
+}
+.sp-navIcon svg {
+  width: 20px;
+  height: 20px;
+}
+.sp-navLabel { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.28px; }
+.sp-navLabel--dwallet {
+  text-transform: none;
+  letter-spacing: 0.2px;
+  font-weight: 800;
+}
+.sp-navIndicator {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  width: 22px;
+  height: 3px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--sp-primary), color-mix(in srgb, var(--sp-primary) 70%, white));
+  pointer-events: none;
+}
+
+/* sections */
+.sp-section {
+  padding: 12px 0;
+  border-bottom: 1px solid var(--sp-border);
+  margin-bottom: 0;
+}
+.sp-section:last-child { border-bottom: none; }
+.sp-sectionTitle {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--sp-muted);
+  margin-bottom: 8px;
+}
+
+/* settings menu rows */
+.sp-menuList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0 6px;
+}
+.sp-menuGroupLabel {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: var(--sp-muted);
+  padding: 14px 4px 4px;
+}
+.sp-menuRow {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: var(--theme-radius-sm);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-text);
+  cursor: pointer;
+  text-align: left;
+  font: inherit;
+  transition: background 0.12s, border-color 0.12s;
+}
+.sp-menuRow:hover {
+  background: var(--theme-sp-btn-ghost-hover);
+  border-color: var(--theme-chain-border-soft);
+}
+.sp-menuRow:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+.sp-menuRowIcon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  background: rgba(124, 92, 252, 0.15);
+  color: rgba(190, 175, 255, 0.95);
+}
+.sp-menuRowBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+.sp-menuRowTitle {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--sp-text);
+  line-height: 1.2;
+}
+.sp-menuRowDesc {
+  font-size: 11.5px;
+  color: var(--sp-muted);
+  line-height: 1.35;
+}
+.sp-menuRowChev {
+  flex-shrink: 0;
+  color: var(--sp-muted);
+  opacity: 0.65;
+}
+.sp-menuRow:hover .sp-menuRowChev { opacity: 1; }
+.sp-menuRow--danger {
+  color: rgba(255, 130, 130, 0.95);
+}
+.sp-menuRow--danger .sp-menuRowIcon {
+  background: rgba(239, 68, 68, 0.18);
+  color: rgba(255, 150, 150, 0.95);
+}
+.sp-menuRow--danger .sp-menuRowTitle {
+  color: rgba(255, 130, 130, 0.95);
+}
+.sp-advancedSection { background: rgba(124,92,252,0.07); border-radius: 10px; padding: 10px; margin: 2px 0; }
+
+/* hero */
+.sp-hero {
+  padding: 18px 0 14px;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-heroLabel { font-size: 11px; color: var(--sp-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.sp-heroAmount { font-size: 32px; font-weight: 900; line-height: 1.1; margin: 4px 0 2px; letter-spacing: -1px; }
+.sp-heroUnit { font-size: 16px; font-weight: 600; opacity: 0.75; }
+.sp-heroSub { font-size: 13px; color: var(--sp-muted); }
+
+/* action row */
+.sp-actionRow {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-actionBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-text);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: background 0.15s;
+}
+.sp-actionBtn:not(:disabled):hover { background: rgba(255,255,255,0.09); }
+.sp-actionBtn:disabled { opacity: 0.5; cursor: default; }
+.sp-actionIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 4px;
+  line-height: 0;
+}
+.sp-actionLabel { font-size: 11px; }
+
+/* dense toolbar: icon-only, fixed footprint (vault card rail, etc.) */
+.sp-actionBtn--compact {
+  position: relative;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  justify-content: center;
+  border-radius: 10px;
+  gap: 0;
+}
+.sp-actionBtn--compact .sp-actionIcon {
+  margin-bottom: 0;
+}
+.sp-actionBtn--compact .sp-actionLabel {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* funding bar */
+.sp-fundingBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+  margin: 10px 0;
+}
+.sp-fundingOk { background: rgba(16,185,129,0.12); color: rgba(16,185,129,0.95); border: 1px solid rgba(16,185,129,0.25); }
+.sp-fundingWarn { background: rgba(245,158,11,0.12); color: rgba(245,158,11,0.95); border: 1px solid rgba(245,158,11,0.25); }
+.sp-inlineBtn {
+  background: none; border: none; cursor: pointer; color: inherit; font-size: 14px; padding: 0 4px;
+}
+
+/* address */
+.sp-addressRow { display: flex; align-items: center; gap: 8px; line-height: 1.45; }
+.sp-address { font-family: monospace; font-size: 12px; word-break: break-all; flex: 1; line-height: 1.45; }
+.sp-addressSmall { font-size: 11px; }
+.sp-copyBtn {
+  flex-shrink: 0;
+  font-size: 11px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-text);
+  cursor: pointer;
+}
+.sp-copyBtn:hover { background: var(--theme-sp-btn-ghost-hover); }
+
+/* inputs */
+.sp-input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 9px 12px;
+  border-radius: var(--theme-radius-sm);
+  border: 1px solid var(--theme-chain-border);
+  background: var(--theme-wc-input-bg);
+  color: var(--sp-text);
+  font-size: 13px;
+  outline: none;
+}
+.sp-input:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--theme-focus-ring);
+}
+.sp-inputAmount { flex: 1; }
+.sp-amountRow { display: flex; align-items: center; gap: 8px; }
+.sp-amountUnit { font-weight: 700; font-size: 13px; color: var(--sp-muted); flex-shrink: 0; }
+
+/* buttons */
+.sp-btn {
+  padding: 8px 16px;
+  border-radius: var(--theme-radius-sm);
+  border: 1px solid var(--theme-chain-border-soft);
+  background: var(--sp-surface);
+  color: var(--sp-text);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.sp-btn:hover:not(:disabled) { background: var(--theme-sp-btn-ghost-hover); }
+.sp-btn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+.sp-btn:disabled { opacity: 0.5; cursor: default; }
+.sp-btnPrimary { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
+.sp-btnPrimary:hover:not(:disabled) { filter: brightness(1.12); }
+.sp-btnPrimary:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+.sp-btnDanger { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); color: rgba(255,120,120,0.95); cursor: pointer; padding: 5px 10px; border-radius: 8px; font-size: 11px; }
+.sp-btnFull { width: 100%; }
+.sp-row { display: flex; align-items: center; gap: 10px; }
+
+/* chips */
+.sp-chipRow { display: flex; gap: 6px; flex-wrap: wrap; }
+.sp-chip {
+  padding: 4px 12px;
+  border-radius: var(--theme-radius-pill);
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-muted);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+.sp-chip:hover { color: var(--sp-text); }
+.sp-chip:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+.sp-chipActive {
+  background: var(--theme-chip-active-bg);
+  border-color: var(--theme-chip-active-border);
+  color: var(--theme-chip-active-text);
+}
+
+/* feedback */
+.sp-error { color: rgba(255,99,132,0.95); font-size: 12px; margin: 6px 0; line-height: 1.4; }
+.sp-info { color: rgba(245,158,11,0.95); font-size: 12px; margin: 6px 0; }
+.sp-muted { color: var(--sp-muted); }
+
+/* empty state */
+.sp-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; gap: 8px; }
+.sp-emptyIcon { font-size: 40px; }
+.sp-emptyTitle { font-weight: 700; font-size: 15px; }
+
+/* nft grid */
+.sp-safetyBadge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--sp-muted);
+  margin-bottom: 10px;
+  padding: 3px 8px;
+  background: var(--sp-surface);
+  border-radius: 6px;
+  display: inline-block;
+}
+.sp-nftGrid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.sp-nftCard { border-radius: var(--theme-radius-control); border: 1px solid var(--theme-chain-border); background: var(--sp-surface); overflow: hidden; }
+.sp-nftImg {
+  aspect-ratio: 1;
+  background: var(--theme-sp-nft-placeholder-bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.sp-nftImg img { width: 100%; height: 100%; object-fit: cover; }
+.sp-nftImgPlaceholder { font-size: 32px; opacity: 0.4; }
+.sp-nftName { font-size: 12px; font-weight: 700; padding: 8px 10px 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sp-nftCollection { font-size: 10px; color: var(--sp-muted); padding: 0 10px 8px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* network rows */
+.sp-networkRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-networkRow:last-child { border-bottom: none; }
+.sp-networkRowActive { opacity: 0.9; }
+.sp-activeDot { color: var(--sp-ok); font-size: 10px; }
+
+/* toggle */
+.sp-toggle { display: flex; align-items: center; gap: 10px; cursor: pointer; font-size: 13px; }
+.sp-toggle input { width: 16px; height: 16px; cursor: pointer; accent-color: var(--sp-primary); }
+
+/* loading / unlock */
+.sp-loading { padding: 40px; color: var(--sp-muted); text-align: center; }
+/* header + sp-bodyScroll layout; centering happens on inner .sp-contentTrack--center */
+.sp-root.sp-unlock {
+  align-items: stretch;
+  justify-content: flex-start;
+}
+
+/* fx: code-current — strings of code drifting beneath the surface, surfacing briefly */
+.fx-root {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  isolation: isolate;
+}
+.fx-layer {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 0;
+  perspective: 320px;
+  perspective-origin: 50% 50%;
+  transform-style: preserve-3d;
+}
+.fx-content {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+.fx-drifter {
+  position: absolute;
+  top: 0;
+  left: 0;
+  white-space: nowrap;
+  font-family: ui-monospace, 'JetBrains Mono', 'Fira Code', Menlo, Consolas, monospace;
+  font-size: 7px;
+  letter-spacing: 0.02em;
+  color: var(--fx-color, rgba(158, 180, 255, 1));
+  opacity: 0;
+  will-change: transform, opacity, filter;
+  text-shadow: 0 0 8px currentColor;
+}
+
+/* no sub-box — logo top, slogan under, field vertically centered in remaining space, button pinned bottom */
+.sp-unlockScreen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1 1 auto;
+  align-self: stretch;
+  width: 100%;
+  padding: 24px 16px 16px;
+  box-sizing: border-box;
+}
+.sp-unlockBrand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+.sp-unlockSlogan {
+  font-size: 13px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--sp-muted, currentColor);
+  opacity: 0.85;
+  max-width: 260px;
+  margin: 0;
+}
+.sp-unlockFieldWrap {
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  width: 90%;
+  gap: 10px;
+  min-height: 0;
+}
+.sp-unlockFieldWrap .sp-input { width: 100%; }
+.sp-unlockFooter {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 4px;
+}
+.sp-unlockPrimary { width: 90%; }
+.sp-unlockBio { width: 90%; }
+
+/** non-password unlock methods (passkey / waap / seeker / lazor / recovery-words) — render
+ *  below the password form when both kinds are available, or alone for password-free wallets. */
+.sp-unlockExtras {
+  width: 90%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 4px;
+}
+.sp-unlockExtra {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 10px 14px;
+}
+.sp-unlockExtraLabel {
+  font-weight: 650;
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+.sp-unlockExtraHint {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  opacity: 0.7;
+}
+.sp-unlockLogo {
+  width: 100px;
+  height: 100px;
+  display: block;
+  border-radius: var(--theme-radius-surface);
+  object-fit: contain;
+}
+.sp-unlockTitle { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+
+/**
+ * unlock micro-interactions: animated conic border on the password field, and a snappy
+ * press / slow bouncy pop-back-out on the unlock button. press class fires for Enter submit
+ * (since hitting Enter on the input doesn't trigger the button's :active), and CSS :active
+ * still drives the visual when the user clicks - both flow into the same pressed style.
+ */
+@property --sp-unlock-border-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+@keyframes sp-unlock-border-hue {
+  to { --sp-unlock-border-angle: 360deg; }
+}
+
+/* matches `.ws-choose-btn--primary` from wallet-setup-choose.css ("create new wallet" button):
+ * purple→teal gradient fill on padding-box, animated conic border on focus. accent vars are
+ * scoped to .ws-choose, so we hardcode the literal values here. */
+.sp-unlockField {
+  /* compensate for 2px transparent border (vs .sp-input's default 1px) so size stays equivalent */
+  padding: 8px 11px;
+  border: 2px solid transparent;
+  color: rgba(249, 251, 255, 0.99);
+  background:
+    linear-gradient(135deg, rgba(186, 170, 252, 0.98), rgba(150, 236, 224, 0.96)) padding-box,
+    linear-gradient(rgba(255, 255, 255, 0.22), rgba(255, 255, 255, 0.22)) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: 0 4px 20px rgba(124, 92, 252, 0.25);
+  transition:
+    box-shadow 200ms ease,
+    filter 140ms ease;
+}
+
+.sp-unlockField::placeholder {
+  color: rgba(248, 250, 255, 0.78);
+}
+
+.sp-unlockField:focus,
+.sp-unlockField:focus-visible {
+  outline: none;
+  --sp-unlock-border-angle: 0deg;
+  background:
+    linear-gradient(135deg, rgba(194, 178, 255, 0.98), rgba(156, 242, 230, 0.97)) padding-box,
+    conic-gradient(
+      from var(--sp-unlock-border-angle),
+      #7cf0c4,
+      #6366f1,
+      #f472b6,
+      #fbbf24,
+      #7cf0c4
+    ) border-box;
+  background-clip: padding-box, border-box;
+  -webkit-background-clip: padding-box, border-box;
+  background-origin: padding-box, border-box;
+  box-shadow: 0 6px 28px rgba(124, 92, 252, 0.35);
+  filter: brightness(1.05);
+  animation: sp-unlock-border-hue 2.8s linear infinite;
+}
+
+.sp-unlockPrimary {
+  transition:
+    transform 540ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    box-shadow 540ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    filter 220ms ease;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.sp-unlockPrimary:active:not(:disabled),
+.sp-unlockPrimary.sp-unlockPrimary--pressed:not(:disabled) {
+  transition:
+    transform 90ms cubic-bezier(0.4, 0, 0.6, 1),
+    box-shadow 90ms cubic-bezier(0.4, 0, 0.6, 1),
+    filter 90ms ease;
+  transform: scale(0.96) translateY(2px);
+  box-shadow:
+    inset 0 4px 10px rgba(0, 0, 0, 0.45),
+    inset 0 1px 2px rgba(0, 0, 0, 0.6);
+  filter: brightness(0.88);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-unlockField:focus,
+  .sp-unlockField:focus-visible { animation: none; }
+  .sp-unlockPrimary,
+  .sp-unlockPrimary:active:not(:disabled),
+  .sp-unlockPrimary.sp-unlockPrimary--pressed:not(:disabled) {
+    transition: none;
+    transform: none;
+  }
+}
+
+
+
+/* --- send page --- */
+.sp-successBox {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(52,211,153,0.12);
+  border: 1px solid rgba(52,211,153,0.30);
+  margin: 8px 0;
+}
+.sp-successLabel { font-size: 13px; font-weight: 700; color: rgba(52,211,153,0.95); margin-bottom: 4px; }
+.sp-txHash { font-family: monospace; font-size: 11px; color: rgba(234,240,255,0.65); word-break: break-all; }
+
+/* --- dapps page --- */
+.sp-pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+.sp-backBtn {
+  background: none;
+  border: none;
+  color: rgba(180,160,255,0.85);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0;
+  white-space: nowrap;
+}
+.sp-backBtn:hover { color: rgba(200,180,255,0.95); }
+.sp-backBtn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 3px;
+  border-radius: var(--theme-radius-xs);
+}
+.sp-shellRouteFallback {
+  min-height: 72px;
+  justify-content: center;
+}
+.sp-dappRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-dappRow:last-child { border-bottom: none; }
+.sp-dappInfo { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.sp-dappOrigin { font-size: 13px; font-weight: 600; color: var(--sp-text); word-break: break-all; }
+.sp-dappDate { font-size: 11px; color: var(--sp-muted); }
+.sp-revokeBtn {
+  flex-shrink: 0;
+  padding: 5px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(239,68,68,0.15);
+  border: 1px solid rgba(239,68,68,0.30);
+  color: rgba(255,100,100,0.9);
+  margin-left: 10px;
+}
+.sp-revokeBtn:hover { background: rgba(239,68,68,0.25); }
+.sp-revokeBtn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+.sp-revokeBtn:disabled { opacity: 0.4; cursor: default; }
+
+/* --- price display --- */
+.sp-heroUsd { font-size: 18px; font-weight: 700; color: rgba(234,240,255,0.65); margin-top: 2px; }
+
+/* --- activity feed --- */
+.sp-activityRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--sp-border);
+}
+.sp-activityRow:last-child { border-bottom: none; }
+.sp-activityIcon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; color: var(--sp-accent); }
+.sp-activityInfo { flex: 1; min-width: 0; }
+.sp-activityLabel { font-size: 13px; font-weight: 600; color: var(--sp-text); }
+.sp-activityMeta { font-size: 11px; color: var(--sp-muted); margin-top: 2px; }
+.sp-activityDigest { font-family: monospace; }
+.sp-activityDigestRow { min-width: 0; }
+.sp-activityDigestRow .ch-explorerValueRow { font-size: 11px; }
+.sp-activityStatus { font-size: 13px; font-weight: 700; flex-shrink: 0; }
+.sp-activityStatus--success { color: rgba(52,211,153,0.9); }
+.sp-activityStatus--failure { color: rgba(255,99,99,0.9); }
+
+/* --- kiosk ui --- */
+.sp-kioskList { display: flex; flex-direction: column; gap: 8px; }
+.sp-kioskCard {
+  border-radius: 12px;
+  border: 1px solid var(--sp-border);
+  overflow: hidden;
+  background: rgba(255,255,255,0.03);
+}
+.sp-kioskHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--sp-text);
+  text-align: left;
+}
+.sp-kioskHeader:hover { background: rgba(255,255,255,0.04); }
+.sp-kioskId { font-family: monospace; font-size: 12px; color: var(--sp-muted); }
+.sp-kioskMeta { display: flex; align-items: center; gap: 6px; }
+.sp-kioskCount { font-size: 11px; color: var(--sp-muted); }
+.sp-kioskChevron { font-size: 10px; color: var(--sp-muted); }
+.sp-kioskBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+  background: rgba(139,92,246,0.2);
+  color: rgba(167,139,250,0.9);
+  border: 1px solid rgba(139,92,246,0.3);
+}
+.sp-kioskBadgeListed {
+  background: rgba(251,191,36,0.15);
+  color: rgba(251,191,36,0.9);
+  border-color: rgba(251,191,36,0.3);
+}
+.sp-kioskItems { border-top: 1px solid var(--sp-border); padding: 8px 14px; display: flex; flex-direction: column; gap: 4px; }
+.sp-kioskItem { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.sp-kioskItemId { font-family: monospace; font-size: 11px; color: var(--sp-muted); flex: 1; }
+.sp-kioskItemType { font-size: 11px; color: var(--sp-text); }
+
+/* --- swap card --- */
+.sp-swapCta {
+  font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 6px;
+  background: rgba(124,58,237,0.25); color: #c4b5fd; border: 1px solid rgba(124,58,237,0.4);
+  cursor: pointer; margin-left: 8px; transition: background 0.15s;
+}
+.sp-swapCta:hover { background: rgba(124,58,237,0.4); }
+
+.sp-swapCard {
+  background: var(--sp-surface); border: 1px solid rgba(124,58,237,0.3);
+  border-radius: 14px; margin: 8px 0; overflow: hidden;
+}
+.sp-swapHeader {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-bottom: 1px solid var(--sp-border);
+}
+.sp-swapTitle { font-size: 13px; font-weight: 700; color: #c4b5fd; }
+.sp-closeBtn {
+  background: none; border: none; color: var(--sp-muted); font-size: 14px;
+  cursor: pointer; padding: 2px 6px; border-radius: 4px;
+}
+.sp-closeBtn:hover { background: rgba(255,255,255,0.06); }
+.sp-closeBtn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  border-radius: 6px;
+}
+
+.sp-swapBody { padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.sp-swapLabel { font-size: 12px; color: var(--sp-muted); display: flex; flex-direction: column; gap: 4px; }
+.sp-swapInput {
+  padding: 8px 10px; border-radius: 8px; border: 1px solid var(--sp-border);
+  background: rgba(255,255,255,0.04); color: var(--sp-text); font-size: 14px;
+  font-family: 'Menlo', 'Consolas', monospace;
+  outline: none;
+}
+.sp-swapInput:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--theme-focus-ring);
+}
+
+.sp-swapQuoteRow {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 3px 0; font-size: 12px;
+}
+.sp-swapQuoteLabel { color: var(--sp-muted); }
+.sp-swapQuoteVal { font-weight: 600; color: var(--sp-text); font-family: monospace; font-size: 12px; }
+
+.sp-swapActions { display: flex; gap: 8px; margin-top: 4px; }
+.sp-swapActions .sp-btn { flex: 1; }
+
+.sp-btnPrimary {
+  background: rgba(124,58,237,0.3) !important; border-color: rgba(124,58,237,0.5) !important;
+  color: #e0d4ff !important;
+}
+.sp-btnPrimary:hover { background: rgba(124,58,237,0.45) !important; }
+
+.sp-swapDigest {
+  font-size: 11px; color: var(--sp-muted); font-family: monospace;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+/* x402 payments settings — cap matrix + summary cards. */
+.sp-paySummary {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.sp-paySummaryCell {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(99, 102, 241, 0.22);
+  border-radius: 8px;
+  padding: 8px 10px;
+  min-width: 0;
+}
+
+.sp-paySummaryLabel {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(234, 240, 255, 0.5);
+  margin-bottom: 2px;
+}
+
+.sp-paySummaryValue {
+  font-family: ui-monospace, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  color: rgba(234, 240, 255, 0.95);
+}
+
+.sp-payHostHeader {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(234, 240, 255, 0.7);
+  margin-top: 12px;
+  margin-bottom: 4px;
+}
+
+.sp-payTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 11px;
+}
+
+.sp-payTable th {
+  font-weight: 500;
+  color: rgba(234, 240, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-size: 10px;
+  padding: 4px 6px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.18);
+}
+
+.sp-payTable td {
+  padding: 6px;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  vertical-align: middle;
+}
+
+.sp-payTable tr:last-child td {
+  border-bottom: none;
+}
+
+.sp-payHost {
+  font-family: ui-monospace, monospace;
+  word-break: break-all;
+  color: rgba(234, 240, 255, 0.92);
+}
+
+/* x402 receipts list — settings section. */
+.sp-x402Receipts {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.sp-x402Receipt {
+  background: rgba(15, 23, 42, 0.45);
+  border: 1px solid rgba(99, 102, 241, 0.18);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sp-x402ReceiptTop {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.sp-x402StatusBadge {
+  font-size: 9px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+  border: 1px solid transparent;
+}
+
+.sp-x402StatusSettled {
+  background: rgba(110, 231, 183, 0.12);
+  color: rgba(110, 231, 183, 0.95);
+  border-color: rgba(110, 231, 183, 0.4);
+}
+
+.sp-x402StatusPending {
+  background: rgba(252, 211, 77, 0.12);
+  color: rgba(252, 211, 77, 0.95);
+  border-color: rgba(252, 211, 77, 0.4);
+}
+
+.sp-x402StatusFailed {
+  background: rgba(252, 165, 165, 0.12);
+  color: rgba(252, 165, 165, 0.95);
+  border-color: rgba(252, 165, 165, 0.4);
+}
+
+.sp-x402StatusRejected {
+  background: rgba(148, 163, 184, 0.12);
+  color: rgba(148, 163, 184, 0.95);
+  border-color: rgba(148, 163, 184, 0.4);
+}
+
+.sp-x402ReceiptHost {
+  font-size: 11px;
+  color: rgba(234, 240, 255, 0.92);
+  font-weight: 500;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-x402ReceiptTime {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.sp-x402ReceiptAmount {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.sp-x402ReceiptUsdc {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(234, 240, 255, 0.95);
+}
+
+.sp-x402ReceiptRow {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  font-size: 10px;
+  min-width: 0;
+}
+
+.sp-x402ReceiptLabel {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: rgba(234, 240, 255, 0.5);
+  flex-shrink: 0;
+  font-size: 9px;
+}
+
+.sp-x402ReceiptValue {
+  color: rgba(234, 240, 255, 0.85);
+  word-break: break-all;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sp-x402ReceiptError .sp-x402ReceiptValue {
+  color: rgba(252, 165, 165, 0.92);
+  white-space: normal;
+}
+
+.sp-x402ReceiptActions {
+  display: flex;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+.sp-x402Thumb {
+  padding: 4px 8px;
+  font-size: 10px;
+}
+
+.sp-x402ThumbActiveGood {
+  background: rgba(110, 231, 183, 0.15) !important;
+  border-color: rgba(110, 231, 183, 0.4) !important;
+  color: rgba(110, 231, 183, 0.95) !important;
+}
+
+.sp-x402ThumbActiveBad {
+  background: rgba(252, 165, 165, 0.15) !important;
+  border-color: rgba(252, 165, 165, 0.4) !important;
+  color: rgba(252, 165, 165, 0.95) !important;
+}
+
+/* a11y baseline: keyboard-only focus ring fallback for any interactive element
+ * that doesn't already have a more specific :focus-visible rule. low specificity
+ * so the targeted rules above (sp-input, sp-btn, etc.) win when they apply.
+ * scoped to wallet shell so external surfaces aren't affected.
+ */
+.sp-page button:focus-visible,
+.sp-page a:focus-visible,
+.sp-page [role='button']:focus-visible,
+.sp-page input:focus-visible,
+.sp-page select:focus-visible,
+.sp-page textarea:focus-visible,
+.wc-approvalSheet button:focus-visible,
+.wc-approvalSheet a:focus-visible,
+.wc-approvalSheet [role='button']:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}

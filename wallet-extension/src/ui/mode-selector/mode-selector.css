@@ -1,0 +1,202 @@
+@import url('../theme.css');
+
+/* ika base mode: Sui / Solana toggle — active ring pulse */
+
+@keyframes ckm-pulse-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ckm-modeBtn {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  border-radius: var(--theme-radius-sm, 12px);
+  line-height: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+}
+
+/* fixed box so the pulse ring (::before inset) stays the same while icons shrink inside */
+.ckm-modeBtn--md {
+  width: 28px;
+  height: 28px;
+}
+
+.ckm-modeBtn--sm {
+  width: 24px;
+  height: 24px;
+}
+
+.ckm-modeBtn--xs {
+  width: 22px;
+  height: 22px;
+}
+
+.ckm-modeBtn:focus-visible {
+  outline: 2px solid rgba(124, 240, 196, 0.85);
+  outline-offset: 2px;
+}
+
+.ckm-modeBtn--inactive {
+  opacity: 0.72;
+  filter: grayscale(1);
+}
+
+.ckm-modeBtn--inactive:hover {
+  opacity: 0.95;
+  filter: grayscale(0.85);
+}
+
+.ckm-modeBtn--active {
+  filter: none;
+  opacity: 1;
+}
+
+/* rotating conic border (electrical pulse) */
+.ckm-modeBtn--active::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border-radius: var(--theme-radius-control, 14px);
+  padding: 2px;
+  background: conic-gradient(
+    from var(--ckm-spin, 0deg),
+    #7cf0c4,
+    #6366f1,
+    #f472b6,
+    #fbbf24,
+    #7cf0c4
+  );
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  animation: ckm-pulse-spin 2.8s linear infinite;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ckm-modeBtn--active::before {
+    animation: none;
+    background: linear-gradient(135deg, #7cf0c4, #6366f1, #f472b6);
+  }
+}
+
+.ckm-modeBtn img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  border-radius: var(--theme-radius-sm, 10px);
+  object-fit: contain;
+}
+
+/* ~10% smaller than the box so there is gap between icon and border ring */
+.ckm-modeBtn--xs img {
+  width: 16px;
+  height: 16px;
+}
+
+.ckm-modeBtn--sm img {
+  width: 18px;
+  height: 18px;
+}
+
+.ckm-modeBtn--md img {
+  width: 22px;
+  height: 22px;
+}
+
+.ckm-panel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.ckm-panel--hero {
+  gap: clamp(14px, 2.5vw, 22px);
+}
+
+.ckm-modeBtn--hero {
+  width: clamp(72px, 14vw, 96px);
+  height: clamp(72px, 14vw, 96px);
+  border-radius: var(--theme-radius-surface, 18px);
+}
+
+.ckm-modeBtn--hero img {
+  width: clamp(44px, 9vw, 58px);
+  height: clamp(44px, 9vw, 58px);
+  border-radius: var(--theme-radius-control, 14px);
+}
+
+.ckm-modeBtn--hero.ckm-modeBtn--active::before {
+  inset: -4px;
+  border-radius: var(--theme-radius-panel, 22px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ckm-modeBtn--hero.ckm-modeBtn--active::before {
+    animation: none;
+  }
+}
+
+/* header bar shells */
+.ckm-headerBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.ckm-headerBar--popup {
+  padding: 6px 8px 8px;
+  min-height: 36px;
+  border-bottom: 1px solid var(--theme-chrome-border-soft);
+  background: var(--theme-chrome-popup-bg);
+}
+
+.ckm-headerBar--sidepanel {
+  min-height: 36px;
+  padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--theme-chrome-border-soft);
+  background: var(--theme-chrome-sidepanel-bg);
+}
+
+.ckm-headerBar--onboarding {
+  padding: 10px clamp(16px, 3vw, 28px);
+  border-bottom: 1px solid var(--theme-chrome-border-soft);
+  background: var(--theme-chrome-onboarding-bg);
+  backdrop-filter: blur(10px);
+}
+
+.ckm-headerBar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.ckm-shellWithHeader {
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
+}
+
+.ckm-shellWithHeader > *:last-child {
+  flex: 1;
+  min-height: 0;
+}

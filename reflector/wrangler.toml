@@ -1,0 +1,28 @@
+name = "chromatika-mwa-reflector"
+main = "src/index.ts"
+compatibility_date = "2024-09-23"
+# nodejs_compat is not strictly required; our reflector uses only Web APIs
+# (WebSocket, crypto.getRandomValues, btoa). Leaving it out keeps cold start fast.
+
+# Durable Object: one instance per reflector_unique_id, holds the half-open /
+# fully-open WebSocket pair and the ws-PING heartbeat.
+[[durable_objects.bindings]]
+name = "REFLECTOR"
+class_name = "ReflectorDurableObject"
+
+[[migrations]]
+tag = "v1"
+# SQLite-backed Durable Object (CF default since 2024). Our DO uses storage only
+# for alarms — SQLite vs KV doesn't matter functionally; SQLite is the modern path.
+new_sqlite_classes = ["ReflectorDurableObject"]
+
+# Recommended: serve from a custom hostname (e.g. reflect.chromatika.xyz) so the
+# integrator can rotate behind DNS without a Chromatika rebuild. Configure under
+# [routes] or via the Cloudflare dashboard once DNS is set up.
+# Example:
+# [[routes]]
+# pattern = "reflect.chromatika.xyz/*"
+# custom_domain = true
+
+[observability]
+enabled = true

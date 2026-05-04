@@ -1,0 +1,60 @@
+/* full-viewport frosted veil + subtle shutter stripes during theme swap (see runChromatikaThemeFlash) */
+html.ch-theme-flash::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147483645;
+  pointer-events: none;
+  opacity: 0;
+  background: repeating-linear-gradient(
+    105deg,
+    transparent 0,
+    transparent 14px,
+    rgba(255, 255, 255, 0.03) 14px,
+    rgba(255, 255, 255, 0.03) 15px
+  );
+  transition: opacity 0.22s ease-out;
+}
+
+html.ch-theme-flash.ch-theme-flash--on::before {
+  opacity: 1;
+}
+
+/* `pointer-events: none` is intentional. an earlier version used `pointer-events: auto`
+   plus `cursor: wait` to lock the UI during the ~620ms flash, but that ate the user's
+   first settings click on initial popup load when the auto-correct effect briefly
+   fired the flash. the visual blur is plenty of feedback on its own; clicks should
+   always reach the underlying chrome. */
+html.ch-theme-flash::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147483646;
+  pointer-events: none;
+  opacity: 0;
+  backdrop-filter: blur(0);
+  -webkit-backdrop-filter: blur(0);
+  background: rgba(0, 0, 0, 0);
+  transition:
+    opacity 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    backdrop-filter 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    -webkit-backdrop-filter 0.22s cubic-bezier(0.4, 0, 0.2, 1),
+    background 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html.ch-theme-flash.ch-theme-flash--on::after {
+  opacity: 1;
+  backdrop-filter: blur(22px) saturate(1.15);
+  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  background: rgba(6, 8, 18, 0.62);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html.ch-theme-flash::before,
+  html.ch-theme-flash::after {
+    transition: none;
+  }
+  html.ch-theme-flash.ch-theme-flash--on::before {
+    opacity: 0;
+  }
+}

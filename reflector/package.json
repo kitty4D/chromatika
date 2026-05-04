@@ -1,0 +1,26 @@
+{
+  "name": "@chromatika/mwa-reflector",
+  "private": true,
+  "version": "0.1.0",
+  "description": "MWA (Solana Mobile) reflector — relays bytes between a desktop dapp and a Seeker / Phantom Android / Solflare Android wallet during remote QR pairing. Cloudflare Workers + Durable Objects. Implements the spec at https://solana-mobile.github.io/mobile-wallet-adapter/spec/spec.html#reflector-protocol.",
+  "type": "module",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "tail": "wrangler tail",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20240620.0",
+    "typescript": "^5.6.0",
+    "wrangler": "^4.85.0"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild",
+      "sharp",
+      "workerd"
+    ]
+  }
+}

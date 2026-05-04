@@ -1,0 +1,2644 @@
+/* title bar (chromatika chrome) — ct-* */
+
+.ct-titleBar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
+}
+
+/* dapp / tx approval popups — single-column wordmark, no side slots */
+.ct-titleBar--approvalOnly {
+  grid-template-columns: 1fr;
+  justify-items: stretch;
+}
+
+.ct-titleBar--approvalOnly .ct-titleBar-center {
+  grid-column: 1;
+  justify-self: stretch;
+}
+
+/* main wallet chrome (side panel + extension popup): one visual system */
+.ct-titleBar--wallet,
+.ct-titleBar--sidepanel {
+  min-height: 36px;
+  padding: 6px 10px 8px;
+  border-bottom: 1px solid var(--theme-chrome-border-soft);
+  background: var(--theme-chrome-sidepanel-bg);
+}
+
+.ct-titleBar--onboarding {
+  padding: 10px clamp(16px, 3vw, 28px);
+  border-bottom: 1px solid var(--theme-chrome-border-soft);
+  background: var(--theme-chrome-onboarding-bg);
+  backdrop-filter: blur(10px);
+}
+
+.ct-titleBar-left {
+  display: flex;
+  justify-content: flex-start;
+  min-width: 0;
+}
+
+.ct-titleBar-center {
+  font-family: var(--theme-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(234, 240, 255, 0.78);
+  white-space: nowrap;
+}
+
+.ct-titleBar-right {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ct-ikaStakingBtn-logo {
+  display: block;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+.ct-titleBar-rightSpacer {
+  width: 32px;
+  height: 1px;
+}
+
+.ct-settingsBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: none;
+  border-radius: var(--theme-radius-sm);
+  background: transparent;
+  color: rgba(234, 240, 255, 0.72);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.ct-settingsBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(234, 240, 255, 0.95);
+}
+
+.ct-settingsBtn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+
+/*
+ * Borderless copy / row icon actions.
+ * Hit area: 28×28px min (WCAG 2.5.8 needs ≥24×24; side panel + touch laptops get a sane tap zone without blowing token rows).
+ * Glyph stays small via svg rules below.
+ */
+.ch-copyIconBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  padding: 0;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: rgba(234, 240, 255, 0.42);
+  cursor: pointer;
+  line-height: 0;
+  box-sizing: border-box;
+}
+
+.ch-copyIconBtn:hover {
+  color: rgba(234, 240, 255, 0.88);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.ch-copyIconBtn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+
+.ch-copyIconBtn--12,
+.ch-copyIconBtn--13 {
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
+  min-height: 28px;
+}
+
+.ch-copyIconBtn--12 svg {
+  width: 11px;
+  height: 11px;
+}
+
+.ch-copyIconBtn--13 svg {
+  width: 12px;
+  height: 12px;
+}
+
+/* vault context header — cv-context* */
+
+.cv-contextHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px 12px 10px;
+  border-bottom: 1px solid var(--theme-chrome-border-soft, rgba(255, 255, 255, 0.1));
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.cv-contextHeader--withDapp {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+  padding-bottom: 12px;
+}
+
+.cv-contextDivider {
+  height: 1px;
+  margin: 10px 0 12px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.11) 12%,
+    rgba(255, 255, 255, 0.11) 88%,
+    transparent
+  );
+  border: none;
+  flex-shrink: 0;
+}
+
+.cv-contextDapp {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cv-contextDappHead {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cv-contextDappHeadText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.cv-contextDappKicker {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(234, 240, 255, 0.45);
+}
+
+.cv-contextDappName {
+  font-size: 13px;
+  font-weight: 650;
+  color: var(--sp-text);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv-contextDappAddrRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  padding-left: 18px;
+}
+
+.cv-contextFeeExplorer,
+.cv-contextDappExplorer {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.cv-contextAddr--dapp {
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.cv-contextDappChain {
+  font-size: 11px;
+  color: var(--sp-muted);
+  padding-left: 18px;
+  line-height: 1.35;
+}
+
+.cv-contextHeader--disconnected {
+  flex-direction: column;
+  gap: 0;
+}
+
+.cv-contextDisconnectedRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.cv-contextVault--clamped {
+  flex: 0 0 40%;
+  width: 40%;
+  min-width: 40%;
+  max-width: 40%;
+  flex-shrink: 0;
+}
+
+.cv-contextVault--clamped .cv-contextVaultName:not(.cv-contextVaultName--withAvatar) {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv-contextVault--clamped .cv-contextVaultName--withAvatar .cv-contextVaultNameText {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.cv-contextVault--clamped .sp-vaultPicker {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cv-contextVault--clamped .sp-vaultPickerBtn {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.cv-contextVault--clamped .sp-vaultPickerLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv-contextBaseAddr--inline {
+  flex: 1;
+  min-width: 0;
+  text-align: right;
+}
+
+.cv-contextDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.cv-contextDot--live {
+  background: #34d399;
+  box-shadow: 0 0 0 3px rgba(52, 211, 153, 0.25);
+}
+
+.cv-contextMain {
+  min-width: 0;
+}
+
+.cv-contextAddr {
+  font-family: ui-monospace, monospace;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sp-text);
+}
+
+.cv-contextSub {
+  font-size: 11px;
+  color: var(--sp-muted);
+  margin-top: 2px;
+}
+
+.cv-contextVault {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cv-contextVaultName {
+  font-weight: 700;
+  font-size: 14px;
+}
+
+.cv-contextVaultName--withAvatar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cv-contextChevron {
+  font-size: 10px;
+  color: var(--sp-muted);
+}
+
+.cv-contextBaseRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cv-contextBaseAddr {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--sp-muted);
+}
+
+.cv-contextNetBadge {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--theme-chain-border-soft);
+  color: var(--sp-muted);
+}
+
+/* cockpit + vault card layout */
+
+.cv-cockpitAndCard {
+  margin-top: 4px;
+  position: relative;
+}
+
+.cv-fundingPill {
+  margin: 0 12px 10px;
+  padding: 8px 14px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.35;
+  text-align: center;
+  color: rgba(254, 226, 226, 0.95);
+  background: rgba(220, 38, 38, 0.28);
+  border: 1px solid rgba(248, 113, 113, 0.38);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.18);
+}
+
+/* solana pre-alpha "notice" — soft purple/blue, not the red funding-pill treatment.
+   sits above the dWallets bento on Solana base. */
+.cv-prealphaNotice {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.16), rgba(59, 130, 246, 0.12));
+  border: 1px solid rgba(167, 139, 250, 0.34);
+  color: rgba(234, 230, 255, 0.92);
+}
+
+.cv-prealphaNotice-tag {
+  display: inline-block;
+  align-self: flex-start;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(167, 139, 250, 0.22);
+  color: rgba(216, 180, 254, 1);
+  border: 1px solid rgba(192, 132, 252, 0.4);
+}
+
+.cv-prealphaNotice-text {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.45;
+}
+
+.cv-prealphaNotice-text code {
+  font-size: 0.9em;
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+html[data-appearance='light'] .cv-prealphaNotice {
+  color: rgba(46, 16, 101, 0.95);
+  background: linear-gradient(180deg, rgba(139, 92, 246, 0.14), rgba(59, 130, 246, 0.1));
+  border-color: rgba(124, 58, 237, 0.32);
+}
+
+html[data-appearance='light'] .cv-prealphaNotice-tag {
+  color: rgba(91, 33, 182, 1);
+  background: rgba(167, 139, 250, 0.22);
+  border-color: rgba(124, 58, 237, 0.4);
+}
+
+html[data-appearance='light'] .cv-prealphaNotice-text code {
+  background: rgba(0, 0, 0, 0.08);
+}
+
+/* empty state when a vault has zero dWallets. two flavors via inline children:
+   funded → CTA button; not funded → muted "fund first" copy. */
+.cv-dwalletsEmpty {
+  margin-top: 8px;
+  padding: 18px 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  text-align: center;
+  color: var(--sp-muted);
+}
+
+.cv-dwalletsEmpty-title {
+  margin: 0 0 4px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sp-text);
+}
+
+.cv-dwalletsEmpty-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.cv-dwalletsEmpty-btn {
+  margin-top: 12px;
+}
+
+html[data-appearance='light'] .cv-dwalletsEmpty {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.16);
+}
+
+html[data-appearance='light'] .cv-fundingPill {
+  color: rgba(127, 29, 29, 0.95);
+  background: rgba(248, 113, 113, 0.22);
+  border-color: rgba(220, 38, 38, 0.3);
+}
+
+/*
+ * vault card: identity column sets height; actions are a horizontal icon rail,
+ * absolutely positioned and vertically centered so they never stretch the card.
+ * slot width = 4×36px + 3×5px gap + divider padding (~11px) + edge (~12px)
+ */
+.cv-baseCard-columns {
+  position: relative;
+  padding: 12px 12px 14px 14px;
+  /* width reserved for text so it does not run under the icon rail; tuned per rail count */
+  --cv-vault-actions-slot: 178px;
+}
+
+.cv-baseCard-columns[data-vault-rail-count='3'] {
+  --cv-vault-actions-slot: 140px;
+}
+
+.cv-baseCard-columns[data-vault-rail-count='2'] {
+  --cv-vault-actions-slot: 100px;
+}
+
+.cv-baseCard-actionsCol {
+  position: absolute;
+  inset-inline-end: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding-inline-start: 10px;
+  border-inline-start: 1px solid var(--sp-border);
+  pointer-events: none;
+}
+
+.cv-baseCard-actionsCol .cv-baseCard-actionStack {
+  pointer-events: auto;
+}
+
+.cv-baseCard-actionStack {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 5px;
+  width: max-content;
+}
+
+.cv-balancesRefreshBtn--vaultRail {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  border-radius: 10px;
+  border: 1px solid var(--sp-border);
+  background: var(--sp-surface);
+  color: var(--sp-muted);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.cv-balancesRefreshBtn--vaultRail:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: var(--sp-text);
+}
+
+/* flush vault info card with panel edges when parent has no horizontal gutter */
+.cv-cockpitAndCard .cv-baseCard {
+  border-radius: 0;
+}
+
+.cv-baseCard {
+  position: relative;
+  z-index: 2;
+  border-radius: var(--theme-radius-surface);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-left: none;
+  border-right: none;
+  background: rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: var(--theme-elev-card, 0 12px 40px rgba(0, 0, 0, 0.35));
+}
+
+/* --- cockpit area --- */
+
+.cv-rocket {
+  position: relative;
+  z-index: 1;
+}
+
+.cv-cockpitWrap {
+  transform-origin: center bottom;
+}
+
+.cv-rocket-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  color: rgba(234, 240, 255, 0.88);
+}
+
+.cv-seatImage {
+  opacity: 0.92;
+  pointer-events: none;
+}
+
+.cv-cockpitImage {
+  pointer-events: none;
+}
+
+.cv-headUse {
+  color: rgba(230, 240, 255, 0.92);
+}
+
+/* --- fuel gauges (HTML, above SVG) --- */
+
+.cv-gaugeRow {
+  display: flex;
+  gap: 8px;
+  padding: 0 4px 6px;
+}
+
+.cv-gauge {
+  flex: 1;
+  min-width: 0;
+}
+
+.cv-gauge-track {
+  position: relative;
+  height: 28px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.cv-gauge-fill {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  bottom: 2px;
+  width: calc(100% - 4px);
+  border-radius: 12px;
+  transform-origin: left center;
+  transform: scaleX(var(--cv-gauge-fill-scale, 0.01));
+  transition: transform 0.6s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* SUI gauge - blue */
+.cv-gauge--sui .cv-gauge-fill {
+  background: linear-gradient(90deg, rgba(77, 162, 255, 0.7), rgba(77, 162, 255, 0.95));
+  box-shadow: 0 0 10px rgba(77, 162, 255, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.cv-gauge--sui[data-health='yellow'] .cv-gauge-fill {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.7), rgba(251, 191, 36, 0.95));
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.cv-gauge--sui[data-health='red'] .cv-gauge-fill {
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.7), rgba(248, 113, 113, 0.95));
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+/* IKA gauge - pink */
+.cv-gauge--ika .cv-gauge-fill {
+  background: linear-gradient(90deg, rgba(232, 121, 198, 0.7), rgba(232, 121, 198, 0.95));
+  box-shadow: 0 0 10px rgba(232, 121, 198, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.cv-gauge--ika[data-health='yellow'] .cv-gauge-fill {
+  background: linear-gradient(90deg, rgba(251, 191, 36, 0.7), rgba(251, 191, 36, 0.95));
+  box-shadow: 0 0 10px rgba(251, 191, 36, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.cv-gauge--ika[data-health='red'] .cv-gauge-fill {
+  background: linear-gradient(90deg, rgba(248, 113, 113, 0.7), rgba(248, 113, 113, 0.95));
+  box-shadow: 0 0 10px rgba(248, 113, 113, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.cv-gauge[data-health='empty'] .cv-gauge-fill {
+  opacity: 0;
+  box-shadow: none;
+  animation: none !important;
+}
+
+.cv-gauge[data-health='empty'] .cv-gauge-track {
+  opacity: 0.7;
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.cv-rocket[data-funded='false'] .cv-gauge-label {
+  color: rgba(234, 240, 255, 0.7);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.75);
+}
+
+.cv-gauge-label {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #ffffff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+  white-space: nowrap;
+  z-index: 10;
+}
+
+.cv-gauge-label svg {
+  flex-shrink: 0;
+  opacity: 1;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.8));
+}
+
+.cv-gauge--sui .cv-gauge-label svg {
+  color: rgba(140, 200, 255, 0.95);
+}
+
+.cv-gauge--ika .cv-gauge-label svg {
+  color: rgba(245, 170, 220, 0.95);
+}
+
+/* --- vault card body --- */
+
+.cv-baseCard-body {
+  padding: 0;
+  padding-inline-end: var(--cv-vault-actions-slot, 178px);
+  min-width: 0;
+}
+
+.cv-baseCard-vaultName {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--sp-text);
+  margin-bottom: 4px;
+}
+
+.cv-baseCard-kicker {
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--sp-muted);
+  margin-bottom: 6px;
+}
+
+.cv-baseCard-addrRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cv-baseCard-addr {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sp-text);
+}
+
+.cv-baseCard-faucetNote {
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1.4;
+  color: var(--sp-muted);
+}
+
+.cv-baseCard-faucetLink {
+  color: #c084fc; /* match solana neon-purple ring; explicitly not browser blue */
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  text-decoration-color: rgba(192, 132, 252, 0.55);
+}
+
+.cv-baseCard-faucetLink:hover,
+.cv-baseCard-faucetLink:focus-visible {
+  color: #d8b4fe;
+  text-decoration-color: rgba(216, 180, 254, 0.85);
+}
+
+html[data-appearance='light'] .cv-baseCard-faucetLink {
+  color: #7c3aed;
+  text-decoration-color: rgba(124, 58, 237, 0.55);
+}
+
+html[data-appearance='light'] .cv-baseCard-faucetLink:hover,
+html[data-appearance='light'] .cv-baseCard-faucetLink:focus-visible {
+  color: #6d28d9;
+  text-decoration-color: rgba(109, 40, 217, 0.85);
+}
+
+.cv-explorerLink {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(167, 139, 250, 0.95);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.cv-explorerLink:hover {
+  color: #ddd6fe;
+}
+
+.cv-iconBtn {
+  font-size: 11px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--sp-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sp-muted);
+  cursor: pointer;
+}
+
+.cv-iconBtn--tiny {
+  padding: 2px 6px;
+  font-size: 10px;
+}
+
+/* --- cockpit + head motion --- */
+
+/* head translate/opacity: owned by usePilotChoreography (js) - no css keyframes on pilot/passenger groups */
+
+/* cockpit-wide motion (whole wrap sways/dips behind the card) */
+@keyframes cv-cockpit-drift {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  30% { transform: translateY(-2px) rotate(0.3deg); }
+  70% { transform: translateY(3px) rotate(-0.2deg); }
+}
+
+@keyframes cv-cockpit-rock {
+  0%, 100% { transform: translateY(0) rotate(0deg); }
+  20% { transform: translateY(-3px) rotate(0.5deg); }
+  50% { transform: translateY(4px) rotate(-0.4deg); }
+  80% { transform: translateY(-1px) rotate(0.2deg); }
+}
+
+@keyframes cv-cockpit-turbulence {
+  0%, 100% { transform: translate(0, 0) rotate(0deg); }
+  15% { transform: translate(-2px, 3px) rotate(-0.6deg); }
+  35% { transform: translate(3px, -4px) rotate(0.8deg); }
+  55% { transform: translate(-1px, 5px) rotate(-0.3deg); }
+  75% { transform: translate(2px, -2px) rotate(0.5deg); }
+}
+
+/* cockpit wrap animations (the whole scene dips behind the card) */
+.cv-rocket[data-animations='on'][data-vault-health='green'] .cv-cockpitWrap {
+  animation: cv-cockpit-drift 6s ease-in-out infinite;
+}
+
+.cv-rocket[data-animations='on'][data-vault-health='yellow'] .cv-cockpitWrap {
+  animation: cv-cockpit-rock 3.5s ease-in-out infinite;
+}
+
+.cv-rocket[data-animations='on'][data-vault-health='red'] .cv-cockpitWrap {
+  animation: cv-cockpit-turbulence 0.8s ease-in-out infinite;
+}
+
+.cv-rocket[data-vault-health='unfunded'] .cv-cockpitWrap {
+  animation: none !important;
+}
+
+/* gauge low-fuel pulse */
+.cv-gauge[data-health='red'] .cv-gauge-fill {
+  animation: cv-gauge-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes cv-gauge-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-rocket .cv-cockpitWrap {
+    animation: none !important;
+  }
+  .cv-gauge-fill {
+    transition: none !important;
+  }
+  .cv-gauge[data-health='red'] .cv-gauge-fill {
+    animation: none !important;
+  }
+  .cv-gauge[data-health='empty'] .cv-gauge-fill {
+    animation: none !important;
+  }
+}
+
+/* dWallet cards — cd-* */
+
+/* inline help bubbles (vault home + future screens) — full border, no accent stripe */
+
+.cd-helpBubble {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  width: fit-content;
+  max-width: min(34ch, calc(100% - 2 * var(--ch-content-pad)));
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--theme-help-bubble-border);
+  background: var(--theme-help-bubble-bg);
+  box-shadow: 0 4px 22px rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+}
+
+.cd-helpBubble--hero {
+  align-self: center;
+  margin: 0 auto 12px;
+}
+
+/* wallet home places this hero bubble directly under the vault-card panel,
+   so it needs a little breathing room above. scoped so other surfaces using
+   the hero variant keep their existing flush spacing. */
+.sp-page--walletHome > .cd-helpBubble--hero {
+  margin-top: 14px;
+}
+
+.cd-helpBubble--bento {
+  align-self: center;
+  margin: 4px auto 10px;
+  border-color: var(--theme-help-bubble-bento-border);
+  background: var(--theme-help-bubble-bento-bg);
+  box-shadow: 0 3px 18px rgba(0, 0, 0, 0.2);
+}
+
+.cd-helpBubble--bento .cd-helpBubble-icon {
+  color: var(--theme-help-bubble-bento-icon);
+}
+
+.cd-helpBubble-icon {
+  flex-shrink: 0;
+  margin-top: 1px;
+  color: var(--theme-help-bubble-icon);
+  line-height: 0;
+}
+
+.cd-helpBubble-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.cd-helpBubble-text {
+  font-family: var(--theme-font-body);
+  font-size: 11px;
+  line-height: 1.45;
+  margin: 0;
+  color: var(--sp-muted);
+}
+
+.cd-helpBubble-text strong {
+  font-weight: 700;
+  color: var(--sp-text);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .cd-helpBubble {
+    animation: cd-helpBubble-in 0.28s cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+}
+
+@keyframes cd-helpBubble-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-helpBubble {
+    animation: none;
+  }
+}
+
+.cd-sectionTitle {
+  font-family: var(--theme-font-display);
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--sp-muted);
+  margin-bottom: 8px;
+}
+
+.cd-sectionTitle--inline {
+  margin-bottom: 0;
+}
+
+.cd-sectionTitle--dwalletsMixed {
+  text-transform: none;
+  letter-spacing: 0.05em;
+  /* one step above .cd-cardTitle (13px) so the section reads above each dWallet name */
+  font-size: 15px;
+}
+
+.cd-sectionTitleRow {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cd-sectionManageBtn {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  border-radius: var(--theme-radius-sm);
+  background: var(--theme-wc-btn-bg);
+  color: var(--sp-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.cd-sectionManageBtn:hover {
+  background: var(--theme-wc-btn-hover-bg);
+  color: var(--sp-text);
+}
+
+.cd-sectionManageBtn:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+
+.cd-card {
+  border-radius: var(--theme-radius-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.045);
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  box-shadow: var(--theme-elev-card, 0 12px 40px rgba(0, 0, 0, 0.35));
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.cd-card--dwallet {
+  display: flex;
+  flex-direction: column;
+  height: auto;
+  min-height: 0;
+  max-height: 210px;
+  padding: 8px 10px 6px;
+  margin-bottom: 8px;
+  box-sizing: border-box;
+}
+
+.cd-cardDwalletBody {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  margin-top: 2px;
+}
+
+.cd-dwGasFetchHint {
+  font-size: 10px;
+  line-height: 1.35;
+  color: var(--sp-muted);
+  padding: 0 0 6px;
+  font-style: italic;
+}
+
+.cd-dwGasScroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+  margin-bottom: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in oklch, var(--sp-text) 34%, transparent) var(--theme-scrollbar-track);
+}
+
+.cd-dwGasScroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.cd-dwGasScroll::-webkit-scrollbar-track {
+  margin-block: 2px;
+  background: var(--theme-scrollbar-track);
+  border-radius: 999px;
+}
+
+.cd-dwGasScroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: var(--theme-scrollbar-thumb);
+}
+
+.cd-dwGasScroll:hover::-webkit-scrollbar-thumb {
+  background: var(--theme-scrollbar-thumb-hover);
+}
+
+/* fixed column template so addresses + gas line up across dWallet cards */
+.cd-dwGasScroll--alignCols {
+  --dw-gas-col-chain: 3.75rem;
+  --dw-gas-col-addr: 5.75rem;
+  --dw-gas-col-gas: minmax(0, 1fr);
+}
+
+.cd-dwGasScroll--alignCols .cd-dwGasRow--grid {
+  grid-template-columns: var(--dw-gas-col-chain) var(--dw-gas-col-addr) var(--dw-gas-col-gas);
+  gap: 6px 8px;
+}
+
+.cd-dwGasScroll--alignCols .cd-dwGasColAddr {
+  justify-content: flex-end;
+}
+
+.cd-addr--tail {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+}
+
+.cd-dwGasLoading {
+  padding: 2px 0 4px;
+}
+
+.cd-dwGasLoadingDots {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--sp-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.cd-dwPendingHint {
+  padding-top: 4px;
+  line-height: 1.45;
+}
+
+.cd-dwGasRow {
+  padding: 4px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+
+.cd-dwGasRow--grid {
+  display: grid;
+  grid-template-columns: minmax(60px, auto) minmax(0, 1fr) minmax(76px, auto);
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.cd-dwGasRow:last-child {
+  border-bottom: none;
+}
+
+.cd-dwGasCol {
+  min-width: 0;
+}
+
+.cd-dwGasColChain {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd-dwGasColAddr {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+}
+
+.cd-dwGasColGas {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  text-align: right;
+}
+
+.cd-dwGasColGasInner {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0;
+  line-height: 1.2;
+}
+
+.cd-dwGasColGasInner--amounts .cd-dwGasSym {
+  font-size: 9px;
+}
+
+.cd-dwGasColGasInner--amounts .cd-dwGasAmt {
+  font-size: 11px;
+}
+
+.cd-dwGasColGasInner--amounts .cd-dwGasUsd {
+  font-size: 10px;
+}
+
+.cd-dwChainIco {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  border-radius: 5px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.cd-dwChainIcoLetter {
+  transform: translateY(0.5px);
+}
+
+.cd-dwChainIco--btc {
+  background: rgba(247, 147, 26, 0.2);
+  color: #ffb14a;
+}
+
+.cd-dwChainIco--eth {
+  background: rgba(98, 126, 234, 0.22);
+  color: #a5b4fc;
+}
+
+.cd-dwChainIco--evm {
+  background: rgba(167, 139, 250, 0.18);
+  color: #ddd6fe;
+}
+
+.cd-dwChainIco--sui {
+  background: rgba(79, 209, 197, 0.18);
+  color: #5eead4;
+}
+
+.cd-dwChainIco--sol {
+  background: rgba(192, 132, 252, 0.2);
+  color: #e9d5ff;
+}
+
+.cd-dwChainIco--apt {
+  background: rgba(148, 163, 184, 0.2);
+  color: #e2e8f0;
+}
+
+.cd-dwChainIco--img {
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-sizing: border-box;
+}
+
+.cd-dwChainIco--img img {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  object-fit: contain;
+  object-position: center;
+  display: block;
+}
+
+.cd-dwGasRowText {
+  min-width: 0;
+  flex: 1;
+}
+
+.cd-dwGasChainLabel {
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--sp-text);
+  line-height: 1.25;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cd-dwGasAddrRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.cd-dwGasRail {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 2px;
+  text-align: right;
+  min-width: 88px;
+}
+
+.cd-dwGasSym {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: rgba(234, 240, 255, 0.45);
+}
+
+.cd-dwGasAmt {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: var(--sp-text);
+}
+
+.cd-dwGasUsd {
+  font-size: 11px;
+  color: var(--sp-muted);
+}
+
+.cd-portfolioBtn--dwalletFooter {
+  flex-shrink: 0;
+  margin-top: auto;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+.cd-card--dwallet .cd-cardHead {
+  margin: -8px -10px 5px;
+  padding: 5px 10px;
+  align-items: center;
+}
+
+.cd-cardHead {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin: -12px -14px 10px;
+  padding: 10px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: calc(var(--theme-radius-surface) - 1px) calc(var(--theme-radius-surface) - 1px) 0 0;
+}
+
+.cd-cardHeadActions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.cd-cardDragHandle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sp-muted);
+  cursor: grab;
+  padding: 0;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .cd-cardDragHandle:hover {
+    color: rgba(234, 240, 255, 0.95);
+    background: rgba(124, 92, 252, 0.22);
+    box-shadow: 0 0 0 1px rgba(168, 140, 255, 0.35);
+    transform: scale(1.06);
+  }
+}
+
+.cd-cardDragHandle:active {
+  cursor: grabbing;
+  transform: scale(0.98);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-cardDragHandle {
+    transition: background 0.2s ease, color 0.2s ease;
+  }
+
+  .cd-cardDragHandle:hover,
+  .cd-cardDragHandle:active {
+    transform: none;
+  }
+}
+
+.cd-reorderGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.cd-reorderItemWrap {
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 10px;
+}
+
+.cd-reorderItemBody {
+  position: relative;
+}
+
+.cd-reorderItemBody .cd-card {
+  margin-bottom: 0;
+}
+
+.cd-reorderDropSlot {
+  flex-shrink: 0;
+  border: 2px dashed rgba(124, 92, 252, 0.72);
+  border-radius: var(--theme-radius-surface);
+  margin-bottom: 10px;
+  background: rgba(124, 92, 252, 0.1);
+  box-sizing: border-box;
+  pointer-events: none;
+}
+
+.cd-addrBlock {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.cd-addrRailLabel {
+  font-size: 11px;
+  min-width: 76px;
+  flex-shrink: 0;
+}
+
+.cd-addrPending {
+  font-size: 12px;
+}
+
+.cd-card:hover {
+  border-color: rgba(124, 92, 252, 0.55);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(124, 92, 252, 0.12);
+}
+
+.cd-card--active {
+  border-color: rgba(124, 92, 252, 0.45);
+  box-shadow: 0 0 0 1px rgba(124, 92, 252, 0.2);
+}
+
+.cd-card--pending {
+  border-style: dashed;
+  opacity: 0.92;
+}
+
+.cd-cardTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.cd-cardHead .cd-cardTitle {
+  margin-bottom: 0;
+}
+
+.cd-cardTitle {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 0;
+  line-height: 1.3;
+  flex: 1;
+  min-width: 0;
+}
+
+.cd-cardTitleEdit {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sp-muted);
+  cursor: pointer;
+}
+
+.cd-cardTitleEdit:hover {
+  color: var(--sp-text);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.cd-cardTitleEdit:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}
+
+.cd-cardRename {
+  margin-bottom: 10px;
+}
+
+.cd-cardRenameActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.cd-addrRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.cd-addr {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.45;
+  color: var(--sp-muted);
+}
+
+.cd-muted {
+  font-size: 12px;
+  color: var(--sp-muted);
+}
+
+.cd-tokenList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+
+.cd-tokenRow {
+  display: grid;
+  grid-template-columns: 48px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+}
+
+.cd-tokenSym {
+  font-weight: 700;
+}
+
+.cd-tokenBal {
+  text-align: right;
+  font-family: ui-monospace, monospace;
+  color: var(--sp-text);
+}
+
+.cd-tokenUsd {
+  font-size: 11px;
+  color: var(--sp-muted);
+  text-align: right;
+}
+
+.cd-miniBtn {
+  font-size: 10px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--sp-border);
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--sp-muted);
+  cursor: pointer;
+}
+
+.cd-portfolioBtn {
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border-radius: var(--theme-radius-sm);
+  border: 1px solid rgba(124, 92, 252, 0.35);
+  background: rgba(124, 92, 252, 0.15);
+  color: #ddd6fe;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.18s ease, background 0.18s ease, border-color 0.18s ease;
+}
+
+.cd-portfolioBtn:hover:not(:disabled) {
+  background: rgba(124, 92, 252, 0.28);
+  border-color: rgba(168, 140, 255, 0.65);
+}
+
+.cd-portfolioBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.cd-pendingLabel {
+  font-size: 12px;
+  font-weight: 700;
+  color: rgba(251, 191, 36, 0.95);
+  margin-bottom: 6px;
+}
+
+/* portfolio — cp-* */
+
+.cp-portfolioHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cp-portfolioHero {
+  padding: 12px 0 16px;
+  border-bottom: 1px solid var(--sp-border);
+  margin-bottom: 12px;
+}
+
+.cp-portfolioLabel {
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 6px;
+}
+
+.cp-portfolioAddrRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  line-height: 1.45;
+}
+
+.cp-portfolioAddrRow .ch-explorerValueRow {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.cp-totalUsd {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 8px 0;
+}
+
+.cp-tokenTable {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.cp-tokenTableBlock {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cp-tokenTableBlock:last-child {
+  border-bottom: none;
+}
+
+.cp-tokenTableRow {
+  display: grid;
+  grid-template-columns: 52px 1fr 88px 72px;
+  gap: 8px;
+  align-items: center;
+  font-size: 12px;
+  padding: 6px 0;
+  border-bottom: none;
+}
+
+.cp-tokenTableRow.cp-tokenTableRow--send {
+  /* last column: 28px control + focus ring breathing room on touch / keyboard */
+  grid-template-columns: 52px 1fr 88px 72px 40px;
+}
+
+.cp-tokenSendBtn--open {
+  color: var(--theme-accent, #a78bfa);
+  border-radius: 8px;
+  background: rgba(167, 139, 250, 0.12);
+}
+
+.cp-tokenTableSendPanel {
+  overflow: hidden;
+  padding: 0 0 12px 4px;
+}
+
+.cp-tokenTableSendPanelInner {
+  margin-top: 4px;
+  padding: 12px;
+  border-radius: var(--theme-radius-surface, 10px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.cp-tokSendPlaceholder {
+  width: 40px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+/* secp portfolio: bitcoin / evm section chrome */
+.cp-portfolioSecpAssetStack {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.cp-portfolioSectionHdr {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  color: var(--sp-muted, rgba(255, 255, 255, 0.55));
+  margin: 10px 0 6px;
+  padding-left: 2px;
+}
+
+.cp-portfolioSecpRule {
+  height: 1px;
+  margin: 14px 0 10px;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.14) 12%,
+    rgba(255, 255, 255, 0.14) 88%,
+    transparent
+  );
+}
+
+.cp-portfolioEvmHdrRow {
+  display: grid;
+  grid-template-columns: 1fr minmax(0, auto);
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  padding: 0 2px;
+  min-width: 0;
+}
+
+.cp-portfolioEvmHdrLabel {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--sp-muted, rgba(255, 255, 255, 0.55));
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-portfolioNetSelect {
+  appearance: none;
+  -webkit-appearance: none;
+  max-width: min(58%, 200px);
+  padding: 5px 26px 5px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.25;
+  color: var(--sp-text, #fff);
+  background: rgba(255, 255, 255, 0.06)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='rgba(255,255,255,0.55)' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 7px center;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  cursor: pointer;
+  text-align: right;
+  direction: rtl;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  outline: none;
+}
+
+.cp-portfolioNetSelect option {
+  direction: ltr;
+  text-align: left;
+  font-weight: 600;
+  font-size: 12px;
+}
+
+.cp-portfolioNetSelect:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+  border-color: var(--theme-focus-ring);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--theme-focus-ring) 22%, transparent);
+}
+
+.dp-portfolioAssetsSlab {
+  flex: 1 1 auto;
+  min-height: 0;
+  background: var(--wallet-home-bento-bg, #05030d);
+  margin-top: 4px;
+  padding: 10px var(--ch-content-pad, 14px) max(20px, env(safe-area-inset-bottom, 0px));
+  border-radius: 14px 14px 0 0;
+  box-sizing: border-box;
+}
+
+.dp-dwalletSummaryHero {
+  flex-shrink: 0;
+  padding: 8px var(--ch-content-pad, 14px) 14px;
+  box-sizing: border-box;
+}
+
+/* dWallet portfolio empty state — frowny wallet glyph + copy.
+   shown when the active vault has zero dWallets so the page no longer spins on "loading…" forever. */
+.dp-dwalletEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px var(--ch-content-pad, 14px) 40px;
+  text-align: center;
+  color: var(--sp-muted);
+}
+
+.dp-sadWallet {
+  color: rgba(234, 240, 255, 0.55);
+  margin-bottom: 4px;
+}
+
+html[data-appearance='light'] .dp-sadWallet {
+  color: rgba(60, 64, 87, 0.55);
+}
+
+.dp-dwalletEmpty-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--sp-text);
+}
+
+.dp-dwalletEmpty-text {
+  margin: 0;
+  max-width: 320px;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.dp-dwalletSummaryTitleRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+
+.dp-dwalletSummaryTitle {
+  font-family: var(--theme-font-display, inherit);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.35px;
+  line-height: 1.15;
+  margin: 0;
+}
+
+.dp-dwalletRenameBtn {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--sp-muted, rgba(255, 255, 255, 0.6));
+  cursor: pointer;
+}
+
+.dp-dwalletRenameBtn:hover {
+  color: var(--sp-text, #fff);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.dp-dwalletRenameField {
+  margin-top: 8px;
+}
+
+html[data-appearance='light'] .dp-portfolioAssetsSlab {
+  box-shadow: 0 -1px 0 rgba(15, 23, 42, 0.06);
+}
+
+.cp-tokSym {
+  font-weight: 800;
+}
+
+.cp-tokName {
+  color: var(--sp-muted);
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cp-tokBal,
+.cp-tokUsd {
+  font-family: ui-monospace, monospace;
+  text-align: right;
+  font-size: 11px;
+}
+
+/* vault management skeleton */
+
+.cv-vaultMgmt-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.cv-vaultMgmt-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: var(--theme-radius-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cv-vaultMgmt-row--active {
+  border-color: rgba(124, 92, 252, 0.45);
+}
+
+.cv-vaultMgmt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.cv-dragHint {
+  font-size: 12px;
+  color: var(--sp-muted);
+  opacity: 0.5;
+  cursor: default;
+  user-select: none;
+}
+
+.cv-vaultMgmt-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.cv-vaultMgmt-nameRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  min-width: 0;
+}
+
+.cv-vaultMgmt-nameBlock {
+  min-width: 0;
+  flex: 1;
+}
+
+.cv-vaultMgmt-renamePanel {
+  margin-top: 12px;
+}
+
+.cv-vaultMgmt-renameChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+/* popup: stack dWallet cards tighter */
+
+.wc-popupDwalletStack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.wc-popupDwalletStack .cd-card {
+  margin-bottom: 0;
+}
+
+/* dWallet context strip under vault header */
+.cv-dwalletBar {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 4px var(--ch-content-pad, 12px);
+  border-bottom: 1px solid var(--sp-border);
+  background: color-mix(in srgb, var(--sp-bg) 92%, transparent);
+  position: relative;
+  z-index: 4;
+  box-sizing: border-box;
+}
+
+.cv-dwalletBar--empty {
+  justify-content: center;
+}
+
+.cv-dwalletBar-muted {
+  font-size: 11px;
+  color: var(--sp-muted);
+}
+
+.cv-dwalletBar--singleWrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+  box-sizing: border-box;
+}
+
+.cv-dwalletBar-singleNav {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  padding: 0;
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.cv-dwalletBar--single {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  padding: 4px 0;
+}
+
+.cv-dwalletBar-triggerWrap {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  padding: 4px 0;
+  box-sizing: border-box;
+}
+
+.cv-dwalletBar-triggerLabel,
+.cv-dwalletBar-triggerChev {
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.cv-dwalletBar-triggerAddr {
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+  gap: 2px;
+}
+
+.cv-dwalletBar-curveHint {
+  font-size: 11px;
+  color: var(--sp-muted);
+  flex-shrink: 0;
+}
+
+.cv-dwalletBar-addrExplorer {
+  min-width: 0;
+  flex: 1;
+  justify-content: flex-end;
+}
+
+.cv-dwalletBar-itemRow {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.cv-dwalletBar-itemRow:last-child {
+  border-bottom: none;
+}
+
+.cv-dwalletBar-itemRow--active {
+  background: rgba(124, 92, 252, 0.08);
+}
+
+.cv-dwalletBar-itemMain {
+  flex: 1;
+  min-width: 0;
+  display: block;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cv-dwalletBar-itemMain:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.cv-dwalletBar-itemExplorer {
+  flex-shrink: 0;
+  max-width: 48%;
+  padding-right: 8px;
+}
+
+.cv-dwalletBar-label {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+
+.cv-dwalletBar-addr {
+  font-size: 11px;
+  color: var(--sp-muted);
+}
+
+/**
+ * connected-dapps pill — surfaces which dapp origins are bound to the focused dWallet.
+ * curve-discriminated upstream so it works the same on every base chain (sui-base + solana-base ika).
+ */
+.cv-dwalletBar-dappsPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  margin-left: 6px;
+  max-width: 140px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  font-size: 10px;
+  line-height: 1.4;
+  background: rgba(124, 92, 252, 0.14);
+  color: var(--sp-text);
+  border: 1px solid rgba(124, 92, 252, 0.22);
+  cursor: default;
+}
+
+.cv-dwalletBar-dappsPillLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.cv-dwalletBar-itemMainInner {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  width: 100%;
+}
+
+.cv-dwalletBar-trigger {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  padding: 4px 0;
+}
+
+.cv-dwalletBar-chev {
+  margin-left: auto;
+  font-size: 10px;
+  opacity: 0.65;
+}
+
+.cv-dwalletBar-menu {
+  position: absolute;
+  left: var(--ch-content-pad, 12px);
+  right: var(--ch-content-pad, 12px);
+  top: calc(100% + 4px);
+  max-height: 220px;
+  overflow: auto;
+  border-radius: 10px;
+  border: 1px solid var(--theme-chain-border);
+  /* opaque surface — --theme-setup-card-bg-side is ~0.06 alpha in dark themes */
+  background: var(--sp-bg);
+  color: var(--theme-page-text);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
+}
+
+.cv-dwalletBar-item {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 10px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cv-dwalletBar-item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.cv-dwalletBar-item--active {
+  font-weight: 700;
+}
+
+.cv-dwalletBar-itemMeta {
+  font-size: 11px;
+  color: var(--sp-muted);
+}
+
+/* assets page inner tabs */
+.ap-tabRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.ap-tabBtn {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--sp-muted);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.ap-tabBtn--active {
+  border-color: rgba(124, 92, 252, 0.55);
+  background: rgba(124, 92, 252, 0.18);
+  color: var(--sp-text);
+}
+
+.ap-tokensStub {
+  padding: 8px 0 4px;
+}
+
+/* dWallet portfolio page */
+.dp-chipRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.dp-actionsRow {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.dp-actIcon {
+  display: inline-flex;
+  vertical-align: middle;
+  margin-right: 6px;
+}
+
+.ch-ext--popup .wc-sendOverlay .sp-backBtn {
+  margin-bottom: 12px;
+}
+
+/* receive sheet (dWallet portfolio) */
+.dp-receiveBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 12px;
+  box-sizing: border-box;
+}
+
+.dp-receiveSheet {
+  width: 100%;
+  max-width: 400px;
+  border-radius: 16px 16px 12px 12px;
+  padding: 16px 16px 18px;
+  background: var(--theme-setup-card-bg-side, rgba(18, 20, 28, 0.98));
+  border: 1px solid var(--theme-chain-border);
+  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.45);
+}
+
+.dp-receiveSheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.dp-receiveSheet-title {
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dp-receiveSheet-sub {
+  font-size: 11px;
+  color: var(--sp-muted);
+  margin-bottom: 12px;
+}
+
+.dp-receiveClose {
+  border: none;
+  background: transparent;
+  color: var(--sp-muted);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 8px;
+}
+
+.dp-receiveClose:hover {
+  color: var(--sp-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.dp-receiveQrWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.dp-receiveQr {
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.dp-receiveQrPlaceholder {
+  width: 220px;
+  height: 220px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: var(--sp-muted);
+  border-radius: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+}
+
+.dp-receiveAddr {
+  font-size: 11px;
+  line-height: 1.45;
+  word-break: break-all;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dp-receiveAddrWrap {
+  margin-bottom: 0;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.dp-receiveExplorerRow.ch-explorerValueRow {
+  font-size: 11px;
+}
+
+/* aggregated assets tab */
+.ap-aggTotal {
+  font-size: 20px;
+  font-weight: 800;
+  margin-bottom: 14px;
+}
+
+.ap-aggRow {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  margin-bottom: 10px;
+  border-radius: var(--theme-radius-surface);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.ap-aggRow-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.ap-aggLabel {
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.ap-aggCurve {
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.65;
+  letter-spacing: 0.04em;
+}
+
+.ap-aggUsd {
+  font-size: 13px;
+  font-weight: 800;
+  flex-shrink: 0;
+}
+
+.ap-aggOpen {
+  align-self: flex-start;
+  margin-top: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(124, 92, 252, 0.4);
+  background: rgba(124, 92, 252, 0.12);
+  color: #ddd6fe;
+  cursor: pointer;
+}
+
+.ap-aggOpen:hover {
+  background: rgba(124, 92, 252, 0.22);
+}
+
+/* screen-reader-only: keep copy in DOM for AT without affecting layout */
+.ch-srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* explorer link + copy (ExplorerValueRow) */
+.ch-explorerValueRow {
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cv-baseCard-addrRow .ch-explorerValueRow {
+  flex: 1;
+  min-width: 0;
+}
+
+.cd-dwGasColAddr .ch-explorerValueRow {
+  flex: 1;
+  min-width: 0;
+  justify-content: flex-end;
+}
+
+.cd-explorerMonoLink {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  color: rgba(147, 197, 253, 0.95);
+  text-decoration: none;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.cd-explorerMonoLink:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.cd-explorerMonoPlain {
+  font-variant-numeric: tabular-nums;
+  font-family: ui-monospace, monospace;
+  font-size: 11px;
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+  color: var(--sp-text, rgba(234, 240, 255, 0.92));
+}
+
+/* win 1 - per-dWallet encrypted label widget (pre-alpha lab-grade). */
+.cd-encLabel {
+  margin-top: 10px;
+  padding: 8px 10px 10px;
+  border: 1px dashed rgba(147, 197, 253, 0.25);
+  border-radius: 8px;
+  background: rgba(15, 23, 42, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cd-encLabel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.cd-encLabel-title {
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(234, 240, 255, 0.7);
+}
+
+.cd-encLabel-badge {
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(252, 211, 77, 0.45);
+  color: rgba(252, 211, 77, 0.95);
+  background: rgba(252, 211, 77, 0.08);
+  cursor: help;
+}
+
+.cd-encLabel-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cd-encLabel-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.cd-encLabel-state {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex: 1;
+  min-width: 0;
+}
+
+.cd-encLabel-hidden {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  color: rgba(147, 197, 253, 0.85);
+}
+
+.cd-encLabel-revealed {
+  font-family: ui-monospace, monospace;
+  font-size: 12px;
+  color: rgba(234, 240, 255, 0.95);
+  word-break: break-all;
+  min-width: 0;
+}
+
+.cd-encLabel-meta {
+  font-size: 10px;
+  white-space: nowrap;
+}
+
+.cd-encLabel-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cd-encLabel-clear {
+  color: rgba(252, 165, 165, 0.95);
+}
+
+.cd-encLabel-msg {
+  font-size: 11px;
+  line-height: 1.35;
+}
+
+.cd-encLabel-err {
+  color: rgba(252, 165, 165, 0.95);
+}
+
+/* on-chain status pills shown next to encrypted dwallet labels */
+.cd-encLabel-pillOk,
+.cd-encLabel-pillPending,
+.cd-encLabel-pillMissing {
+  font-size: 9px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 6px;
+  border-radius: 999px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.cd-encLabel-pillOk {
+  background: rgba(110, 231, 183, 0.12);
+  color: rgba(110, 231, 183, 0.95);
+  border: 1px solid rgba(110, 231, 183, 0.4);
+}
+.cd-encLabel-pillPending {
+  background: rgba(252, 211, 77, 0.12);
+  color: rgba(252, 211, 77, 0.95);
+  border: 1px solid rgba(252, 211, 77, 0.4);
+}
+.cd-encLabel-pillMissing {
+  background: rgba(252, 165, 165, 0.12);
+  color: rgba(252, 165, 165, 0.95);
+  border: 1px solid rgba(252, 165, 165, 0.4);
+}

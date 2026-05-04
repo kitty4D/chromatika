@@ -1,0 +1,20 @@
+{
+  "v": 1,
+  "id": "demo-panic-1777693585502",
+  "severity": "critical",
+  "timestampMs": 1777693585502,
+  "expiresAtMs": 1778298385502,
+  "affectedDomains": [],
+  "affectedChains": [
+    "evm",
+    "sui",
+    "solana"
+  ],
+  "titleShort": "auto-panic: chromatika-team detected active drain pattern",
+  "bodyLong": "A drain pattern targeting policy-vault dWallets was detected in the wild. chromatika-team is publishing this alert with panicTargets populated for the affected vaults. When your chromatika instance verifies this alert and the active vault id matches, the on-chain panic flag will flip automatically. Unfreeze takes effect after the configured delay; until then the MPC network refuses ALL signing.",
+  "publisherKeyB64": "+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=",
+  "panicTargets": [
+    "0xabcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789"
+  ],
+  "signatureB64": "bUbnjoBNbukL9StmOOyO2rT4cr0rZkMLSpMdjdWcn2QQPYNqW4KUQ2tmA0/rdPXXaFZ9DzmbUO9yT10eyF74DQ=="
+}

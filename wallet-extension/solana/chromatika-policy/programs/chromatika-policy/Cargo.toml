@@ -1,0 +1,19 @@
+[package]
+name = "chromatika-policy"
+version = "0.1.0"
+description = "chromatika on-chain spend caps + panic for Solana ika base. Pre-alpha; awaits ika Solana Alpha-1."
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "lib"]
+name = "chromatika_policy"
+
+[features]
+no-entrypoint = []
+no-idl = []
+no-log-ix-name = []
+cpi = ["no-entrypoint"]
+default = []
+
+[dependencies]
+anchor-lang = "0.30.1"
