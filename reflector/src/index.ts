@@ -1,18 +1,31 @@
 /**
  * Chromatika MWA reflector - Cloudflare Worker entry.
  *
- * the Mobile Wallet Adapter spec (https://solana-mobile.github.io/mobile-wallet-adapter/spec/spec.html#reflector-protocol)
- * defines a tiny relay: a dapp connects without an id, server allocates a random id, sends a
- * REFLECTOR_ID frame back; a wallet connects with `?id=<base64url>` and the two are paired.
- * once paired the server sends APP_PING to both endpoints and then forwards every frame from
- * one to the other. frames cap at 4 KiB; half-open sessions die after 30 s, fully-open after 90 s.
+ * supports both the new MWA reflector spec
+ * (https://solana-mobile.github.io/mobile-wallet-adapter/spec/spec.html#reflector-protocol)
+ * AND the legacy 1.0 spec
+ * (https://solana-mobile.github.io/mobile-wallet-adapter/spec/spec1.0.html#reflector-protocol)
+ * simultaneously, discriminated by URL shape on first connect:
+ *
+ * - new spec: dapp opens `wss://<host>/reflect` (no id). server allocates a random 16-byte id,
+ *   responds with a REFLECTOR_ID frame, and the dapp embeds that id into the QR. wallet later
+ *   connects with `?id=<base64url>`.
+ * - old spec (used by every published Android wallet still in the wild as of 2026-05): dapp
+ *   picks its own numeric id and opens `wss://<host>/reflect?id=<numeric>`. server uses that id
+ *   as the room key, sends NO REFLECTOR_ID frame. wallet connects with the same `?id=<numeric>`
+ *   from the QR.
+ *
+ * once paired the server sends APP_PING (empty frame) to both endpoints and then forwards every
+ * frame from one to the other. frames cap at 4 KiB; half-open sessions die after 30 s,
+ * fully-open after 90 s. these semantics are identical between the two specs.
  *
  * routing strategy:
- * - GET /reflect (no `id`): the dapp side. we allocate a random reflector_unique_id, route to a
- *   Durable Object keyed by that id, and pass `dapp=1` so the DO knows to respond with a
- *   REFLECTOR_ID frame.
- * - GET /reflect?id=<base64url>: the wallet side. we route to the Durable Object for that id;
- *   the DO either pairs and sends APP_PING to both, or rejects (already paired / unknown id).
+ * - GET /reflect (no `id`): new-spec dapp side. allocate a random reflector_unique_id, route to
+ *   a Durable Object keyed by that id, pass `role=dapp` so the DO knows it's new-spec and must
+ *   send a REFLECTOR_ID frame on accept.
+ * - GET /reflect?id=<X>: ambiguous — either the old-spec dapp creating a room or any-spec
+ *   wallet joining one. forward to the DO keyed by `X` with `role=auto`; the DO uses its own
+ *   state (room empty -> old-spec dapp; room has dapp -> wallet) to disambiguate.
  *
  * health probes (GET /healthz) return plain text 200 OK so uptime checks have something to hit.
  *
@@ -58,17 +71,18 @@ export default {
     const requestedId = url.searchParams.get('id');
 
     if (requestedId) {
-      // wallet side: route to the existing DO. if the dapp never connected (or already paired
-      // / timed out), the DO closes the socket; we still return 101 so the lib surfaces the close.
+      // ambiguous path: this could be an old-spec dapp creating a new room with its own id, or
+      // a wallet (either spec) joining an existing room. forward to the DO keyed by the id with
+      // role=auto so the DO can decide based on whether it already has a dapp attached.
       const stub = env.REFLECTOR.get(env.REFLECTOR.idFromName(requestedId));
       const forwarded = new Request(
-        `https://internal.reflector/attach?role=wallet&id=${encodeURIComponent(requestedId)}`,
+        `https://internal.reflector/attach?role=auto&id=${encodeURIComponent(requestedId)}`,
         request,
       );
       return stub.fetch(forwarded);
     }
 
-    // dapp side: allocate a fresh random id and address the DO by it.
+    // new-spec dapp side: allocate a fresh random id and address the DO by it.
     const idBytes = new Uint8Array(REFLECTOR_ID_BYTES);
     crypto.getRandomValues(idBytes);
     const newId = bytesToBase64Url(idBytes);
