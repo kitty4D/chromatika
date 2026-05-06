@@ -133,12 +133,12 @@ cannot remove the **last** envelope - that would brick the vault. UI / API enfor
 
 ## per-envelope KDF inputs
 
-| envelope kind | KDF input | KDF | rationale |
-|---------------|-----------|-----|-----------|
-| password | password (string) | argon2id (slow, memory-hard) | resists offline brute force |
-| passkey-prf | PRF output (32 bytes random) | HKDF-SHA256 (fast) | input is already high-entropy random |
-| wallet-signature | signature (64 bytes ed25519 sig) | HKDF-SHA256 (fast) | input is already high-entropy |
-| recovery-words | BIP39 seed (64 bytes from PBKDF2-HMAC-SHA512) | HKDF-SHA256 (fast) | BIP39's PBKDF2 already did the slow work |
+| envelope kind    | KDF input                                     | KDF                          | rationale                                |
+| ---------------- | --------------------------------------------- | ---------------------------- | ---------------------------------------- |
+| password         | password (string)                             | argon2id (slow, memory-hard) | resists offline brute force              |
+| passkey-prf      | PRF output (32 bytes random)                  | HKDF-SHA256 (fast)           | input is already high-entropy random     |
+| wallet-signature | signature (64 bytes ed25519 sig)              | HKDF-SHA256 (fast)           | input is already high-entropy            |
+| recovery-words   | BIP39 seed (64 bytes from PBKDF2-HMAC-SHA512) | HKDF-SHA256 (fast)           | BIP39's PBKDF2 already did the slow work |
 
 password is the only envelope that uses argon2id because it's the only credential where the entropy comes directly from a human-chosen string. PRF / signatures / BIP39 seeds are all high-entropy random outputs that don't need additional stretching.
 

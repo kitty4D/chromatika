@@ -5,6 +5,8 @@ node_modules/
 wallet-extension/dist/
 wallet-extension/.vite/
 
+website/dist/
+
 # test artifacts
 wallet-extension/test-results/
 wallet-extension/playwright-report/

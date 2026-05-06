@@ -32,7 +32,7 @@ export const homeFoundationTech: FoundationTech[] = [
   {
     id: "encrypt",
     label: "encrypt",
-    href: "https://github.com/dwallet-labs/ika/blob/main/docs/content/docs/sdk/cryptography.mdx",
+    href: "https://www.encrypt.xyz/",
     iconSrc: "/logos/encrypt.svg",
   },
   {
@@ -78,7 +78,10 @@ export const homeTechCarouselSlides: TechCarouselSlide[] = [
     links: [
       { label: "ika.xyz", href: "https://www.ika.xyz/" },
       { label: "github", href: "https://github.com/dwallet-labs/ika" },
-      { label: "sdk docs (book)", href: "https://github.com/dwallet-labs/ika/tree/main/docs/content/docs" },
+      {
+        label: "sdk docs (book)",
+        href: "https://github.com/dwallet-labs/ika/tree/main/docs/content/docs",
+      },
       { label: "x / ika", href: "https://x.com/ikadotxyz" },
     ],
   },
@@ -95,9 +98,8 @@ export const homeTechCarouselSlides: TechCarouselSlide[] = [
       "dapps that assume Mysten-native personal-message verification need a compatibility conversation; the wallet documents the gap on purpose.",
     ],
     links: [
-      { label: "cryptography.mdx", href: "https://github.com/dwallet-labs/ika/blob/main/docs/content/docs/sdk/cryptography.mdx" },
-      { label: "ika repo", href: "https://github.com/dwallet-labs/ika" },
-      { label: "ika.xyz", href: "https://www.ika.xyz/" },
+      { label: "encrypt.xyz", href: "https://www.encrypt.xyz/" },
+      { label: "encrypt repo", href: "https://github.com/dwallet-labs/encrypt-pre-alpha" },
       { label: "x / encrypt", href: "https://x.com/encrypt_xyz" },
     ],
   },
@@ -106,7 +108,7 @@ export const homeTechCarouselSlides: TechCarouselSlide[] = [
     title: "LazorKit",
     logoSrc: "/logos/lazorkit.svg",
     intro:
-      "LazorKit is Solana's passkey-native smart-wallet execution layer: WebAuthn on the front, program-owned accounts on chain, and a developer SDK that treats seed-phrase anxiety as a bug. they aim to make \"sign in like a normal app\" the default for Solana dapps that still want programmable custody.",
+      'LazorKit is Solana\'s passkey-native smart-wallet execution layer: WebAuthn on the front, program-owned accounts on chain, and a developer SDK that treats seed-phrase anxiety as a bug. they aim to make "sign in like a normal app" the default for Solana dapps that still want programmable custody.',
     howWeUse:
       "Chromatika watches LazorKit the same way we watch Seeker and MWA: as the template for device-bound Solana auth without pasting secrets through the clipboard. onboarding flows and hardware metaphors on Solana ika base borrow language and expectations from their UX.",
     howWeUseBullets: [
@@ -129,7 +131,7 @@ export const homeTechCarouselSlides: TechCarouselSlide[] = [
     howWeUse:
       "production ika today is Sui-base: GraphQL core APIs feed vault reads, ika PTBs ride Mysten transactions, and Enoki-class passkey stories are on our radar wherever Mysten ships wallet infrastructure we can align with.",
     howWeUseBullets: [
-      "`SuiGraphQLClient` is the default transport anywhere core covers the read (JSON-RPC only for legacy gaps).",
+      "`SuiGraphQLClient` is the default transport for every Sui read; chromatika no longer uses Mysten JSON-RPC anywhere.",
       "dWallet objects, caps, and ika-priced splits stay expressed as Move calls the wallet simulates with the same client you use in their docs.",
     ],
     links: [

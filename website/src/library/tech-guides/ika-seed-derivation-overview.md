@@ -6,17 +6,18 @@ every chromatika dWallet has a per-curve `UserShareEncryptionKeys` (USK) - the l
 
 all four use `keccak256(preimage_bytes || encryption_key_index_le_4bytes)` (see [keccak256-uses.md](/library/tech/keccak256-uses)) - they only differ in **what `preimage_bytes` is**:
 
-| factory | preimage_bytes | preimage length |
-|---------|----------------|-----------------|
-| `ikaRootSeedFromFeeKeypair(suiKp)` | `SuiKeyPair.to_bytes()` = `[scheme_flag(1) \|\| secret(32)]` for ed25519 | 33 bytes |
-| `ikaRootSeedFromSolanaKeypair(solKp)` | canonical 64-byte `Keypair.secretKey` (`[seed(32) \|\| pubkey(32)]`) | 64 bytes |
-| `ikaRootSeedFromMwaSignature(sig)` | raw 64-byte ed25519 signature over `IKA_USK_DERIVATION_MESSAGE` | 64 bytes |
-| `ikaRootSeedFromPasskeyPRF(prf)` | 32-byte WebAuthn PRF / hmac-secret output | 32 bytes |
-| `ikaRootSeedFromRecoveryWords(words)` | 64-byte BIP39 PBKDF2 seed (`mnemonicToSeedSync(words, "")`) | 64 bytes |
+| factory                               | preimage_bytes                                                           | preimage length |
+| ------------------------------------- | ------------------------------------------------------------------------ | --------------- |
+| `ikaRootSeedFromFeeKeypair(suiKp)`    | `SuiKeyPair.to_bytes()` = `[scheme_flag(1) \|\| secret(32)]` for ed25519 | 33 bytes        |
+| `ikaRootSeedFromSolanaKeypair(solKp)` | canonical 64-byte `Keypair.secretKey` (`[seed(32) \|\| pubkey(32)]`)     | 64 bytes        |
+| `ikaRootSeedFromMwaSignature(sig)`    | raw 64-byte ed25519 signature over `IKA_USK_DERIVATION_MESSAGE`          | 64 bytes        |
+| `ikaRootSeedFromPasskeyPRF(prf)`      | 32-byte WebAuthn PRF / hmac-secret output                                | 32 bytes        |
+| `ikaRootSeedFromRecoveryWords(words)` | 64-byte BIP39 PBKDF2 seed (`mnemonicToSeedSync(words, "")`)              | 64 bytes        |
 
 `encryption_key_index_le_4bytes` is the 4-byte LE encoding of a `u32` index. almost always `0` for the primary user-share key. an index > 0 would be how you produce a sibling user-share key from the same credential without collision (not exposed in the API today).
 
 after derivation:
+
 ```
 seed_32 = keccak256(preimage || index_le)
 ikaUskSecpk1 = UserShareEncryptionKeys.fromRootSeedKey(seed_32, Curve.SECP256K1)
@@ -28,19 +29,19 @@ both curves are derived from the same seed - meaning a single chromatika vault c
 
 ## per-credential matrix
 
-| credential | base chain | factory used | how preimage gets produced |
-|------------|------------|--------------|---------------------------|
-| BIP39 mnemonic | Sui | `ikaRootSeedFromFeeKeypair` | mnemonic → SLIP10 ed25519 derive `m/44'/784'/0'/0'/0'` → Sui ed25519 keypair |
-| BIP39 mnemonic | Solana | `ikaRootSeedFromSolanaKeypair` | mnemonic → BIP39 seed → SLIP10 derive `m/44'/501'/0'/0'` → Solana keypair |
-| imported `suiprivkey…` bech32 | Sui | `ikaRootSeedFromFeeKeypair` | bech32 decode → Ed25519Keypair.fromSecretKey |
-| imported 64-byte solana b64 | Solana | `ikaRootSeedFromSolanaKeypair` | b64 decode → Keypair.fromSecretKey |
-| Passkey (WebAuthn PRF) | Sui only | `ikaRootSeedFromPasskeyPRF` | webauthn assertion with `prf.eval.first` salt → 32-byte HMAC-secret output |
-| WAAP (deterministic) | Sui only | `ikaRootSeedFromMwaSignature` | WAAP signs `IKA_USK_DERIVATION_MESSAGE` → 64-byte sig |
-| WAAP (non-deterministic fallback) | Sui only | `ikaRootSeedFromRecoveryWords` | user provides BIP39 phrase → mnemonicToSeedSync |
-| Lazor | Solana only | `ikaRootSeedFromRecoveryWords` | required BIP39 phrase → mnemonicToSeedSync |
-| Seeker MWA (local + remote) | Solana | `ikaRootSeedFromMwaSignature` | wallet signs `IKA_USK_DERIVATION_MESSAGE` → 64-byte sig |
-| WalletConnect | Solana | `ikaRootSeedFromMwaSignature` | wallet signs `IKA_USK_DERIVATION_MESSAGE` → 64-byte sig |
-| Ledger key-copy | Sui or Solana | (none - copy from source vault) | `ikaShareKeysB64` copied verbatim from another vault's record |
+| credential                        | base chain    | factory used                    | how preimage gets produced                                                   |
+| --------------------------------- | ------------- | ------------------------------- | ---------------------------------------------------------------------------- |
+| BIP39 mnemonic                    | Sui           | `ikaRootSeedFromFeeKeypair`     | mnemonic → SLIP10 ed25519 derive `m/44'/784'/0'/0'/0'` → Sui ed25519 keypair |
+| BIP39 mnemonic                    | Solana        | `ikaRootSeedFromSolanaKeypair`  | mnemonic → BIP39 seed → SLIP10 derive `m/44'/501'/0'/0'` → Solana keypair    |
+| imported `suiprivkey…` bech32     | Sui           | `ikaRootSeedFromFeeKeypair`     | bech32 decode → Ed25519Keypair.fromSecretKey                                 |
+| imported 64-byte solana b64       | Solana        | `ikaRootSeedFromSolanaKeypair`  | b64 decode → Keypair.fromSecretKey                                           |
+| Passkey (WebAuthn PRF)            | Sui only      | `ikaRootSeedFromPasskeyPRF`     | webauthn assertion with `prf.eval.first` salt → 32-byte HMAC-secret output   |
+| WAAP (deterministic)              | Sui only      | `ikaRootSeedFromMwaSignature`   | WAAP signs `IKA_USK_DERIVATION_MESSAGE` → 64-byte sig                        |
+| WAAP (non-deterministic fallback) | Sui only      | `ikaRootSeedFromRecoveryWords`  | user provides BIP39 phrase → mnemonicToSeedSync                              |
+| Lazor                             | Solana only   | `ikaRootSeedFromRecoveryWords`  | required BIP39 phrase → mnemonicToSeedSync                                   |
+| Seeker MWA (local + remote)       | Solana        | `ikaRootSeedFromMwaSignature`   | wallet signs `IKA_USK_DERIVATION_MESSAGE` → 64-byte sig                      |
+| WalletConnect                     | Solana        | `ikaRootSeedFromMwaSignature`   | wallet signs `IKA_USK_DERIVATION_MESSAGE` → 64-byte sig                      |
+| Ledger key-copy                   | Sui or Solana | (none - copy from source vault) | `ikaShareKeysB64` copied verbatim from another vault's record                |
 
 ## the `IKA_USK_DERIVATION_MESSAGE` constant
 

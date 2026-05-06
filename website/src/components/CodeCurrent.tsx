@@ -19,7 +19,7 @@ const SNIPPETS = [
   "chrome.storage.session.set(unlockCache)",
   "acceptEncryptedUserShare(shareId, capId)",
   "const presign = await ikaClient.getPresign(presignID)",
-  "Route → /guide/first-run-side-panel",
+  "Route → /library/user/readme",
   "prefers-reduced-motion: reduce",
   "oklch(0.78 0.14 265)",
 ];

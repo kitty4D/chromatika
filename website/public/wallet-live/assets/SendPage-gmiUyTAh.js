@@ -1,0 +1,1 @@
+import{t as e}from"./SendPage-B1MGrFHA.js";export{e as SendPage};

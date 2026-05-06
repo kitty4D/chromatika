@@ -44,9 +44,10 @@ export function HomeHero() {
             </ul>
             <p className="home-hero-lead">
               Chromatika is a Chromium extension wallet: one Argon2id-encrypted vault, ika dWallet
-              identity, and the usual chains (Bitcoin, EVM, Solana, Sui, Aptos) from a side panel and
-              popup. this site is the companion hub: user guide, searchable knowledge base, and
-              honest pre-release notes while you try the build or read how the pieces fit together.
+              identity, and the usual chains (Bitcoin, EVM, Solana, Sui, Aptos) from a side panel
+              and popup. this site is the companion hub: user guides, tech guides, a searchable
+              knowledge base, and honest pre-release notes while you try the build or read how the
+              pieces fit together.
             </p>
             <nav className="home-hero-tech" aria-label="core tech links">
               <ul className="home-hero-tech-list">

@@ -7,20 +7,20 @@ chromatika's `SessionState` is the in-memory snapshot of "what's unlocked right 
 ```ts
 type SessionState = {
   // multi-vault
-  vaultKey: CryptoKey;                            // non-extractable AES-GCM master key (decrypts vault blob)
-  vaultKdfMeta: KdfMeta;                          // argon2id salt + params (for re-deriving on switch if needed)
+  vaultKey: CryptoKey; // non-extractable AES-GCM master key (decrypts vault blob)
+  vaultKdfMeta: KdfMeta; // argon2id salt + params (for re-deriving on switch if needed)
   activeVaultId: string;
-  vaults: VaultRecord[];                          // all vault records (decrypted)
+  vaults: VaultRecord[]; // all vault records (decrypted)
 
   // active-vault-scoped
-  activeDwalletMeta: DwalletMeta[];               // active vault's dWallet list
-  activeIkaShareKeys: { SECP256K1, ED25519 };     // per-curve UserShareEncryptionKeys instances
-  activeFeeMaterial: FeeMaterial;                 // sui keypair + solana fee-payer keypair
-  activePresignPools: { SECP256K1_ECDSA, SECP256K1_TAPROOT, ED25519_EDDSA };
+  activeDwalletMeta: DwalletMeta[]; // active vault's dWallet list
+  activeIkaShareKeys: { SECP256K1; ED25519 }; // per-curve UserShareEncryptionKeys instances
+  activeFeeMaterial: FeeMaterial; // sui keypair + solana fee-payer keypair
+  activePresignPools: { SECP256K1_ECDSA; SECP256K1_TAPROOT; ED25519_EDDSA };
 
   // hardware
-  solanaMwaAccount: HardwareVaultRecord | null;   // active MWA Seeker account
-  solanaWcAccount: HardwareVaultRecord | null;    // active WC account (for x402)
+  solanaMwaAccount: HardwareVaultRecord | null; // active MWA Seeker account
+  solanaWcAccount: HardwareVaultRecord | null; // active WC account (for x402)
 
   // pending requests (in chrome.storage.session for SW restart survivability)
   pendingTxApprovals: Map<string, PendingTxApproval>;
@@ -31,7 +31,7 @@ type SessionState = {
 
   // lifecycle
   unlockedAtMs: number;
-  lockAtMs: number;                               // autolock timer end
+  lockAtMs: number; // autolock timer end
 };
 ```
 
@@ -64,18 +64,24 @@ type SessionState = {
 
 ```ts
 async function switchVault(targetVaultId: string) {
-  const targetRecord = sessionState.vaults.find(v => v.id === targetVaultId);
-  if (!targetRecord) throw 'vault not found';
+  const targetRecord = sessionState.vaults.find((v) => v.id === targetVaultId);
+  if (!targetRecord) throw "vault not found";
 
   // cleanup old active state
-  await persistActiveVaultEphemera();   // flush dwalletMeta + presign pools to storage
+  await persistActiveVaultEphemera(); // flush dwalletMeta + presign pools to storage
 
   // swap active id
   sessionState.activeVaultId = targetVaultId;
 
   // populate new active scoped fields
-  sessionState.activeDwalletMeta = mergeMeta(targetRecord.dwalletMeta, await loadDwalletMetaOverlay(targetVaultId));
-  sessionState.activeIkaShareKeys = await buildIkaShareKeys(makeSeedForRecord(targetRecord), targetRecord.ikaShareKeysB64);
+  sessionState.activeDwalletMeta = mergeMeta(
+    targetRecord.dwalletMeta,
+    await loadDwalletMetaOverlay(targetVaultId)
+  );
+  sessionState.activeIkaShareKeys = await buildIkaShareKeys(
+    makeSeedForRecord(targetRecord),
+    targetRecord.ikaShareKeysB64
+  );
   sessionState.activeFeeMaterial = await feeMaterialFromVaultRecord(targetRecord);
   sessionState.activePresignPools = await loadPresignPools(targetVaultId);
 
@@ -94,10 +100,12 @@ multi-vault is one masterKey wrapping many vault records. each vault has its own
 ## the "session never has plaintext password" rule
 
 the session holds:
+
 - `vaultKey` (non-extractable `CryptoKey` - the imported AES key, can be used to encrypt / decrypt but bytes can't be extracted via JS)
 - `vaultKdfMeta` (Argon2id salt + params - public-equivalent; useful only if combined with a password)
 
 it does **not** hold:
+
 - the password (string)
 - any envelope's KDF input (PRF output, signature bytes) after the unwrap completes
 
@@ -110,6 +118,7 @@ the **post-argon2id key bytes** (b64) live in `chrome.storage.session` for cold-
 ## the dapp-bridge contract
 
 connected origins see a stable mental model:
+
 - `accounts` = the active dWallet's per-curve addresses
 - `chainId` (EVM) = the active EVM chain id
 
@@ -124,7 +133,7 @@ for any flow that needs user approval (TX_APPROVE, HW_SIGN, MCP_APPROVE, X402_AP
 ```ts
 async function enqueuePending(kind: string, request: any) {
   const id = randomUUID();
-  const stored = await chrome.storage.session.get('chromatika_pending');
+  const stored = await chrome.storage.session.get("chromatika_pending");
   stored[kind] = stored[kind] ?? {};
   stored[kind][id] = request;
   await chrome.storage.session.set({ chromatika_pending: stored });
@@ -137,6 +146,7 @@ popups read by id (`?txapprove=<id>`, `?hwsign=<id>`, etc.) and call back via tR
 ## the dWallet meta merge
 
 `activeDwalletMeta` is the in-memory merge of:
+
 1. **in-blob copy** - in `record.dwalletMeta` inside the vault payload (authoritative)
 2. **overlay** - in `chromatika_dwallet_meta_v2_<vaultId>` (potentially fresher for some flows)
 

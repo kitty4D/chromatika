@@ -28,7 +28,7 @@ chromatika **does not migrate** older PBKDF2 + AES-GCM blobs (`chromatika_vault_
 
 ## storage key naming
 
-`chromatika_vault_v3` lives in `chrome.storage.local` (persists across browser restarts but cleared on uninstall). bumping the schema means bumping the integer suffix - convention is documented in CLAUDE.md.
+`chromatika_vault_v3` lives in `chrome.storage.local` (persists across browser restarts but cleared on uninstall). bumping the schema means bumping the integer suffix - the storage-key convention is `chromatika_<domain>_v<N>` (see [chrome-storage-local-and-session.md](/library/tech/chrome-storage-local-and-session)).
 
 ## the unlock cache (session-only)
 

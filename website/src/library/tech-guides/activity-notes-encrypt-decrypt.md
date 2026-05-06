@@ -150,6 +150,7 @@ idempotent: removing an already-removed note returns `{ ok: true, removed: false
 ## the presence-check (`getActivityNoteStatus`)
 
 lightweight query, no decrypt. used by:
+
 - the activity feed merge to set `item.hasEncryptedNote`
 - the note-edit modal to know "should I show 'view' or '+ note'"
 - any UI that wants to reflect note presence without paying decrypt cost
@@ -179,6 +180,7 @@ returns the `origin` + `kind` fields too, since the UI often wants those alongsi
 `src/ui/components/NoteEditModal.tsx`:
 
 three states based on note presence + decrypt outcome:
+
 - **no note yet** (or user clicked edit): textarea with "encrypt + save" button + utf-8 byte counter
 - **note locked**: "decrypt to view" + "remove" buttons; pre-alpha disclaimer
 - **note decrypted**: read-only plaintext display + "edit" + "remove" buttons
@@ -192,6 +194,7 @@ lock icon (12px) rendered inline next to the tx label in the activity feed. visi
 ## error handling
 
 `EncryptionBackendError` reasons surface specifically:
+
 - `wrong-vault` - "switch to <recipientLockedAtVaultId> to read this note"
 - `not-implemented` - shouldn't happen for encrypt-xyz (only stubs throw this)
 - `aes-gcm-fail` - "this note's ciphertext is corrupted; try removing + re-encrypting"
@@ -202,7 +205,7 @@ the UI maps these to specific copy strings rather than showing raw error.message
 
 ## the pre-alpha disclaimer obligation
 
-every note surface (modal, badge tooltip, settings copy) must include the encrypt.xyz pre-alpha disclaimer per CLAUDE.md and project status doc. ciphertexts may be plaintext on-chain in this phase. treat as **dev preview**, not production secrecy. do not put real secrets in notes.
+every note surface (modal, badge tooltip, settings copy) must include the encrypt.xyz pre-alpha disclaimer. ciphertexts may be plaintext on-chain in this phase. treat as **dev preview**, not production secrecy. do not put real secrets in notes.
 
 ## library
 

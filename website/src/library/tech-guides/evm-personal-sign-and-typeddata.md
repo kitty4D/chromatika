@@ -5,6 +5,7 @@
 ## personal_sign (EIP-191)
 
 EIP-191 specifies the format:
+
 ```
 preimage = "\x19Ethereum Signed Message:\n" + len(message) + message
 digest = keccak256(preimage)
@@ -18,9 +19,8 @@ the `\x19` prefix and `Ethereum Signed Message:\n` marker domain-separate this f
 ```ts
 async function signEvm({ message, chainId }) {
   // 1. wrap per EIP-191
-  const messageBytes = typeof message === 'string'
-    ? new TextEncoder().encode(message)
-    : ethers.getBytes(message);
+  const messageBytes =
+    typeof message === "string" ? new TextEncoder().encode(message) : ethers.getBytes(message);
   const prefix = `\x19Ethereum Signed Message:\n${messageBytes.length}`;
   const prefixBytes = new TextEncoder().encode(prefix);
   const preimage = new Uint8Array(prefixBytes.length + messageBytes.length);
@@ -28,24 +28,30 @@ async function signEvm({ message, chainId }) {
   preimage.set(messageBytes, prefixBytes.length);
 
   // 2. take a presign
-  const presignId = takePresign('SECP256K1_ECDSA');
+  const presignId = takePresign("SECP256K1_ECDSA");
 
   // 3. sign via ika - PASS THE PREIMAGE
   const sigBytes = await ikaSign({
     dwalletId: activeSecpDwalletId,
     curve: Curve.SECP256K1,
     algorithm: SignatureAlgorithm.ECDSASecp256k1,
-    message: preimage,                                 // RAW PREIMAGE
+    message: preimage, // RAW PREIMAGE
     presignId,
   });
 
   // 4. parse + recover v
-  const { r, s } = parseSignatureFromSignOutput(sigBytes, Curve.SECP256K1, SignatureAlgorithm.ECDSASecp256k1);
+  const { r, s } = parseSignatureFromSignOutput(
+    sigBytes,
+    Curve.SECP256K1,
+    SignatureAlgorithm.ECDSASecp256k1
+  );
   const digest = ethers.keccak256(preimage);
   const dwalletAddress = await getEvmAddress();
 
   let v: 27 | 28 = 27;
-  if (ethers.recoverAddress(digest, { r, s, v: 27 }).toLowerCase() !== dwalletAddress.toLowerCase()) {
+  if (
+    ethers.recoverAddress(digest, { r, s, v: 27 }).toLowerCase() !== dwalletAddress.toLowerCase()
+  ) {
     v = 28;
   }
 
@@ -57,6 +63,7 @@ async function signEvm({ message, chainId }) {
 ## signTypedData_v4 (EIP-712)
 
 EIP-712 is structured-data signing: instead of arbitrary bytes, the user signs a typed object (e.g. `{ name: "Permit", domain: ..., message: { holder, spender, value } }`). the rule is:
+
 ```
 preimage = 0x1901 || domainSeparator || hashStruct(message)
 digest = keccak256(preimage)
@@ -68,6 +75,7 @@ signature = ecdsa_sign(digest, key)
 ### the critical preimage method
 
 ethers v6 exposes both:
+
 - `TypedDataEncoder.encode(domain, types, value)` - returns the **preimage** (`0x1901 || domainSep || msgHash`)
 - `TypedDataEncoder.hash(domain, types, value)` - returns the **digest** (keccak256 of the preimage)
 
@@ -83,7 +91,7 @@ async function signTypedDataV4({ domain, types, value, chainId }) {
   const preimageBytes = ethers.getBytes(preimage);
 
   // 2. take a presign
-  const presignId = takePresign('SECP256K1_ECDSA');
+  const presignId = takePresign("SECP256K1_ECDSA");
 
   // 3. sign via ika - PASS THE PREIMAGE
   const sigBytes = await ikaSign({
@@ -95,12 +103,18 @@ async function signTypedDataV4({ domain, types, value, chainId }) {
   });
 
   // 4. parse + recover v
-  const { r, s } = parseSignatureFromSignOutput(sigBytes, Curve.SECP256K1, SignatureAlgorithm.ECDSASecp256k1);
+  const { r, s } = parseSignatureFromSignOutput(
+    sigBytes,
+    Curve.SECP256K1,
+    SignatureAlgorithm.ECDSASecp256k1
+  );
   const digest = ethers.keccak256(preimageBytes);
   const dwalletAddress = await getEvmAddress();
 
   let v: 27 | 28 = 27;
-  if (ethers.recoverAddress(digest, { r, s, v: 27 }).toLowerCase() !== dwalletAddress.toLowerCase()) {
+  if (
+    ethers.recoverAddress(digest, { r, s, v: 27 }).toLowerCase() !== dwalletAddress.toLowerCase()
+  ) {
     v = 28;
   }
 
@@ -110,17 +124,18 @@ async function signTypedDataV4({ domain, types, value, chainId }) {
 
 ## the rule, summarized
 
-| operation | what to pass to ika | what NOT to pass |
-|-----------|---------------------|------------------|
-| transaction send | `tx.unsignedSerialized` (RLP-encoded unsigned tx) | the keccak digest of the tx |
-| `personal_sign` | the EIP-191 wrapped bytes | the keccak digest of the wrapped bytes |
-| `signTypedData_v4` | `TypedDataEncoder.encode(...)` | `TypedDataEncoder.hash(...)` |
+| operation          | what to pass to ika                               | what NOT to pass                       |
+| ------------------ | ------------------------------------------------- | -------------------------------------- |
+| transaction send   | `tx.unsignedSerialized` (RLP-encoded unsigned tx) | the keccak digest of the tx            |
+| `personal_sign`    | the EIP-191 wrapped bytes                         | the keccak digest of the wrapped bytes |
+| `signTypedData_v4` | `TypedDataEncoder.encode(...)`                    | `TypedDataEncoder.hash(...)`           |
 
 ika hashes once with KECCAK256 internally for SECP256K1_ECDSA. ALWAYS pass the **preimage bytes**.
 
 ## what double-hashing looks like
 
 if you accidentally pre-hash:
+
 ```ts
 const digest = ethers.keccak256(preimage);
 const sig = await ikaSign({ message: digest, ... });   // BAD - ika hashes the digest

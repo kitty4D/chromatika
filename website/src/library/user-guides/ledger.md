@@ -51,4 +51,3 @@ signing is initiated by chromatika operations (sends, dapp tx approval, message 
 - WebHID lives in popup / side-panel only. the service worker cannot drive it - that's why hardware signing always opens a separate popup window
 - Ledger gives you signatures over data, never over secrets. if any flow asks you to type a Ledger seed, it's wrong - reject it
 - the Ledger app on the device must be the right one for the chain you're signing for. switching apps mid-flow may cancel the pending request
-- two `@ledgerhq/live-network` versions are pinned + patched in chromatika today (`2.0.19` + `2.4.3`); reconciling these is a future cleanup task and should not affect users

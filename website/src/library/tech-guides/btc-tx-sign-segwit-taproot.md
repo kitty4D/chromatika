@@ -4,10 +4,10 @@ Bitcoin transactions in chromatika are signed via two ika MPC paths: **SECP256K1
 
 ## the address layouts chromatika supports
 
-| address kind | derivation path | signing curve | sig algorithm |
-|--------------|----------------|---------------|---------------|
-| P2WPKH (segwit bech32 `bc1q...`) | `m/84'/0'/0'/0/0` | secp256k1 | ECDSA (BIP143) |
-| P2TR (taproot bech32m `bc1p...`) | `m/86'/0'/0'/0/0` | secp256k1 | Schnorr (BIP340) |
+| address kind                     | derivation path   | signing curve | sig algorithm    |
+| -------------------------------- | ----------------- | ------------- | ---------------- |
+| P2WPKH (segwit bech32 `bc1q...`) | `m/84'/0'/0'/0/0` | secp256k1     | ECDSA (BIP143)   |
+| P2TR (taproot bech32m `bc1p...`) | `m/86'/0'/0'/0/0` | secp256k1     | Schnorr (BIP340) |
 
 both addresses derive from the **same dWallet** (SECP256K1 curve). different address types from the same key - the dWallet's secp256k1 pubkey, encoded differently per address kind.
 
@@ -66,6 +66,7 @@ async function signBtcP2wpkhTx(tx: bitcoinjs.Psbt, inputIndex: number) {
 ```
 
 key bitcoinjs-lib bits:
+
 - `tx.__tx.hashForWitnessV0(...)` computes the BIP143 sighash for a segwit input
 - DER encoding is the canonical secp256k1 ECDSA signature serialization on Bitcoin (NOT compact r||s like EVM)
 - `partialSig` is the PSBT field that carries one signer's sig
@@ -78,26 +79,30 @@ async function signBtcP2trTx(tx: bitcoinjs.Psbt, inputIndex: number) {
   // 1. compute BIP341 sighash (taproot key-path-only)
   const sighash = tx.__tx.hashForWitnessV1(
     inputIndex,
-    prevoutScripts,                        // all input scripts
-    prevoutAmounts,                        // all input amounts
-    bitcoinjs.Transaction.SIGHASH_DEFAULT, // 0x00 (default for taproot, omitted from sig)
+    prevoutScripts, // all input scripts
+    prevoutAmounts, // all input amounts
+    bitcoinjs.Transaction.SIGHASH_DEFAULT // 0x00 (default for taproot, omitted from sig)
   );
   // sighash is 32 bytes - tagged_hash("TapSighash", 0x00 || sighash_data)
 
   // 2. take a presign from SECP256K1_TAPROOT pool (different from ECDSA!)
-  const presignId = takePresign('SECP256K1_TAPROOT');
+  const presignId = takePresign("SECP256K1_TAPROOT");
 
   // 3. sign via ika
   const sigBytes = await ikaSign({
     dwalletId: activeSecpDwalletId,
     curve: Curve.SECP256K1,
-    algorithm: SignatureAlgorithm.Taproot,   // BIP340 Schnorr
+    algorithm: SignatureAlgorithm.Taproot, // BIP340 Schnorr
     message: sighash,
     presignId,
   });
 
   // 4. parse - 64-byte BIP340 Schnorr (R || s)
-  const { R, S } = parseSignatureFromSignOutput(sigBytes, Curve.SECP256K1, SignatureAlgorithm.Taproot);
+  const { R, S } = parseSignatureFromSignOutput(
+    sigBytes,
+    Curve.SECP256K1,
+    SignatureAlgorithm.Taproot
+  );
   const sig64 = Buffer.concat([R, S]);
 
   // 5. for SIGHASH_DEFAULT (0x00), no trailing sighash byte needed
@@ -116,6 +121,7 @@ P2TR key-path spending: the witness is `[signature]` only, no script. simpler th
 ## the BIP143 sighash digest
 
 P2WPKH segwit signs over the BIP143-defined preimage:
+
 ```
 preimage = nVersion ||
            hashPrevouts ||
@@ -135,6 +141,7 @@ bitcoinjs-lib encapsulates this. you compute the sighash once per input, hand to
 ## the BIP341 sighash digest
 
 P2TR taproot signs over the BIP341-defined preimage with a tagged hash:
+
 ```
 sighash_data = SIGHASH_DEFAULT ||
                nVersion ||

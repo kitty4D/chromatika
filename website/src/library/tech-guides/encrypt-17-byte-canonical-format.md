@@ -10,18 +10,18 @@ without the leading `fhe_type` byte, the executor falls into a fallback path tha
 
 ## the bytes
 
-| offset | length | what |
-|--------|--------|------|
-| 0 | 1 | `fhe_type` enum value |
-| 1-16 | 16 | `value_le` little-endian bytes (zero-padded for values < 2^128) |
+| offset | length | what                                                            |
+| ------ | ------ | --------------------------------------------------------------- |
+| 0      | 1      | `fhe_type` enum value                                           |
+| 1-16   | 16     | `value_le` little-endian bytes (zero-padded for values < 2^128) |
 
 total: 17 bytes per encrypted input.
 
 ## fhe_type values
 
 ```js
-FHE_TYPE_EUINT64  = 4
-FHE_TYPE_EUINT128 = 5
+FHE_TYPE_EUINT64 = 4;
+FHE_TYPE_EUINT128 = 5;
 ```
 
 other values exist in Encrypt's protocol (EUint8, EUint16, EUint32, etc.) but chromatika only writes EUint64 (lab demos) and EUint128 (labels). reads return whatever fheType the on-chain ciphertext was created with.
@@ -35,7 +35,7 @@ function mockEncryptScalarBytes(value: number | bigint, fheType: number): Uint8A
   buf[0] = fheType;
   let v = BigInt(value);
   for (let i = 0; i < 16; i++) {
-    buf[1 + i] = Number(v & 0xFFn);
+    buf[1 + i] = Number(v & 0xffn);
     v >>= 8n;
   }
   return buf;
@@ -44,7 +44,7 @@ function mockEncryptScalarBytes(value: number | bigint, fheType: number): Uint8A
 // 2. take pre-formatted 16-byte value (left-justified, zero-padded UTF-8 chunk),
 //    prepend fheType. used by label encoder to avoid bigint round-trip
 function mockEncryptScalarBytesFromBytes(valueLe16: Uint8Array, fheType: number): Uint8Array {
-  if (valueLe16.length !== 16) throw new Error('expected 16-byte value');
+  if (valueLe16.length !== 16) throw new Error("expected 16-byte value");
   const buf = new Uint8Array(17);
   buf[0] = fheType;
   buf.set(valueLe16, 1);
@@ -88,10 +88,11 @@ note: although we call it "value_le", for label chunks the bytes are placed in t
 ## what gets sent to CreateInput
 
 `CreateInputRequest.inputs[]` is a list of `EncryptedInput`s. each `EncryptedInput` has:
+
 ```jsonc
 {
   "ciphertextBytes": "<17-byte buffer>",
-  "fheType": 5
+  "fheType": 5,
 }
 ```
 
@@ -100,17 +101,19 @@ note `fheType` is also redundantly included as a separate field. the executor us
 ## reads return 16 bytes plus fheType
 
 `ReadCiphertextResponse` returns:
+
 ```jsonc
 {
   "value": "<16-byte plaintext value, no leading type byte>",
   "fheType": 5,
-  "digest": "<opaque executor-local proof state>"
+  "digest": "<opaque executor-local proof state>",
 }
 ```
 
 read response **strips** the type byte - the response carries `fheType` as a separate field. so if you write `[5, 0x68, 0x65, 0x6C, 0x6C, 0x6F, ...]` (17 bytes), you read back `value = [0x68, 0x65, 0x6C, 0x6C, 0x6F, ...]` (16 bytes) plus `fheType = 5`.
 
 decoders need to know `fheType` to interpret the 16 bytes correctly:
+
 - EUint64 → take low 8 bytes, interpret as u64 LE
 - EUint128 → take all 16 bytes, interpret as u128 LE
 - (when used for labels) ignore the int interpretation, use the bytes directly as UTF-8 chunk

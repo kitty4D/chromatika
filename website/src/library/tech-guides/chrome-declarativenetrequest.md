@@ -9,6 +9,7 @@ MV2 extensions could intercept network requests via `chrome.webRequest.onBeforeR
 dNR is the replacement: declare static / dynamic rules; chrome's network stack matches and acts. extension JS isn't woken per-request - the rules just live in chrome's matching engine.
 
 trade-offs:
+
 - **pro**: faster (no JS hop per request)
 - **pro**: SW can stay asleep
 - **con**: less flexible (no custom logic per-request)
@@ -20,22 +21,24 @@ for chromatika's phishing use case, the trade-offs are net-positive: matching ~3
 
 ```ts
 const rule = {
-  id: 1,                                                    // unique within the rule set
-  priority: 1,                                              // higher = wins ties
+  id: 1, // unique within the rule set
+  priority: 1, // higher = wins ties
   action: {
-    type: 'redirect',
+    type: "redirect",
     redirect: {
-      regexSubstitution: chrome.runtime.getURL('phishing-warning.html') + '?blocked=phishing-domain.com',
+      regexSubstitution:
+        chrome.runtime.getURL("phishing-warning.html") + "?blocked=phishing-domain.com",
     },
   },
   condition: {
-    urlFilter: '||phishing-domain.com^',                    // match any subdomain + path
-    resourceTypes: ['main_frame'],                          // only navigation requests
+    urlFilter: "||phishing-domain.com^", // match any subdomain + path
+    resourceTypes: ["main_frame"], // only navigation requests
   },
 };
 ```
 
 `urlFilter` syntax is similar to AdBlock's:
+
 - `||` matches the start of a hostname
 - `^` matches a separator (path slash, query mark, end of url)
 - `*` is a wildcard
@@ -44,6 +47,7 @@ const rule = {
 `resourceTypes` filters by what kind of request: `main_frame` (top-level navigation), `sub_frame` (iframes), `xmlhttprequest`, `image`, `script`, etc.
 
 `action.type` can be:
+
 - `block` - cancel the request
 - `redirect` - reroute to a new URL
 - `modifyHeaders` - add / remove / modify request or response headers
@@ -73,6 +77,7 @@ const existing = await chrome.declarativeNetRequest.getDynamicRules();
 ```
 
 chromatika's phishing sync (see [eth-phishing-detect.md](/library/tech/eth-phishing-detect)):
+
 1. fetches the latest phishing config.json
 2. computes new rule set (4900 highest-priority entries)
 3. computes diff: new ids to add, old ids to remove
@@ -83,13 +88,14 @@ atomic: either all rules update or none do.
 ## the manifest declaration
 
 `manifest.json`:
+
 ```jsonc
 {
   "permissions": [
     "declarativeNetRequest",
-    "declarativeNetRequestWithHostAccess"   // lets us redirect across hosts
+    "declarativeNetRequestWithHostAccess", // lets us redirect across hosts
   ],
-  "host_permissions": ["<all_urls>"]   // dNR needs broad host permission for cross-host redirects
+  "host_permissions": ["<all_urls>"], // dNR needs broad host permission for cross-host redirects
 }
 ```
 
@@ -104,6 +110,7 @@ chrome-extension://<chromatika-id>/phishing-warning.html?blocked=evil-domain.com
 `chrome.runtime.getURL('phishing-warning.html')` returns the extension-scoped URL. the `?blocked=` query lets the warning page show which domain triggered.
 
 `web_accessible_resources` in the manifest must include `phishing-warning.html` so dNR can redirect there:
+
 ```jsonc
 "web_accessible_resources": [{
   "resources": ["phishing-warning.html"],
@@ -114,6 +121,7 @@ chrome-extension://<chromatika-id>/phishing-warning.html?blocked=evil-domain.com
 ## the rule cap (4900 vs 5000)
 
 chrome's hard limit is 5000. chromatika uses 4900 to leave 100 rules of headroom for:
+
 - future user-driven allowlist (override flagged domains the user knows are safe)
 - typo-squat detection rules (per-pattern matchers)
 - emergency rules (e.g. a critical zero-day campaign needs immediate blocking)

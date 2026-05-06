@@ -13,19 +13,21 @@ export function SiteFooter() {
           </div>
           <div className="site-footer-cols" role="navigation" aria-label="footer">
             <div className="site-footer-col">
-              <h2 className="site-footer-heading">library</h2>
+              <h2 className="site-footer-heading">guides</h2>
               <ul className="site-footer-links">
                 <li>
-                  <Link to="/resources">resource library</Link>
+                  <Link to="/library/user/readme">user guides</Link>
                 </li>
                 <li>
-                  <Link to="/library">markdown library</Link>
+                  <Link to="/library/tech/readme">tech guides</Link>
                 </li>
+              </ul>
+            </div>
+            <div className="site-footer-col">
+              <h2 className="site-footer-heading">knowledge base</h2>
+              <ul className="site-footer-links">
                 <li>
-                  <Link to="/guide">user guide</Link>
-                </li>
-                <li>
-                  <Link to="/category/start">knowledge base</Link>
+                  <Link to="/knowledge-base">browse topics</Link>
                 </li>
               </ul>
             </div>

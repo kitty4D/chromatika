@@ -1,13 +1,8 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
+import { useDocHead } from "../lib/use-doc-head";
 
-function LegalArticle({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+function LegalArticle({ title, children }: { title: string; children: ReactNode }) {
   return (
     <article className="page-legal">
       <header className="page-header">
@@ -30,6 +25,12 @@ function LegalArticle({
 }
 
 export function PrivacyPolicy() {
+  useDocHead({
+    title: "privacy policy",
+    description:
+      "Chromatika's privacy stance for the public knowledge base and the wallet extension.",
+    canonicalPath: "/legal/privacy",
+  });
   return (
     <div className="page-legal-wrap">
       <nav className="crumbs" aria-label="breadcrumb">
@@ -76,6 +77,11 @@ export function PrivacyPolicy() {
 }
 
 export function TermsOfService() {
+  useDocHead({
+    title: "terms of service",
+    description: "Terms of use for the Chromatika public knowledge base and the wallet extension.",
+    canonicalPath: "/legal/terms",
+  });
   return (
     <div className="page-legal-wrap">
       <nav className="crumbs" aria-label="breadcrumb">

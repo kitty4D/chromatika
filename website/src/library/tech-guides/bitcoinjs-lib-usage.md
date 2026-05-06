@@ -4,31 +4,31 @@
 
 ## what we use it for
 
-| feature | bitcoinjs-lib API |
-|---------|-------------------|
-| build segwit tx | `Psbt`, `Psbt.addInput`, `addOutput` |
-| compute BIP143 sighash | `Transaction.hashForWitnessV0(...)` |
-| compute BIP341 sighash | `Transaction.hashForWitnessV1(...)` |
-| derive P2WPKH address | `payments.p2wpkh({ pubkey, network })` |
-| derive P2TR address | `payments.p2tr({ internalPubkey, network })` |
-| encode DER ECDSA sig | `script.signature.encode(...)` |
-| finalize PSBT input | `Psbt.finalizeInput(...)` |
+| feature                | bitcoinjs-lib API                            |
+| ---------------------- | -------------------------------------------- |
+| build segwit tx        | `Psbt`, `Psbt.addInput`, `addOutput`         |
+| compute BIP143 sighash | `Transaction.hashForWitnessV0(...)`          |
+| compute BIP341 sighash | `Transaction.hashForWitnessV1(...)`          |
+| derive P2WPKH address  | `payments.p2wpkh({ pubkey, network })`       |
+| derive P2TR address    | `payments.p2tr({ internalPubkey, network })` |
+| encode DER ECDSA sig   | `script.signature.encode(...)`               |
+| finalize PSBT input    | `Psbt.finalizeInput(...)`                    |
 
 ## bech32 / bech32m address derivation
 
 ```ts
-import * as bitcoin from 'bitcoinjs-lib';
+import * as bitcoin from "bitcoinjs-lib";
 
 // P2WPKH (segwit) - bech32
 const p2wpkh = bitcoin.payments.p2wpkh({
-  pubkey: dwalletSecpPubkey,                                // 33-byte compressed
-  network: bitcoin.networks.bitcoin,                         // mainnet
+  pubkey: dwalletSecpPubkey, // 33-byte compressed
+  network: bitcoin.networks.bitcoin, // mainnet
 });
 // p2wpkh.address = "bc1q..."
 
 // P2TR (taproot) - bech32m
 const p2tr = bitcoin.payments.p2tr({
-  internalPubkey: dwalletSecpPubkey.slice(1),                // 32-byte x-only (drop 0x02/0x03 prefix)
+  internalPubkey: dwalletSecpPubkey.slice(1), // 32-byte x-only (drop 0x02/0x03 prefix)
   network: bitcoin.networks.bitcoin,
 });
 // p2tr.address = "bc1p..."
@@ -43,11 +43,11 @@ const psbt = new bitcoin.Psbt({ network: bitcoin.networks.bitcoin });
 
 // add input
 psbt.addInput({
-  hash: prevTxId,                                             // 32-byte tx id
+  hash: prevTxId, // 32-byte tx id
   index: prevVout,
   witnessUtxo: {
     script: bitcoin.address.toOutputScript(senderAddress, network),
-    value: prevAmountSats,                                    // input value in sats
+    value: prevAmountSats, // input value in sats
   },
 });
 
@@ -65,10 +65,10 @@ psbt.addOutput({
 
 // compute sighash for input 0
 const sighash = psbt.__CACHE.__TX.hashForWitnessV0(
-  0,                                                          // input index
+  0, // input index
   bitcoin.payments.p2wpkh({ pubkey: senderPubkey }).output,
   prevAmountSats,
-  bitcoin.Transaction.SIGHASH_ALL,
+  bitcoin.Transaction.SIGHASH_ALL
 );
 ```
 
@@ -110,13 +110,14 @@ const txHex = psbt.extractTransaction().toHex();
 ```ts
 const sighash = psbt.__CACHE.__TX.hashForWitnessV1(
   0,
-  prevoutScripts,                                             // ALL input scripts (not just current)
-  prevoutAmounts,                                             // ALL input amounts
-  bitcoin.Transaction.SIGHASH_DEFAULT,                        // 0x00 (default for taproot)
+  prevoutScripts, // ALL input scripts (not just current)
+  prevoutAmounts, // ALL input amounts
+  bitcoin.Transaction.SIGHASH_DEFAULT // 0x00 (default for taproot)
 );
 ```
 
 different from V0 (BIP143):
+
 - takes **all** input scripts + amounts, not just the current input's
 - uses tagged hash with `"TapSighash"` tag
 - supports `SIGHASH_DEFAULT` (0x00) which is implicit and produces 64-byte signatures (no trailing sighash byte)
@@ -128,8 +129,8 @@ after signing via ika SECP256K1_TAPROOT pool, write the 64-byte signature direct
 ```ts
 const txHex = psbt.extractTransaction().toHex();
 const resp = await fetch(`${esploraUrl}/tx`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'text/plain' },
+  method: "POST",
+  headers: { "Content-Type": "text/plain" },
   body: txHex,
 });
 const txid = await resp.text();

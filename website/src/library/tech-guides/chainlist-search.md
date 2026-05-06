@@ -10,9 +10,9 @@ Chainlist (`chainlist.org`) maintains a community-curated list of EVM chains wit
 
 ```ts
 async function importFromChainlist({ query }: { query: string | number }) {
-  const all = await fetchChainlist();   // cached
-  const candidates = all.filter(c => {
-    if (typeof query === 'number') return c.chainId === query;
+  const all = await fetchChainlist(); // cached
+  const candidates = all.filter((c) => {
+    if (typeof query === "number") return c.chainId === query;
     const q = query.toLowerCase();
     return (
       c.name.toLowerCase().includes(q) ||
@@ -25,6 +25,7 @@ async function importFromChainlist({ query }: { query: string | number }) {
 ```
 
 returns up to 20 matches. each carries:
+
 - `chainId` (decimal)
 - `name`, `shortName`
 - `nativeCurrency` (`{ name, symbol, decimals }`)
@@ -53,22 +54,24 @@ after `importFromChainlist` shows candidates, the user picks one. chromatika the
 async function addCustomNetwork(params) {
   // probe the suggested RPC
   const provider = new ethers.JsonRpcProvider(params.rpcUrl);
-  const probedChainId = await provider.send('eth_chainId', []);
+  const probedChainId = await provider.send("eth_chainId", []);
   if (parseInt(probedChainId, 16) !== params.chainId) {
-    throw new Error('RPC reports different chainId than declared');
+    throw new Error("RPC reports different chainId than declared");
   }
   // commit
-  await chrome.storage.local.update('chromatika_custom_networks_v1', list => [...list, params]);
+  await chrome.storage.local.update("chromatika_custom_networks_v1", (list) => [...list, params]);
 }
 ```
 
 step 2 catches both:
+
 - malicious RPC lying about which chain it serves
 - a stale Chainlist entry pointing at an RPC that's been repurposed
 
 ## RPC selection
 
 Chainlist often lists 5+ RPC URLs per chain. chromatika prefers:
+
 1. URLs that look like they don't require an API key (no `${INFURA_API_KEY}` placeholders)
 2. URLs that don't have placeholder patterns (`${ALCHEMY_API_KEY}`, etc.)
 3. URLs hosted by chain teams themselves (e.g. `arb1.arbitrum.io/rpc` for Arbitrum)

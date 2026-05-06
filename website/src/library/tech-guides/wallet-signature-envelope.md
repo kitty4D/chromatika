@@ -58,7 +58,7 @@ the **signature itself** is not stored. only the wrapped masterKey. on every unl
 
 ### Seeker (MWA remote)
 
-- transport: `wss://reflect.solanamobile.com` reflector + persisted `auth_token`
+- transport: `wss://development.reflector.solanamobile.com` reflector + persisted `auth_token`
 - subsequent unlocks reauthorize against the cached `auth_token` to skip the QR rescan
 - `ERROR_AUTHORIZATION_FAILED` from the wallet → `MwaSigner` flips into `needsRepair` state → re-pair via fresh QR
 - the same Seeker on a different device produces the same signature (RFC 8032 determinism + Seed Vault holds the same secret) → unlock works on a fresh chromatika install with the same Seeker

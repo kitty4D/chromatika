@@ -14,6 +14,7 @@ this is called "zero-trust" because chromatika doesn't have to trust that the ne
 ## the lifecycle state
 
 dWallet states (Sui base):
+
 - `requesting_dkg_user_input` - DKG starting
 - `awaiting_key_holder_signature` - DKG done, share encrypted, waiting for accept
 - `active` - accept ran, dWallet ready for sign
@@ -68,6 +69,7 @@ dWallet states (Sui base):
 the network could in principle hand chromatika a bogus encrypted share that doesn't match the dWallet's public key. zero-trust = chromatika decrypts the share and verifies before accepting. if validation fails, abort and don't accept.
 
 what verification looks like:
+
 - decrypt the share bytes with the user's encryption key (private side)
 - derive the public component from the decrypted share
 - compare to the on-chain dWallet's public key

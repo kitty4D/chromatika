@@ -58,7 +58,8 @@ function rewrite(content, mode) {
     (_, f) => `](${TECH_BASE}${slugFromFilename(f)})`
   );
 
-  out = out.replace(/`([a-z0-9][a-z0-9_-]*\.md)`/gi, (_, f) => {
+  // wrap backtick-enclosed filenames in links, but skip ones already inside a [...](...) (negative lookahead avoids double-wrapping when the backticks live inside link text)
+  out = out.replace(/`([a-z0-9][a-z0-9_-]*\.md)`(?!\])/gi, (_, f) => {
     const s = slugFromFilename(f);
     const href = targetForSlug(s, mode);
     return `[${f}](${href})`;
@@ -81,7 +82,9 @@ function patchReadmeIntro(content, kind) {
     );
     out = out.replace(
       /complement to `wallet-userguides\/` \(which describes \*\*what\*\* users can do\)\./gi,
-      "complement to the [user guides](" + USER_BASE + "readme) (which describes **what** users can do)."
+      "complement to the [user guides](" +
+        USER_BASE +
+        "readme) (which describes **what** users can do)."
     );
   }
   return out;

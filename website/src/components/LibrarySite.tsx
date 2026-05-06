@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import type { LibraryKind } from "../data/library-docs";
 import {
@@ -6,6 +7,7 @@ import {
   libraryDocExists,
   listLibraryNav,
 } from "../data/library-docs";
+import { useDocHead } from "../lib/use-doc-head";
 import { MarkdownDoc } from "./MarkdownDoc";
 
 function LibrarySidebar({
@@ -52,7 +54,7 @@ function LibraryShell({
   kind: LibraryKind;
   basePath: "/library/user" | "/library/tech";
   activeSlug?: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className="docs-layout library-layout">
@@ -63,73 +65,89 @@ function LibraryShell({
 }
 
 export function LibraryHome() {
+  useDocHead({
+    title: "guides library",
+    description:
+      "Entry point for Chromatika markdown guides: user guides and tech guides indices. Prefer the top navigation for browsing.",
+    canonicalPath: "/library",
+  });
   return (
-    <div className="page-library-hub">
+    <div className="page-library-hub page-library-hub--minimal">
       <nav className="crumbs" aria-label="breadcrumb">
         <Link to="/">home</Link>
         <span aria-hidden="true">/</span>
-        <span className="crumbs-current">library</span>
+        <span className="crumbs-current">guides library</span>
       </nav>
       <header className="page-header">
-        <h1>markdown library</h1>
+        <h1>guides library</h1>
         <p className="page-lead">
-          full-length reference docs maintained next to development: task-style user coverage and
-          deep technical notes. start from each index or jump in from search.
+          this URL stays for bookmarks. use the headers on other pages instead of linking here on
+          purpose.
         </p>
       </header>
-      <ul className="resources-cards">
+      <ul className="article-index tight library-minimal-links">
         <li>
-          <Link to="/library/user/readme" className="resources-card">
-            <span className="resources-card-kicker">index + pages</span>
-            <span className="resources-card-title">user guides</span>
-            <span className="resources-card-body">
-              what the wallet supports per feature: prerequisites, steps, options (no UI
-              wireframes).
-            </span>
-          </Link>
+          <Link to="/library/user/readme">user guides</Link>
         </li>
         <li>
-          <Link to="/library/tech/readme" className="resources-card">
-            <span className="resources-card-kicker">index + pages</span>
-            <span className="resources-card-title">tech guides</span>
-            <span className="resources-card-body">
-              how chromatika implements flows: crypto, ika, bridge, chrome APIs, integrations.
-            </span>
-          </Link>
+          <Link to="/library/tech/readme">tech guides</Link>
         </li>
       </ul>
-      <p className="resources-prose">
-        contributors: drop updated <code className="inline-code">.md</code> files into{" "}
-        <code className="inline-code">src/library/</code>, then run{" "}
-        <code className="inline-code">pnpm run sync:library</code> so in-doc links stay routable.
-      </p>
     </div>
   );
 }
 
-function LibraryDocPageInner({ kind, basePath }: { kind: LibraryKind; basePath: "/library/user" | "/library/tech" }) {
+function LibraryDocPageInner({
+  kind,
+  basePath,
+}: {
+  kind: LibraryKind;
+  basePath: "/library/user" | "/library/tech";
+}) {
   const { slug } = useParams();
   const effective = (slug ?? "readme").toLowerCase();
-  if (!libraryDocExists(kind, effective)) {
-    return <Navigate to={kind === "user" ? "/library/user/readme" : "/library/tech/readme"} replace />;
+  const exists = libraryDocExists(kind, effective);
+  const title = exists ? getLibraryTitle(kind, effective) : undefined;
+  const sectionLabel = kind === "user" ? "user guides" : "tech guides";
+
+  useDocHead({
+    title,
+    description: title ? `${sectionLabel}: ${title} - chromatika library reference.` : undefined,
+    canonicalPath: exists ? `${basePath}/${effective}` : undefined,
+    jsonLd: title
+      ? {
+          "@context": "https://schema.org",
+          "@type": "Article",
+          headline: title,
+          articleSection: sectionLabel,
+          author: { "@type": "Organization", name: "Chromatika" },
+          publisher: { "@type": "Organization", name: "Chromatika" },
+        }
+      : null,
+  });
+
+  if (!exists) {
+    return (
+      <Navigate to={kind === "user" ? "/library/user/readme" : "/library/tech/readme"} replace />
+    );
   }
-  const title = getLibraryTitle(kind, effective)!;
+  const resolvedTitle = title!;
   const body = getLibraryBody(kind, effective)!;
-  const crumbLabel = kind === "user" ? "user guides" : "tech guides";
+  const crumbLabel = sectionLabel;
   return (
     <article className="page-article library-article">
       <nav className="crumbs" aria-label="breadcrumb">
         <Link to="/">home</Link>
         <span aria-hidden="true">/</span>
-        <Link to="/library">library</Link>
+        <span>guides library</span>
         <span aria-hidden="true">/</span>
         <Link to={basePath}>{crumbLabel}</Link>
         <span aria-hidden="true">/</span>
-        <span className="crumbs-current">{title}</span>
+        <span className="crumbs-current">{resolvedTitle}</span>
       </nav>
       <header className="article-header">
         <p className="article-eyebrow">{crumbLabel}</p>
-        <h1>{title}</h1>
+        <h1>{resolvedTitle}</h1>
       </header>
       <MarkdownDoc markdown={body} />
     </article>

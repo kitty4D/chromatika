@@ -10,13 +10,12 @@
   "description": "Chromatika MCP native messaging host",
   "path": "/absolute/path/to/chromatika-mcp-host.mjs",
   "type": "stdio",
-  "allowed_origins": [
-    "chrome-extension://<your-extension-id>/"
-  ]
+  "allowed_origins": ["chrome-extension://<your-extension-id>/"],
 }
 ```
 
 required fields:
+
 - `name`: must match what chromatika passes to `connectNative`. **must be lowercase + dots/underscores only** per chrome's spec
 - `description`: free-form
 - `path`: absolute path to the host binary (or a wrapper script)
@@ -30,11 +29,13 @@ per chrome's [native messaging docs](https://developer.chrome.com/docs/extension
 ### macOS
 
 user-level (no admin needed):
+
 ```
 ~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.chromatika.mcp_host.json
 ```
 
 system-level (admin):
+
 ```
 /Library/Google/Chrome/NativeMessagingHosts/com.chromatika.mcp_host.json
 ```
@@ -44,11 +45,13 @@ chromatika setup writes the user-level path.
 ### Linux
 
 user-level:
+
 ```
 ~/.config/google-chrome/NativeMessagingHosts/com.chromatika.mcp_host.json
 ```
 
 system-level:
+
 ```
 /etc/opt/chrome/native-messaging-hosts/com.chromatika.mcp_host.json
 ```
@@ -58,17 +61,20 @@ chromatika setup writes user-level.
 ### Windows
 
 user-level uses **registry** (no JSON manifest in a known directory; instead a registry value points at the manifest):
+
 ```
 HKEY_CURRENT_USER\Software\Google\Chrome\NativeMessagingHosts\com.chromatika.mcp_host
   (Default) = "C:\path\to\manifest.json"
 ```
 
 system-level:
+
 ```
 HKEY_LOCAL_MACHINE\Software\Google\Chrome\NativeMessagingHosts\com.chromatika.mcp_host
 ```
 
 windows also requires the host to be invokable - `node` may not be on `PATH` for the chrome process, so chromatika ships a `.bat` shim:
+
 ```bat
 @echo off
 node "%~dp0chromatika-mcp-host.mjs" %*
@@ -83,6 +89,7 @@ pnpm setup:native-host --extension-id=<your-extension-id>
 ```
 
 the script lives at `wallet-extension/native-host/setup.mjs`. it:
+
 1. detects platform (`process.platform`)
 2. computes the manifest JSON with the right `path` and `allowed_origins`
 3. writes the manifest to the OS-specific user-level location
@@ -119,6 +126,7 @@ on disconnect, chrome cleans up the child. host's `process.stdin` closes, the re
 ## the auto-reconnect behavior
 
 chromatika's `mcp-native-bridge.ts` does **capped exponential backoff** on disconnect:
+
 - max attempts: 5
 - delay: starts at 1s, doubles each attempt, capped at 30s
 - delays: 1s → 2s → 4s → 8s → 16s → 30s, 30s
@@ -130,6 +138,7 @@ reconnect rebinds the same port if `desiredListenPort` is set, otherwise picks a
 ## the SW startup re-establish
 
 on cold service worker start (chrome unloaded the SW after idle):
+
 1. SW reads `chromatika_mcp_v1.enabled`
 2. if `enabled === true`, attempt `connectNative` immediately
 3. retry on failure with the backoff schedule
@@ -139,6 +148,7 @@ this keeps the host alive across SW restart cycles without user action.
 ## why the install needs the extension id
 
 `allowed_origins` in the manifest is the security boundary - **only the listed extension(s) can spawn this host**. without it, any extension installed on the user's chrome could call `connectNative` and drive the wallet. that's why the setup script requires `--extension-id=<id>`:
+
 1. user opens `chrome://extensions`
 2. enables developer mode
 3. copies the chromatika extension id

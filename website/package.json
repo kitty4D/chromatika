@@ -5,17 +5,19 @@
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "dev": "node scripts/sync-wallet-preview.mjs && vite",
+    "build": "node scripts/sync-wallet-preview.mjs --build && tsc --noEmit && vite build && node scripts/check-bundle-size.mjs",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,tsx}\" \"vite.config.ts\" --max-warnings 0",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "pnpm run lint && pnpm run typecheck && pnpm run format:check",
-    "sync:library": "node scripts/rewrite-library-md-links.mjs"
+    "sync:library": "node scripts/rewrite-library-md-links.mjs",
+    "sync:wallet-preview": "node scripts/sync-wallet-preview.mjs --build"
   },
   "dependencies": {
+    "framer-motion": "12.38.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
     "react-markdown": "^10.1.0",

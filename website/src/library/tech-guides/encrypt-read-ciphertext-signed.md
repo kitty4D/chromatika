@@ -17,21 +17,21 @@ BCS (Binary Canonical Serialization) is the encoding Sui / Move use; chromatika 
 
 ```ts
 function encodeReadCiphertextMessage(
-  chain: number,                  // 0 = Solana
+  chain: number, // 0 = Solana
   ciphertextIdentifier: Uint8Array,
-  reencryptionKey: Uint8Array,    // empty for label reveal
-  epoch: bigint,                  // 0n typically
+  reencryptionKey: Uint8Array, // empty for label reveal
+  epoch: bigint // 0n typically
 ): Uint8Array {
   const buf: number[] = [];
-  buf.push(chain & 0xFF);
-  buf.push(ciphertextIdentifier.length & 0xFF);
+  buf.push(chain & 0xff);
+  buf.push(ciphertextIdentifier.length & 0xff);
   for (const b of ciphertextIdentifier) buf.push(b);
-  buf.push(reencryptionKey.length & 0xFF);
+  buf.push(reencryptionKey.length & 0xff);
   for (const b of reencryptionKey) buf.push(b);
   // u64 LE
   let e = epoch;
   for (let i = 0; i < 8; i++) {
-    buf.push(Number(e & 0xFFn));
+    buf.push(Number(e & 0xffn));
     e >>= 8n;
   }
   return new Uint8Array(buf);
@@ -39,6 +39,7 @@ function encodeReadCiphertextMessage(
 ```
 
 for label reveal, we always pass `chain=0` (Solana), the chunk identifier, empty `reencryptionKey`, and `epoch=0n`. so the encoded message is:
+
 ```
 [0x00] [<idLen>] [<id bytes>] [0x00] [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00]
 ```
@@ -46,10 +47,10 @@ for label reveal, we always pass `chain=0` (Solana), the chunk identifier, empty
 ## signing
 
 ```ts
-const signerPk = await getDwalletEd25519PublicKey();   // 32-byte pubkey of active ED25519 dWallet
+const signerPk = await getDwalletEd25519PublicKey(); // 32-byte pubkey of active ED25519 dWallet
 const msg = encodeReadCiphertextMessage(0, identifierBytes, new Uint8Array(0), 0n);
 const { signature } = await signMessageSol(msg);
-const sigBytes = signatureHexToEd25519Bytes(signature);   // 64 bytes
+const sigBytes = signatureHexToEd25519Bytes(signature); // 64 bytes
 ```
 
 `signMessageSol` is the chromatika helper that runs the ika MPC ED25519 signing flow with the message bytes (raw, not pre-hashed - ika SHA-512s internally per RFC 8032). returns a hex-encoded 64-byte ed25519 signature.
@@ -60,9 +61,9 @@ const sigBytes = signatureHexToEd25519Bytes(signature);   // 64 bytes
 
 ```ts
 const request = {
-  message: msg,            // BCS-encoded bytes
-  signature: sigBytes,     // 64-byte ed25519 sig
-  signer: signerPk,        // 32-byte ed25519 pubkey
+  message: msg, // BCS-encoded bytes
+  signature: sigBytes, // 64-byte ed25519 sig
+  signer: signerPk, // 32-byte ed25519 pubkey
 };
 const encoded = encodeReadCiphertextRequest(request);
 const responseBytes = await encryptGrpcReadCiphertext(GRPC_URL, encoded);
@@ -108,11 +109,15 @@ for (const idHex of ciphertextIdentifierHexes) {
   const msg = encodeReadCiphertextMessage(0, id, new Uint8Array(0), 0n);
   const { signature } = await signMessageSol(msg);
   const sigBytes = signatureHexToEd25519Bytes(signature);
-  const encoded = encodeReadCiphertextRequest({ message: msg, signature: sigBytes, signer: signerPk });
+  const encoded = encodeReadCiphertextRequest({
+    message: msg,
+    signature: sigBytes,
+    signer: signerPk,
+  });
   const respBytes = await encryptGrpcReadCiphertext(GRPC_URL, encoded);
   const { value, digest } = decodeReadCiphertextResponse(respBytes);
 
-  chunkValues.push(value);              // 16 bytes
+  chunkValues.push(value); // 16 bytes
   digestHexes.push(bytesToHex(digest));
 }
 
@@ -133,7 +138,7 @@ function decodeLabelFromChunks(chunkValues: Uint8Array[], utf8Len: number): stri
     concatenated.set(chunkValues[i], i * 16);
   }
   const trimmed = concatenated.slice(0, utf8Len);
-  return new TextDecoder('utf-8', { fatal: false }).decode(trimmed);
+  return new TextDecoder("utf-8", { fatal: false }).decode(trimmed);
 }
 ```
 

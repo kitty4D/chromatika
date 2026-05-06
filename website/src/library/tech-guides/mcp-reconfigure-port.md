@@ -19,7 +19,7 @@ it's a "open new before closing old" handoff with rollback on failure.
 // extension → host
 {
   "type": "reconfigure-port",
-  "port": 54321
+  "port": 54321,
 }
 ```
 
@@ -30,34 +30,43 @@ port must be `1024 ≤ port ≤ 65535`. ports below 1024 require root on linux/m
 ```js
 async function rebindToDesiredPort(desiredPort) {
   const currentAddr = server?.address?.();
-  const currentPort = typeof currentAddr === 'object' && currentAddr ? currentAddr.port : null;
+  const currentPort = typeof currentAddr === "object" && currentAddr ? currentAddr.port : null;
 
   // already on the right port - nothing to do
   if (currentPort === desiredPort) {
-    sendFrame({ kind: 'listen', host: '127.0.0.1', port: desiredPort });
+    sendFrame({ kind: "listen", host: "127.0.0.1", port: desiredPort });
     return;
   }
 
   const oldServer = server;
   // build replacement first; only swap after successful bind
   const newServer = createServer(httpHandler);
-  newServer.on('error', (e) => {
-    logErr('replacement server error:', e?.message ?? e);
+  newServer.on("error", (e) => {
+    logErr("replacement server error:", e?.message ?? e);
   });
 
   await new Promise((resolve) => {
-    newServer.once('error', (e) => {
-      logErr(`rebind to port ${desiredPort} failed: ${e?.message ?? e}; staying on current port ${currentPort}`);
-      sendFrame({ kind: 'rebind-error', desiredPort, error: e?.message ?? String(e) });
-      try { newServer.close(); } catch { /* noop */ }
+    newServer.once("error", (e) => {
+      logErr(
+        `rebind to port ${desiredPort} failed: ${e?.message ?? e}; staying on current port ${currentPort}`
+      );
+      sendFrame({ kind: "rebind-error", desiredPort, error: e?.message ?? String(e) });
+      try {
+        newServer.close();
+      } catch {
+        /* noop */
+      }
       resolve();
     });
-    newServer.listen(desiredPort, '127.0.0.1', () => {
+    newServer.listen(desiredPort, "127.0.0.1", () => {
       // bind success - tear down the old listener
-      try { oldServer.close(); }
-      catch (e) { logErr('failed to close prior listener after rebind:', e?.message ?? e); }
+      try {
+        oldServer.close();
+      } catch (e) {
+        logErr("failed to close prior listener after rebind:", e?.message ?? e);
+      }
       server = newServer;
-      sendFrame({ kind: 'listen', host: '127.0.0.1', port: desiredPort });
+      sendFrame({ kind: "listen", host: "127.0.0.1", port: desiredPort });
       logErr(`chromatika-mcp-host rebound to 127.0.0.1:${desiredPort}`);
       resolve();
     });
@@ -66,6 +75,7 @@ async function rebindToDesiredPort(desiredPort) {
 ```
 
 key invariants:
+
 - if `desiredPort` matches `currentPort`, no-op (don't touch a working listener)
 - on bind error, stay on the current listener; report `kind: 'rebind-error'` with the error message
 - on bind success, swap - new listener becomes `server`, old listener closes
@@ -79,9 +89,9 @@ async function pushDesiredPortToHost(port: number | null) {
   if (port === null) {
     // user cleared the desired port - host should fall back to a random port
     // this is a pseudo-rebind: pick a random ephemeral port and reconfigure
-    nativePort.postMessage({ type: 'reconfigure-port', port: pickRandomPort() });
+    nativePort.postMessage({ type: "reconfigure-port", port: pickRandomPort() });
   } else {
-    nativePort.postMessage({ type: 'reconfigure-port', port });
+    nativePort.postMessage({ type: "reconfigure-port", port });
   }
 }
 ```
@@ -91,6 +101,7 @@ a `null` desired-port means "use a random port"; the extension picks a random ep
 ## the chrome-restart behavior
 
 when chrome restarts:
+
 1. service worker spawns cold
 2. SW reads `chromatika_mcp_v1.desiredListenPort` from storage
 3. SW reconnects to the native host via `chrome.runtime.connectNative`
@@ -111,7 +122,7 @@ if the desired port is taken (another process bound it, or chromatika was starte
 {
   "kind": "rebind-error",
   "desiredPort": 54321,
-  "error": "EADDRINUSE: address already in use 127.0.0.1:54321"
+  "error": "EADDRINUSE: address already in use 127.0.0.1:54321",
 }
 ```
 
@@ -124,6 +135,7 @@ native messaging manifests don't have a port field. they just declare the host b
 ## the `setupBuffer` quirk during rebind
 
 when the host rebinds, the **old** server is in the middle of serving any in-flight requests. node's `server.close()` waits for active connections; new connections to the old port refuse immediately. so:
+
 - new requests during rebind: routed to the new listener
 - in-flight requests during rebind: complete on the old listener
 - post-rebind: only the new listener accepts connections

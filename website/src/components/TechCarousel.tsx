@@ -5,7 +5,13 @@ const AUTO_ADVANCE_MS = 7000;
 
 function ChevronLeftIcon() {
   return (
-    <svg className="tech-carousel-chevron" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <svg
+      className="tech-carousel-chevron"
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      aria-hidden="true"
+    >
       <path
         d="M14 7l-5 5 5 5"
         fill="none"
@@ -20,7 +26,13 @@ function ChevronLeftIcon() {
 
 function ChevronRightIcon() {
   return (
-    <svg className="tech-carousel-chevron" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+    <svg
+      className="tech-carousel-chevron"
+      viewBox="0 0 24 24"
+      width="22"
+      height="22"
+      aria-hidden="true"
+    >
       <path
         d="M10 7l5 5-5 5"
         fill="none"
@@ -44,14 +56,8 @@ function LazorkitCarouselMark({ className }: { className?: string }) {
       aria-hidden="true"
     >
       <rect width="100" height="100" rx="22" fill="#7c3aed" />
-      <path
-        d="M28 30 Q24 30 24.5 32.5 L44 48 Q50 52 56 48 L72 32 Q74 30 70 30 Z"
-        fill="#fff"
-      />
-      <path
-        d="M28 70 Q24 70 24.5 67.5 L44 52 Q50 48 56 52 L72 68 Q74 70 70 70 Z"
-        fill="#fff"
-      />
+      <path d="M28 30 Q24 30 24.5 32.5 L44 48 Q50 52 56 48 L72 32 Q74 30 70 30 Z" fill="#fff" />
+      <path d="M28 70 Q24 70 24.5 67.5 L44 52 Q50 48 56 52 L72 68 Q74 70 70 70 Z" fill="#fff" />
     </svg>
   );
 }

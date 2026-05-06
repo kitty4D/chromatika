@@ -1,6 +1,6 @@
 # chromatika website
 
-public knowledge base and user guide for Chromatika (static Vite + React). product and IA direction: **`DESIGN-BRIEF.md`**.
+Chromatika marketing site plus **user guides**, **tech guides**, and a **knowledge base** (Vite + React).
 
 ## after editing this package
 
@@ -28,14 +28,20 @@ pnpm build
 
 ## routes (high level)
 
-- `/`: landing + KB category cards + article index
-- `/guide`: user guide hub (sidebar shell)
-- `/guide/:slug`: individual guide article (media strip when `media` entries have `src`)
-- `/category/:id`, `/article/:slug`: existing KB articles
-
-guide screenshots and video assets can live under **`public/guide/assets/`** (see `.gitkeep`).
+- `/`: landing plus links into user guides and tech guides markdown
+- `/knowledge-base`: knowledge base hub (themes + full article index)
+- `/category/:id`, `/article/:slug`: KB articles
+- `/library`: minimal guides library stub (bookmark URL only; prefer nav)
+- `/library/user`, `/library/user/:slug`: user guides markdown (`website/src/library/user-guides/`)
+- `/library/tech`, `/library/tech/:slug`: tech guides markdown (`website/src/library/tech-guides/`)
+- `/guide`, `/guide/*`: redirects to `/library/user/readme` (legacy inbound links)
+- `/resources`: redirects to `/knowledge-base` (legacy inbound links)
 
 ### logos (chain + partner marks)
+
+Home page assets under **`public/logos/`** are **copies** of `wallet-extension/public/logos/*.svg` plus **`ika.svg`** from `wallet-extension/public/ika.svg`. When the extension adds or updates marks, re-copy those files (or add a small sync script) so the site stays aligned.
+
+## embedding the “real” wallet UI on this site
 
 Home page assets under **`public/logos/`** are **copies** of `wallet-extension/public/logos/*.svg` plus **`ika.svg`** from `wallet-extension/public/ika.svg`. When the extension adds or updates marks, re-copy those files (or add a small sync script) so the site stays aligned.
 

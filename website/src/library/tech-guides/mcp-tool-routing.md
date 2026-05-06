@@ -5,6 +5,7 @@ an MCP `tools/call` lands on the native host's HTTP listener but the actual tool
 ## the correlation problem
 
 the host needs to:
+
 1. accept an HTTP MCP request
 2. forward it to the extension
 3. wait for the extension to respond
@@ -17,6 +18,7 @@ solution: **per-call correlation ids** plus a `pending` Map keyed by id.
 ## the envelope
 
 extension ↔ host:
+
 ```jsonc
 // host → extension (initiated by HTTP MCP request arrival)
 {
@@ -54,14 +56,14 @@ function dispatchToolCall(httpId, jsonRpcReq) {
     const timeoutId = setTimeout(() => {
       if (pending.has(correlationId)) {
         pending.delete(correlationId);
-        reject(new Error('tool call timed out'));
+        reject(new Error("tool call timed out"));
       }
-    }, TOOL_CALL_TIMEOUT_MS);   // 300_000 = 5 minutes
+    }, TOOL_CALL_TIMEOUT_MS); // 300_000 = 5 minutes
 
     pending.set(correlationId, { resolve, reject, timeoutId, httpId });
 
     sendFrame({
-      type: 'tool-call',
+      type: "tool-call",
       id: correlationId,
       method: jsonRpcReq.method,
       params: jsonRpcReq.params,
@@ -71,7 +73,7 @@ function dispatchToolCall(httpId, jsonRpcReq) {
 
 function handleToolResult(msg) {
   const entry = pending.get(msg.id);
-  if (!entry) return;   // already timed out / unknown
+  if (!entry) return; // already timed out / unknown
   pending.delete(msg.id);
   clearTimeout(entry.timeoutId);
   if (msg.error) entry.resolve({ error: msg.error });
@@ -137,23 +139,27 @@ async function runApproveTierTool(name, args) {
   });
 
   // 2. open the appropriate popup
-  if (name === 'signMessage') {
+  if (name === "signMessage") {
     chrome.windows.create({
       url: chrome.runtime.getURL(`index.html?mcpapprove=${requestId}`),
-      type: 'popup', width: 400, height: 700,
+      type: "popup",
+      width: 400,
+      height: 700,
     });
-  } else if (name === 'sendEvmTx' || name === 'signTransaction') {
+  } else if (name === "sendEvmTx" || name === "signTransaction") {
     chrome.windows.create({
       url: chrome.runtime.getURL(`index.html?txapprove=${requestId}&mcpMode=${name}`),
-      type: 'popup', width: 400, height: 700,
+      type: "popup",
+      width: 400,
+      height: 700,
     });
   }
 
   // 3. await user resolution (popup calls approveMcpSign or rejectMcpSign)
   return new Promise((resolve, reject) => {
     mcpPendingQueue.onResolve(requestId, (outcome) => {
-      if (outcome.kind === 'approved') resolve(outcome.payload);
-      else reject({ code: -32000, message: 'user canceled', data: outcome.reason });
+      if (outcome.kind === "approved") resolve(outcome.payload);
+      else reject({ code: -32000, message: "user canceled", data: outcome.reason });
     });
   });
 }
@@ -185,6 +191,7 @@ most of the wall-clock time is **user reading the popup**. the actual MCP machin
 ## list-changed notifications (not implemented)
 
 MCP spec defines a server-to-client notification `notifications/tools/list_changed` for telling the client "hey, the tool list updated, re-fetch via tools/list". chromatika **doesn't push these today** because:
+
 - HTTP MCP transport is request/response only - no SSE or websocket for server push
 - the tool list is static (defined in code), so list-changed events are rare
 

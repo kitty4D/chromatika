@@ -12,7 +12,7 @@ async function signSolanaTx(versionedTx: VersionedTransaction) {
   // NOT the full tx (which would include signature slots)
 
   // 2. take a presign
-  const presignId = takePresign('ED25519_EDDSA');
+  const presignId = takePresign("ED25519_EDDSA");
 
   // 3. sign via ika - PASS RAW MESSAGE BYTES (ika sha-512s internally per RFC 8032)
   const sigBytes = await ikaSign({
@@ -51,6 +51,7 @@ the **serialized v0 message** (`versionedTx.message.serialize()`), not the whole
 ```
 
 signers verify by:
+
 ```
 ed25519_verify(message_bytes, signature, signer_pubkey)
 // internally: sha-512(message_bytes), then verify on the curve
@@ -66,9 +67,9 @@ async function sendSolanaTx(tx: VersionedTransaction) {
   const connection = new Connection(SOLANA_RPC_URL);
   const sig = await connection.sendRawTransaction(signed.serialize(), {
     skipPreflight: false,
-    preflightCommitment: 'processed',
+    preflightCommitment: "processed",
   });
-  await connection.confirmTransaction(sig, 'confirmed');
+  await connection.confirmTransaction(sig, "confirmed");
   return sig;
 }
 ```
@@ -84,7 +85,7 @@ async function sendSolanaNative({ to, amountSol }) {
   const toPk = new PublicKey(to);
 
   const connection = new Connection(SOLANA_RPC_URL);
-  const { blockhash } = await connection.getLatestBlockhash('finalized');
+  const { blockhash } = await connection.getLatestBlockhash("finalized");
 
   const message = new TransactionMessage({
     payerKey: from,
@@ -108,6 +109,7 @@ native SOL sends are exactly one SystemProgram.transfer instruction. SPL token s
 ## dapp `solana_signTransaction` path
 
 when a dapp asks for `solana_signTransaction` via the dapp bridge, chromatika:
+
 1. enqueues the tx as a pending sign request
 2. opens a sign-approval popup
 3. on approve, runs `signSolanaTx`
@@ -118,7 +120,7 @@ a sibling MCP tool (`sendSolanaTx` for agents) is **tracked future** - today MCP
 ## SOL on Sui ika base vs Solana ika base
 
 - **Sui ika base** + ED25519 dWallet: real ika 2PC-MPC ED25519 signing. neither chromatika nor the ika network alone can sign. production-grade
-- **Solana ika base** + ED25519 dWallet: pre-alpha. **single mock signer**, not real distributed MPC. the disclaimer in CLAUDE.md is unambiguous: "never trust Solana-base signatures for real value"
+- **Solana ika base** + ED25519 dWallet: pre-alpha. **single mock signer**, not real distributed MPC. never trust Solana-base signatures for real value
 
 both paths produce the same byte-shape ed25519 signature, but the trust model differs. don't confuse them.
 

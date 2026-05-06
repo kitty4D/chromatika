@@ -5,20 +5,22 @@ chromatika encodes / decodes Encrypt's `CreateInput` and `ReadCiphertext` protob
 ## why hand-rolled
 
 the alternatives:
+
 1. **bufbuild/protobuf-es codegen**: requires `.proto` files and a build step (`buf generate` or similar). overkill for two messages
 2. **runtime reflection**: requires loading `.proto` files at runtime, parsing, registering. heavier than the schema warrants
 3. **manual `BinaryWriter` / `BinaryReader`**: tiny, explicit, easy to audit
 
 we picked manual. the pattern:
+
 - field N with tag `T` and wire type `W`: `writer.tag(N, W).type(value)`
 - on decode: `while (reader.pos < reader.len) { switch (reader.tag()) { case N: ... } }`
 
 ## protobuf wire types we use
 
-| wire type | what | tag byte form |
-|-----------|------|---------------|
-| 0 (VARINT) | int32, int64, uint32, uint64, bool, enum | `(field_number << 3) \| 0` |
-| 2 (LEN) | string, bytes, embedded message, repeated of any | `(field_number << 3) \| 2` |
+| wire type  | what                                             | tag byte form              |
+| ---------- | ------------------------------------------------ | -------------------------- |
+| 0 (VARINT) | int32, int64, uint32, uint64, bool, enum         | `(field_number << 3) \| 0` |
+| 2 (LEN)    | string, bytes, embedded message, repeated of any | `(field_number << 3) \| 2` |
 
 field numbers and wire types combine into the **tag**: the first byte (or varint) of each field. for example, field 1, wire type 2 (LEN, e.g. bytes) → tag `0x0A` (`(1 << 3) | 2 = 10`). field 2, wire type 2 → tag `0x12` (`(2 << 3) | 2 = 18`). etc.
 
@@ -101,11 +103,11 @@ function encodeReadCiphertextRequest(message: ReadCiphertextRequestWire): Uint8A
 }
 ```
 
-| field | wire type | tag byte | content |
-|-------|-----------|----------|---------|
-| 1: message | LEN | 0x0A | BCS-encoded message bytes (see [encrypt-read-ciphertext-signed.md](/library/tech/encrypt-read-ciphertext-signed)) |
-| 2: signature | LEN | 0x12 | 64-byte ed25519 signature over `message` |
-| 3: signer | LEN | 0x1A | 32-byte ed25519 public key |
+| field        | wire type | tag byte | content                                                                                                           |
+| ------------ | --------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1: message   | LEN       | 0x0A     | BCS-encoded message bytes (see [encrypt-read-ciphertext-signed.md](/library/tech/encrypt-read-ciphertext-signed)) |
+| 2: signature | LEN       | 0x12     | 64-byte ed25519 signature over `message`                                                                          |
+| 3: signer    | LEN       | 0x1A     | 32-byte ed25519 public key                                                                                        |
 
 ## ReadCiphertextResponse decoding
 

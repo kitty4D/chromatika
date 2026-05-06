@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phishing Warning — Chromatika</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, #0b1220 0%, #07060f 100%);
+      font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+      color: rgba(234,240,255,0.95);
+      padding: 24px;
+    }
+    .card {
+      max-width: 500px;
+      width: 100%;
+      padding: 32px 28px;
+      border-radius: 22px;
+      background: rgba(239,68,68,0.10);
+      border: 1px solid rgba(239,68,68,0.35);
+    }
+    .icon { font-size: 48px; margin-bottom: 16px; }
+    h1 { font-size: 22px; font-weight: 900; color: rgba(255,100,100,0.95); margin-bottom: 10px; }
+    p { font-size: 14px; line-height: 1.6; color: rgba(234,240,255,0.80); margin-bottom: 12px; }
+    .domain {
+      font-family: monospace;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 8px 14px;
+      border-radius: 10px;
+      background: rgba(0,0,0,0.30);
+      border: 1px solid rgba(255,255,255,0.12);
+      word-break: break-all;
+      margin-bottom: 20px;
+      color: rgba(255,150,150,0.95);
+    }
+    button {
+      padding: 11px 22px;
+      border-radius: 11px;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+    }
+    .back { background: rgba(239,68,68,0.80); color: #fff; margin-right: 10px; }
+    .back:hover { background: rgba(239,68,68,1); }
+    .ignore { background: rgba(255,255,255,0.08); color: rgba(234,240,255,0.70); border: 1px solid rgba(255,255,255,0.14); }
+    .ignore:hover { background: rgba(255,255,255,0.13); }
+    .footer { margin-top: 20px; font-size: 11px; color: rgba(234,240,255,0.45); line-height: 1.5; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">⚠️</div>
+    <h1>Phishing Warning</h1>
+    <p>Chromatika has blocked this site because it matches a known phishing or scam domain:</p>
+    <div class="domain" id="domain">—</div>
+    <p>This site may try to steal your seed phrase, private keys, or trick you into signing malicious transactions.</p>
+    <div>
+      <button class="back" onclick="history.back()">← go back to safety</button>
+      <button class="ignore" onclick="document.getElementById('warning').style.display='none'; window.location.replace(window.location.href.replace(location.origin + '/phishing-warning.html?blocked=', ''))">
+        ignore warning (dangerous)
+      </button>
+    </div>
+    <div class="footer">
+      Powered by the eth-phishing-detect community blocklist. False positive?
+      <a href="https://github.com/MetaMask/eth-phishing-detect" target="_blank" rel="noreferrer" style="color: rgba(180,160,255,0.85);">report here</a>.
+    </div>
+  </div>
+  <script>
+    const url = new URL(location.href);
+    const blocked = url.searchParams.get('blocked') || url.searchParams.get('domain') || '(unknown)';
+    document.getElementById('domain').textContent = decodeURIComponent(blocked);
+  </script>
+</body>
+</html>

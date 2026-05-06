@@ -5,6 +5,7 @@ a dWallet can move from one user to another by **re-encrypting the user share** 
 ## the model
 
 each dWallet has an **encrypted user share** stored on-chain (in the Sui object graph or Solana program account). that share is encrypted to the **owner's encryption key** (registered via `registerEncryptionKey`). to transfer:
+
 1. sender re-encrypts their share to the recipient's encryption key
 2. on-chain transition: dWallet is now "owned" by the recipient (in the sense that the encrypted share is theirs to decrypt)
 3. recipient calls `acceptTransferredDWallet` to verify + finalize
@@ -78,10 +79,12 @@ after step 4, the **sender** can no longer sign with the dWallet - their share i
 ## why re-encryption and not "send the secret"
 
 in a normal wallet, transfer means "give the recipient the secret key". this is bad because:
+
 - the recipient now holds plaintext key material
 - the sender either keeps a copy (= both can sign, no clean handoff) or destroys their copy (= no provable handoff)
 
 ika's re-encryption is cleaner:
+
 - on-chain, there's exactly one encrypted share at any time (well, there's the old encrypted-to-sender and the new encrypted-to-recipient temporarily; the protocol manages the cutover)
 - nobody ever sees the plaintext share
 - the chain itself is the source of truth for "who owns this dWallet now"
@@ -89,6 +92,7 @@ ika's re-encryption is cleaner:
 ## the encryption-key registration step
 
 `registerEncryptionKey({ curve })` registers the user's encryption keypair on-chain. it's a one-time setup per curve per vault:
+
 ```
 1. usk = sessionState.ikaShareKeys[curve]
 2. encryption_pubkey = usk.encryptionPublicKey
@@ -114,6 +118,7 @@ Solana ika base re-encryption surface is **not generally usable today**. per the
 ## the digest / hints flow
 
 `parseTransferTxDigest({ digest })` is a chromatika utility that:
+
 1. fetches the Sui transaction at `digest`
 2. inspects events for the re-encryption event
 3. extracts `encryptedShareId` (the on-chain id of the new encrypted share for the recipient) and `senderEncryptionKeyAddress`

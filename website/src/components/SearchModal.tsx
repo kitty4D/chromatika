@@ -11,13 +11,11 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 import { kbArticles } from "../data/kb";
-import { guideArticles } from "../data/guide";
 
 import { filterLibrarySearch } from "../data/library-docs";
 
 export type SearchResultItem =
   | { kind: "kb"; slug: string; title: string; summary: string; href: string }
-  | { kind: "guide"; slug: string; title: string; summary: string; href: string }
   | { kind: "lib-user" | "lib-tech"; slug: string; title: string; summary: string; href: string };
 
 function matches(needle: string, title: string, summary: string, slug: string): boolean {
@@ -40,15 +38,6 @@ export function filterSiteSearch(needle: string): SearchResultItem[] {
       summary: a.summary,
       href: `/article/${a.slug}`,
     }));
-  const gu: SearchResultItem[] = guideArticles
-    .filter((a) => matches(n, a.title, a.summary, a.slug))
-    .map((a) => ({
-      kind: "guide",
-      slug: a.slug,
-      title: a.title,
-      summary: a.summary,
-      href: `/guide/${a.slug}`,
-    }));
   const lib = filterLibrarySearch(needle).map((h) => ({
     kind: h.kind,
     slug: h.slug,
@@ -56,7 +45,7 @@ export function filterSiteSearch(needle: string): SearchResultItem[] {
     summary: h.summary,
     href: h.href,
   })) as SearchResultItem[];
-  return [...kb, ...gu, ...lib];
+  return [...kb, ...lib];
 }
 
 type SearchModalCtx = {
@@ -161,14 +150,14 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         </div>
         <label htmlFor={inputId} className="visually-hidden">
-          search knowledge base, guide, and markdown library
+          search knowledge base, user guides, and tech guides
         </label>
         <input
           id={inputId}
           ref={inputRef}
           type="search"
           className="search-modal-input"
-          placeholder="articles, guides, library pages…"
+          placeholder="knowledge base, user guides, tech guides…"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           autoComplete="off"
@@ -176,7 +165,7 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
         <ul className="search-modal-results" aria-label="search results">
           {!q.trim() && (
             <li className="search-modal-empty">
-              type to search the knowledge base, user guide, and markdown library.
+              type to search the knowledge base, user guides, and tech guides.
             </li>
           )}
           {q.trim() && results.length === 0 && (
@@ -186,13 +175,7 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
             <li key={`${r.kind}-${r.slug}`}>
               <Link to={r.href} className="search-modal-hit" onClick={() => onClose()}>
                 <span className="search-modal-hit-badge">
-                  {r.kind === "kb"
-                    ? "kb"
-                    : r.kind === "guide"
-                      ? "guide"
-                      : r.kind === "lib-user"
-                        ? "user md"
-                        : "tech md"}
+                  {r.kind === "kb" ? "kb" : r.kind === "lib-user" ? "user md" : "tech md"}
                 </span>
                 <span className="search-modal-hit-title">{r.title}</span>
                 <span className="search-modal-hit-sum">{r.summary}</span>

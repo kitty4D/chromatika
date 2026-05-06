@@ -70,6 +70,7 @@ chromatika polls a signed feed every 5 minutes for in-the-wild attack reports (p
 ## how alerts route from the feed to your wallet
 
 at a glance:
+
 1. every 5 minutes, the poller fetches the signed feed JSON
 2. each alert in the feed is independently verified (ed25519 signature, publisher allowlist, time bounds)
 3. dropped alerts are logged but don't poison the rest of the batch

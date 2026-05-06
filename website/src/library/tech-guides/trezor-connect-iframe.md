@@ -5,6 +5,7 @@ chromatika supports Trezor devices via Trezor's hosted iframe at `https://connec
 ## why an iframe (not direct WebHID)
 
 Trezor's design is to host a single TypeScript SDK at `connect.trezor.io` that all dapps embed. benefits:
+
 - single source of truth for device firmware compatibility
 - centralized UI for confirmations + passphrase prompts
 - no need for each dapp to handle USB device dialogs
@@ -14,6 +15,7 @@ trade-off: the iframe runs cross-origin, so chromatika has to communicate via `p
 ## the CSP allowance
 
 manifest CSP includes:
+
 ```jsonc
 "frame-src": "https://connect.trezor.io"
 ```
@@ -23,16 +25,16 @@ without this, the iframe fails to load. chromatika's manifest already has it.
 ## the connection
 
 ```ts
-import TrezorConnect from '@trezor/connect-web';
+import TrezorConnect from "@trezor/connect-web";
 
 // initialize once
 TrezorConnect.init({
   manifest: {
-    appUrl: 'chrome-extension://<chromatika-id>',
-    email: 'support@chromatika.example',
+    appUrl: "chrome-extension://<chromatika-id>",
+    email: "support@chromatika.example",
   },
-  lazyLoad: true,        // don't load the iframe until first use
-  popup: false,          // use the embedded iframe, not a separate popup
+  lazyLoad: true, // don't load the iframe until first use
+  popup: false, // use the embedded iframe, not a separate popup
 });
 ```
 
@@ -44,7 +46,7 @@ TrezorConnect.init({
 // EVM message sign
 const result = await TrezorConnect.ethereumSignMessage({
   path: "m/44'/60'/0'/0/0",
-  message: 'Hello, world',
+  message: "Hello, world",
   hex: false,
 });
 // result.payload = { signature: '0x...' }
@@ -60,14 +62,14 @@ const result = await TrezorConnect.ethereumSignTypedData({
 const result = await TrezorConnect.ethereumSignTransaction({
   path: "m/44'/60'/0'/0/0",
   transaction: {
-    to: '0x...',
-    value: '0x...',
-    data: '0x',
+    to: "0x...",
+    value: "0x...",
+    data: "0x",
     chainId: 1,
-    nonce: '0x...',
-    gasLimit: '0x...',
-    maxFeePerGas: '0x...',
-    maxPriorityFeePerGas: '0x...',
+    nonce: "0x...",
+    gasLimit: "0x...",
+    maxFeePerGas: "0x...",
+    maxPriorityFeePerGas: "0x...",
   },
 });
 
@@ -79,6 +81,7 @@ const result = await TrezorConnect.solanaSignTransaction({
 ```
 
 each call:
+
 1. chromatika invokes the SDK method
 2. SDK posts to its iframe
 3. iframe handles USB transport, displays confirm UI
@@ -91,6 +94,7 @@ each call:
 ### Bitcoin PSBT
 
 Trezor wants **decomposed UTXO inputs** (raw `TxInputType[]` / `TxOutputType[]` with reference txs), not a raw PSBT blob. chromatika's BTC code uses PSBT. converting PSBT → Trezor's expected shape requires:
+
 - decoding the PSBT
 - fetching reference txs (`refTxs`) for each input
 - converting to `TxInputType[]` / `TxOutputType[]`

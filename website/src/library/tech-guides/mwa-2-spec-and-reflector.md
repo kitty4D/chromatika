@@ -19,7 +19,7 @@ reflector subspec: [reflector-protocol](https://solana-mobile.github.io/mobile-w
 
 [ transport layer ]
   - local: Android intent (solana-wallet:// scheme)
-  - remote: WebSocket to reflector at wss://reflect.solanamobile.com/reflect
+  - remote: WebSocket to reflector at wss://development.reflector.solanamobile.com/reflect
 ```
 
 session-level encryption means the reflector (or any intermediate hop on the websocket) can't read the application-layer messages. it only forwards encrypted blobs.
@@ -27,11 +27,13 @@ session-level encryption means the reflector (or any intermediate hop on the web
 ## the association URL
 
 at pairing time, the dapp generates an **association URL**:
+
 ```
 solana-wallet:/v1/associate/<base64-encoded-association-data>
 ```
 
 association data carries:
+
 - ephemeral public key (X25519, used for the session key exchange)
 - reflector hostname (where the wallet should connect to forward messages)
 - reflector ID (the session topic on the reflector - both sides agree on this so they can reach each other through the relay)
@@ -42,15 +44,16 @@ the dapp shows this URL as a QR code on the desktop. the wallet scans the QR wit
 ## the reflector protocol
 
 the reflector is a stateless message-forwarding server. clients connect via WebSocket, identified by a per-session topic:
+
 ```
-wss://reflect.solanamobile.com/reflect?id=<session-topic>
+wss://development.reflector.solanamobile.com/reflect?id=<session-topic>
 ```
 
 both sides connect to the **same topic**. messages from one side are forwarded to the other. if one side disconnects, the reflector holds messages briefly waiting for reconnect.
 
 ```
 [ desktop chromatika ]                         [ phone wallet (Seeker) ]
-  open wss://reflect.solanamobile.com           scan QR, parse URL
+  open wss://development.reflector.solanamobile.com           scan QR, parse URL
   ←← topic, ephemeral pubkey ←←                 connect wss
   →→ X25519 handshake initiation →→             →→ X25519 response →→
   shared session key derived                    shared session key derived
@@ -70,10 +73,11 @@ record.hardwareAccountId = '<id>';
 record.hardwareVendor = 'mwa';
 record.mwaTransport = 'remote';
 record.mwaAuthToken = '<base64 token>';
-record.mwaReflectorHost = 'reflect.solanamobile.com';
+record.mwaReflectorHost = 'development.reflector.solanamobile.com';
 ```
 
 every subsequent sign:
+
 1. desktop opens fresh WebSocket to the same reflector
 2. sends `reauthorize { auth_token }`
 3. wallet responds with a fresh authorize (or fails with `ERROR_AUTHORIZATION_FAILED` if the token is invalid)
@@ -102,6 +106,7 @@ re-pairing means generating a fresh association URL + new QR. user scans, fresh 
 ## the can't-run-in-SW caveat
 
 the MWA libraries (`@solana-mobile/mobile-wallet-adapter-protocol-web3js`) use:
+
 - `WebSocket` API
 - `window.btoa` / `atob` for base64
 - DOM-related APIs in some code paths
@@ -110,7 +115,6 @@ the **service worker doesn't have these**. so MWA pairing + signing **must run i
 
 ## the host hard-coded constant
 
-per CLAUDE.md:
 - public reflector: `development.reflector.solanamobile.com`
 - chromatika constant: `MWA_REMOTE_HOST_AUTHORITY = 'development.reflector.solanamobile.com'`
 

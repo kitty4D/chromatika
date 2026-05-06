@@ -1,0 +1,1 @@
+function e(e){try{return Number(BigInt(e.split(`.`)[0]))/1e9}catch{return parseFloat(e)||0}}function t(e){try{return Number(BigInt(e.split(`.`)[0]))/1e9}catch{return parseFloat(e)||0}}function n(e){return e>=1e3?`$`+e.toLocaleString(`en-US`,{maximumFractionDigits:0}):e>=1?`$`+e.toFixed(2):`$`+e.toFixed(4)}export{t as n,e as r,n as t};

@@ -18,6 +18,8 @@ chromatika is **pre-release** - storage and crypto are dev-only, and Solana ika 
 - [hardware-only vault](/library/user/hardware-vault) - Solana MWA / Seeker as primary identity
 - [manage multiple vaults](/library/user/manage-vaults) - list, add sibling, switch, rename, remove, cross-chain reuse
 - [BIP39 recovery words](/library/user/recovery-words) - using the recovery branch to unlock passkey / WAAP / Lazor envelopes
+- [manage multi-vault siblings](/library/user/multi-vault-siblings) - one identity, multiple dWallets at different bip44-style indices
+- [find more accounts](/library/user/find-more-accounts) - post-unlock activity scan + dwallet inventory + inline sibling-add
 
 ## dWallet management
 
@@ -60,6 +62,10 @@ chromatika is **pre-release** - storage and crypto are dev-only, and Solana ika 
 - [app settings](/library/user/app-settings) - advanced mode, help hints, theme, explorer preferences
 - [media safety mode](/library/user/media-safety-mode) - NFT / Ordinal image filtering
 - [price source priority](/library/user/price-source-priority) - reorder the price waterfall
+
+## on-chain policy enforcement
+
+- [policy vault](/library/user/policy-vault) - on-chain spend caps + panic + rescue (Sui Move + Solana Anchor; deployment status pre-launch)
 
 ## agent surface, swap, x402
 

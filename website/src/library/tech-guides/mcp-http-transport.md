@@ -40,6 +40,7 @@ Content-Length: <N>
 ```
 
 or for errors:
+
 ```jsonc
 {
   "jsonrpc": "2.0",
@@ -53,6 +54,7 @@ or for errors:
 ```
 
 JSON-RPC error codes used by chromatika:
+
 - `-32700` parse error
 - `-32600` invalid request
 - `-32601` method not found
@@ -61,6 +63,7 @@ JSON-RPC error codes used by chromatika:
 - `-32000` to `-32099` reserved for chromatika-specific errors (e.g. wallet locked, user canceled, timeout)
 
 HTTP status codes:
+
 - `200 OK` for any well-formed JSON-RPC response (whether `result` or `error`)
 - `400 Bad Request` for non-JSON or malformed body
 - `401 Unauthorized` for missing / wrong bearer token
@@ -116,8 +119,17 @@ curl -X POST http://127.0.0.1:54321/mcp \
 ```
 
 response:
+
 ```json
-{"jsonrpc":"2.0","id":"1","result":{"protocolVersion":"2025-03-26","serverInfo":{"name":"chromatika","version":"0.0.1"},"capabilities":{"tools":{"listChanged":false}}}}
+{
+  "jsonrpc": "2.0",
+  "id": "1",
+  "result": {
+    "protocolVersion": "2025-03-26",
+    "serverInfo": { "name": "chromatika", "version": "0.0.1" },
+    "capabilities": { "tools": { "listChanged": false } }
+  }
+}
 ```
 
 ## CORS and security

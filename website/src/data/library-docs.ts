@@ -84,7 +84,7 @@ const librarySearchCache: LibrarySearchHit[] = (() => {
       kind: "lib-user",
       slug,
       title,
-      summary: "user guide library (markdown)",
+      summary: "user guides markdown library",
       href: `/library/user/${slug}`,
     });
   }

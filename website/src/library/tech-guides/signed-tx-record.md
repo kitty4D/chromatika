@@ -6,27 +6,27 @@
 
 ```ts
 type SignedTxKind =
-  | 'evm-send'
-  | 'evm-message-sign'           // future
-  | 'evm-typed-data'             // future
-  | 'sui-send'                   // future
-  | 'sui-message-sign'           // future
-  | 'sol-send'                   // future
-  | 'sol-message-sign'           // future
-  | 'sol-tx-sign'                // future
-  | 'btc-send'                   // future
-  | 'apt-send';                  // future
+  | "evm-send"
+  | "evm-message-sign" // future
+  | "evm-typed-data" // future
+  | "sui-send" // future
+  | "sui-message-sign" // future
+  | "sol-send" // future
+  | "sol-message-sign" // future
+  | "sol-tx-sign" // future
+  | "btc-send" // future
+  | "apt-send"; // future
 
-type SignedTxChainId = number | string;   // number for EVM (chainId), string for others ('sui-mainnet', 'sol-mainnet', etc.)
+type SignedTxChainId = number | string; // number for EVM (chainId), string for others ('sui-mainnet', 'sol-mainnet', etc.)
 
 interface SignedTxRecord {
-  txHash: string;                // EVM tx hash, Sui digest, Solana signature, BTC txid, Aptos tx hash
-  origin: string | null;         // dapp origin at sign time, or null for wallet-UI sends
+  txHash: string; // EVM tx hash, Sui digest, Solana signature, BTC txid, Aptos tx hash
+  origin: string | null; // dapp origin at sign time, or null for wallet-UI sends
   chainId: SignedTxChainId;
-  vaultId: string;               // vault that signed
-  timestampMs: number;           // local clock at broadcast (authoritative ordering)
+  vaultId: string; // vault that signed
+  timestampMs: number; // local clock at broadcast (authoritative ordering)
   kind: SignedTxKind;
-  encryptedNote?: EncryptedRef;  // optional encrypted user note (see activity-notes-encrypt-decrypt.md)
+  encryptedNote?: EncryptedRef; // optional encrypted user note (see activity-notes-encrypt-decrypt.md)
 }
 ```
 
@@ -55,7 +55,7 @@ per-vault scoping means switching active vaults loads a different record set. re
 async function recordSignedTx(rec: SignedTxRecord): Promise<void> {
   const all = await loadAll();
   const list = all[rec.vaultId] ?? [];
-  list.unshift(rec);                       // newest first
+  list.unshift(rec); // newest first
   if (list.length > 500) list.length = 500; // FIFO cap
   all[rec.vaultId] = list;
   await chrome.storage.local.set({ chromatika_signed_txs_v1: all });
@@ -65,21 +65,25 @@ async function recordSignedTx(rec: SignedTxRecord): Promise<void> {
 async function getSignedTxByHash(txHash: string, vaultId: string): Promise<SignedTxRecord | null> {
   const all = await loadAll();
   const list = all[vaultId] ?? [];
-  return list.find(r => r.txHash === txHash) ?? null;
+  return list.find((r) => r.txHash === txHash) ?? null;
 }
 
 // build a fast lookup map for the activity feed merge
 async function getSignedTxsMap(vaultId: string): Promise<Map<string, SignedTxRecord>> {
   const all = await loadAll();
   const list = all[vaultId] ?? [];
-  return new Map(list.map(r => [r.txHash, r]));
+  return new Map(list.map((r) => [r.txHash, r]));
 }
 
 // patch the encryptedNote field (replace or clear)
-async function updateSignedTxNote(txHash: string, vaultId: string, ref: EncryptedRef | null): Promise<boolean> {
+async function updateSignedTxNote(
+  txHash: string,
+  vaultId: string,
+  ref: EncryptedRef | null
+): Promise<boolean> {
   const all = await loadAll();
   const list = all[vaultId] ?? [];
-  const rec = list.find(r => r.txHash === txHash);
+  const rec = list.find((r) => r.txHash === txHash);
   if (!rec) return false;
   if (ref === null) delete rec.encryptedNote;
   else rec.encryptedNote = ref;
@@ -99,17 +103,18 @@ today: **EVM send paths only**.
 // after broadcast success, both paths call:
 await recordSignedTx({
   txHash: txHashOut,
-  origin: params.dappOrigin ?? null,    // dapp-bridge sets this; null for wallet-UI sends
+  origin: params.dappOrigin ?? null, // dapp-bridge sets this; null for wallet-UI sends
   chainId: filled.chainId,
   vaultId: ikaSession.activeVaultId,
   timestampMs: Date.now(),
-  kind: 'evm-send',
+  kind: "evm-send",
 });
 ```
 
 errors are caught + logged via console.warn but don't block the txHash return. the broadcast already happened; failing to record is non-fatal.
 
 **not** writing records yet:
+
 - `signEvmTxOnly` (sign-without-broadcast for relayer / bundler / abstract-wallet flows) - reserves nonce but doesn't broadcast, so recording would mislead the activity feed
 - Sui sends (`sendSuiNative`)
 - Solana sends (`sendSolanaNative`)
@@ -142,7 +147,7 @@ async function getMultiChainActivity(s: Session, limitPerChain = 12): Promise<Ac
 
   // 4. join: for each merged row, look up by digest === txHash
   for (const item of merged) {
-    const rec = txMap.get(item.id);   // item.id is the tx digest
+    const rec = txMap.get(item.id); // item.id is the tx digest
     if (rec) {
       item.origin = rec.origin;
       item.signedByThisWallet = true;
@@ -157,11 +162,13 @@ async function getMultiChainActivity(s: Session, limitPerChain = 12): Promise<Ac
 ```
 
 key fields the merge populates:
+
 - `item.origin` (string | null | undefined) - dapp origin URL if known
 - `item.signedByThisWallet` (boolean) - true if there's a local record for this digest
 - `item.hasEncryptedNote` (boolean) - true if the record has an `encryptedNote` field
 
 UI uses these to:
+
 - render dapp origin hostname under each tx ("via uniswap.org")
 - gate the "+ note" / "view note" buttons (only for `signedByThisWallet === true`)
 - render the lock badge (only when `hasEncryptedNote === true`)
@@ -170,7 +177,7 @@ incoming transfers (txs from someone else to you) don't have a local record → 
 
 ## chain-specific quirks
 
-- **Sui** (`activity.ts` lines 80-84): primary path is `queryTransactionBlocksGraphQL(client, { filter: { affectedAddress }, limit })` using `@mysten/sui` 2.13.2's hand-rolled `transactionBlocks` doc. JSON-RPC fallback is still live per STATUS.md (no GraphQL list wrapper for filtered/scoped queries yet)
+- **Sui** (`activity.ts` lines 80-84): only path is `queryTransactionBlocksGraphQL(client, { filter: { affectedAddress }, limit })`, a hand-rolled `transactionBlocks` doc on the vault-shared `SuiGraphQLClient`. chromatika's Mysten JSON-RPC migration completed 2026-05-01; nothing in the wallet still talks JSON-RPC
 - **EVM** (lines 204-231): only Blockscout v2 API is wired today. other explorers (Etherscan, etc.) return `[]`. tracked future
 - **Solana** (lines 136-162): `getSignaturesForAddress` + optional Encrypt program label detection on top 12 results (when vault is on Solana ika base)
 - **Bitcoin** (lines 169-190): Esplora API for address tx history

@@ -1,0 +1,17 @@
+{
+  "name": "Chromatika knowledge base",
+  "short_name": "Chromatika",
+  "description": "Public knowledge base and user guide for Chromatika - a dWallet-first multi-chain browser wallet.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1d1b30",
+  "theme_color": "#b967fa",
+  "icons": [
+    {
+      "src": "/images/chromatika.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

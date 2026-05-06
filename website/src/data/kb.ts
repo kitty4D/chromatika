@@ -53,7 +53,7 @@ export const kbArticles: KbArticle[] = [
     body: [
       "Chromatika is a browser extension (Manifest V3) that behaves as a multi-chain wallet with a deliberate rule: transactions, dapp connections, signing, and addresses shown on supported networks trace to an ika dWallet (2PC-MPC), not a separate plain HD identity per chain.",
       "You get a local encrypted Chromatika vault (Argon2id + AES-256-GCM) that can hold multiple dWallet Vault records. Each is an owner keyring for a given ika base chain, with its own dWallets and keys.",
-      "Primary UI is the side panel; the popup covers quick actions, approvals, and hardware flows. This site is a knowledge base; the extension source and STATUS.md remain the technical source of truth.",
+      "Primary UI is the side panel; the popup covers quick actions, approvals, and hardware flows. Browse user guides and tech guides from the site header, or open the knowledge base for short themed articles.",
     ],
   },
   {
@@ -183,14 +183,15 @@ export const kbArticles: KbArticle[] = [
   },
   {
     slug: "resource-library",
-    title: "resource library (site layers)",
+    title: "guides and knowledge base on this site",
     categoryId: "start",
     summary:
-      "How the knowledge base, user guide, and bundled user + tech markdown libraries under /library fit together.",
+      "How the themed knowledge base, user guides markdown, and tech guides markdown relate on chromatika.dev.",
     body: [
-      "Open /resources for how all layers fit together. The full markdown stacks render under /library (user and tech indices plus every page).",
-      "Themed knowledge base articles and the task-based user guide stay the lighter-weight surfaces; the library holds exhaustive reference in markdown.",
-      "After editing files under website/src/library/, run pnpm run sync:library so sibling links keep working. When anything disagrees with wallet-extension/docs/, trust the repo.",
+      "The knowledge base (/knowledge-base and /article/* / /category/*) collects short themed articles: start here, identity, vault security, chains, hardware, and product status.",
+      "User guides render from markdown under website/src/library/user-guides/ at /library/user/*. They are exhaustive, task-first reference.",
+      "Tech guides render from website/src/library/tech-guides/ at /library/tech/*. They document implementation shapes: crypto, ika, chrome APIs, and integrations.",
+      "After editing library markdown locally, run pnpm run sync:library from the website package so sibling links keep mapping to routes. When anything disagrees with wallet-extension/docs/, trust the repo.",
     ],
   },
   {
@@ -202,7 +203,7 @@ export const kbArticles: KbArticle[] = [
       "Repository: github.com context from your checkout: README.md (root), wallet-extension/README.md (wallet detail), wallet-extension/docs/STATUS.md (truth index).",
       "Terminology: wallet-extension/docs/TERMINOLOGY.md. Security practices and roadmap gaps: wallet-extension/docs/WALLET_SECURITY.md.",
       "Multi-dWallet Vault phases: wallet-extension/docs/DWALLET_VAULT_MODEL.md. Architecture diagram: wallet-extension/docs/architecture-final.html.",
-      "This website summarizes for humans; see /resources and /library. When docs disagree, the docs folder in the repo wins.",
+      "This website summarizes for humans; use the nav for user guides, tech guides, and the knowledge base. When docs disagree, the docs folder in the repo wins.",
     ],
   },
 ];

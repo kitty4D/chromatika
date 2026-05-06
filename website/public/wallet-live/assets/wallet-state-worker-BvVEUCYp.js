@@ -1,0 +1,1 @@
+(function(){let e=[];self.onconnect=t=>{let n=t.ports[0];e.push(n),n.onmessage=t=>{for(let n of e)try{n.postMessage(t.data)}catch{}};for(let t=e.length-2;t>=0;t--)try{e[t].postMessage({type:`ping`})}catch{e.splice(t,1)}n.start()}})();

@@ -7,6 +7,25 @@
       name="description"
       content="Chromatika user knowledge base: dWallet-first multi-chain wallet docs, security, and terminology."
     />
+    <meta name="theme-color" content="#1d1b30" />
+    <link rel="icon" type="image/svg+xml" href="/images/chromatika.svg" />
+    <link rel="apple-touch-icon" href="/images/chromatika.svg" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Chromatika" />
+    <meta property="og:title" content="Chromatika: knowledge base" />
+    <meta
+      property="og:description"
+      content="Chromatika docs: user guides, tech guides, and a knowledge base for this dWallet-first multi-chain wallet."
+    />
+    <meta property="og:image" content="/images/chromatika.svg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Chromatika: knowledge base" />
+    <meta
+      name="twitter:description"
+      content="Chromatika docs: user guides, tech guides, and a knowledge base for this dWallet-first multi-chain wallet."
+    />
+    <meta name="twitter:image" content="/images/chromatika.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,9 +33,45 @@
       rel="stylesheet"
     />
     <title>Chromatika: knowledge base</title>
+    <!-- Skip link is in static HTML; bundled CSS loads after JS. Hide until then (no flash). -->
+    <style>
+      .skip-link {
+        position: absolute;
+        left: -999px;
+        top: 1rem;
+        z-index: 100;
+        padding: 0.5rem 1rem;
+        background: oklch(0.27 0.05 282);
+        color: oklch(0.93 0.02 260);
+        border-radius: 1rem;
+        text-decoration: none;
+      }
+      .skip-link:focus {
+        left: 1rem;
+        outline: 2px solid oklch(0.78 0.14 245);
+        outline-offset: 2px;
+      }
+    </style>
   </head>
   <body>
     <a class="skip-link" href="#main">skip to content</a>
+    <noscript>
+      <div
+        style="
+          padding: 2rem;
+          max-width: 40rem;
+          margin: 0 auto;
+          font-family: system-ui, sans-serif;
+          color: #ddd;
+        "
+      >
+        <h1>Chromatika knowledge base</h1>
+        <p>
+          This site requires JavaScript to render. The Chromatika repository on GitHub mirrors the
+          same documentation as plain Markdown if you'd prefer to read it without JS.
+        </p>
+      </div>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

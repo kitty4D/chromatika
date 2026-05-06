@@ -11,10 +11,17 @@ new MCP read-tier tool that exposes chromatika's safety alerts to AI agents (Cla
   "inputSchema": {
     "type": "object",
     "properties": {
-      "domain": { "type": "string", "description": "Optional domain to filter on (case-insensitive substring match). If provided, returns only alerts whose affectedDomains include this domain." },
-      "severity": { "type": "string", "enum": ["critical", "warning", "info"], "description": "Optional severity floor. 'critical' returns only critical; 'warning' returns critical+warning; 'info' returns all." }
-    }
-  }
+      "domain": {
+        "type": "string",
+        "description": "Optional domain to filter on (case-insensitive substring match). If provided, returns only alerts whose affectedDomains include this domain.",
+      },
+      "severity": {
+        "type": "string",
+        "enum": ["critical", "warning", "info"],
+        "description": "Optional severity floor. 'critical' returns only critical; 'warning' returns critical+warning; 'info' returns all.",
+      },
+    },
+  },
 }
 ```
 
@@ -31,14 +38,14 @@ new MCP read-tier tool that exposes chromatika's safety alerts to AI agents (Cla
       "affectedDomains": ["uniswap-clone-evil.io"],
       "affectedChains": ["evm"],
       "titleShort": "phishing uniswap clone draining USDC",
-      "bodyLong": "Two domains run an exact uniswap v4 UI clone..."
-    }
+      "bodyLong": "Two domains run an exact uniswap v4 UI clone...",
+    },
     // ... more alerts ...
   ],
   "lastPolledAtMs": 1712346000000,
   "lastPollError": null,
   "muted": false,
-  "optedOut": false
+  "optedOut": false,
 }
 ```
 
@@ -103,10 +110,12 @@ async function listActiveAlertsForMcp({ domain, severity }: { domain?: string, s
 ## the read-tier classification
 
 per [mcp-protocol-overview.md](/library/tech/mcp-protocol-overview), MCP tools split into:
+
 - **read tier** (no popup): `listVaults`, `getActiveVault`, `getActiveNetworks`, `getLockState`, **and now `listActiveAlerts`**
 - **approve tier** (popup-gated): `signMessage`, `sendEvmTx`, `signTransaction`
 
 `listActiveAlerts` joins read-tier because:
+
 - it's read-only (no state mutation)
 - the data is already-verified safety info (no signing needed)
 - agents need fast access to flag dangerous domains before recommending interaction
@@ -118,7 +127,7 @@ read-tier still respects the wallet lock state. if the wallet is locked, the too
 
 ```ts
 if (!sessionState.unlocked) {
-  return { ok: false, error: { code: -32001, message: 'wallet locked' } };
+  return { ok: false, error: { code: -32001, message: "wallet locked" } };
 }
 ```
 
@@ -129,7 +138,8 @@ rationale: alerts data is technically not user-secret (the feed is public), but 
 example agent prompt: "I want to swap USDC for ETH on uniswap.org. is this safe?"
 
 agent flow:
-1. `tools/call listActiveAlerts({ domain: 'uniswap.org' })` 
+
+1. `tools/call listActiveAlerts({ domain: 'uniswap.org' })`
 2. response: `{ alerts: [], ... }` (or `{ alerts: [...] }` with phishing matches)
 3. agent reasons: empty result = no flags = recommend with normal caution. non-empty = surface the alert content to the user before any interaction
 4. agent then might call `sendEvmTx` (approve tier) or just inform the user

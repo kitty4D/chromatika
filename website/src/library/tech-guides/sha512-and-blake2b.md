@@ -5,6 +5,7 @@ two hash functions that show up specifically around Sui personal-message signing
 ## SHA-512 (used by ika ed25519 signing)
 
 ika's ed25519 EdDSA implementation uses SHA-512 as its hash function in two places per RFC 8032:
+
 1. expanding the secret seed into the secret scalar + nonce prefix
 2. hashing `(R || A || M)` to produce the challenge scalar `k`
 
@@ -14,7 +15,7 @@ when chromatika's `sui_signPersonalMessage` runs, it hands ika the **raw user-su
 
 ## BLAKE2b (used by Mysten's PersonalMessage intent)
 
-Mysten's wallet-side native primitive `signPersonalMessage` does **not** sign raw bytes. it wraps them in a Sui *intent*:
+Mysten's wallet-side native primitive `signPersonalMessage` does **not** sign raw bytes. it wraps them in a Sui _intent_:
 
 ```
 intent_message = [0x03, 0x00, 0x00] || bcs(PersonalMessage { message: bytes })
@@ -35,6 +36,7 @@ tracked future: add a parallel "Mysten BLAKE2b path" that wraps the message in t
 ## SHA-512 elsewhere
 
 SHA-512 also surfaces in:
+
 - BIP39 → BIP39-seed: PBKDF2-HMAC-SHA512 with 2048 iterations against the password "mnemonic" || passphrase. produces the 64-byte BIP39 seed that BIP44 and SLIP10 derive from
 - HMAC-SHA512 inside BIP32 (master key + chain-code derivation)
 - HMAC-SHA512 inside SLIP10 ed25519 derivation
@@ -52,11 +54,11 @@ SHA-512 also surfaces in:
 
 ## quick lookup
 
-| where | hash | input | output | who calls it |
-|-------|------|-------|--------|--------------|
-| ika ed25519 sign | SHA-512 | raw msg bytes | 64-byte sig | ika MPC server |
-| Sui native PersonalMessage | BLAKE2b-256 | intent || bcs(msg) | 32-byte digest, then ed25519 sign | dapps using `@mysten/sui` |
-| Sui address | BLAKE2b-256 | scheme_flag || pubkey | 32-byte address | chromatika + Sui SDK |
-| Passkey Sui addr | BLAKE2b-256 | 0x06 || pk_compressed | 32-byte address | chromatika passkey-derive |
-| BIP39 seed | PBKDF2-HMAC-SHA512 | mnemonic + "mnemonic" || passphrase | 64-byte seed | `@scure/bip39` |
-| BIP32 / SLIP10 master | HMAC-SHA512 | seed | 64 bytes (key + chain) | `@scure/bip32` / SLIP10 helper |
+| where                      | hash               | input                 | output                 | who calls it                   |
+| -------------------------- | ------------------ | --------------------- | ---------------------- | ------------------------------ | --------------------------------- | ------------------------- |
+| ika ed25519 sign           | SHA-512            | raw msg bytes         | 64-byte sig            | ika MPC server                 |
+| Sui native PersonalMessage | BLAKE2b-256        | intent                |                        | bcs(msg)                       | 32-byte digest, then ed25519 sign | dapps using `@mysten/sui` |
+| Sui address                | BLAKE2b-256        | scheme_flag           |                        | pubkey                         | 32-byte address                   | chromatika + Sui SDK      |
+| Passkey Sui addr           | BLAKE2b-256        | 0x06                  |                        | pk_compressed                  | 32-byte address                   | chromatika passkey-derive |
+| BIP39 seed                 | PBKDF2-HMAC-SHA512 | mnemonic + "mnemonic" |                        | passphrase                     | 64-byte seed                      | `@scure/bip39`            |
+| BIP32 / SLIP10 master      | HMAC-SHA512        | seed                  | 64 bytes (key + chain) | `@scure/bip32` / SLIP10 helper |

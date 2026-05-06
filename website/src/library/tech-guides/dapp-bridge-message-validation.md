@@ -5,6 +5,7 @@ the chromatika dapp bridge spans three JS contexts: **page world** (where dapp c
 ## the threat model
 
 without validation:
+
 - a malicious iframe could `postMessage` claiming to be the parent origin, get its tx approved as if it came from the parent
 - a sibling frame could intercept messages between the dapp and our content script
 - a content script of another extension could in theory race to register a similar provider
@@ -13,27 +14,31 @@ without validation:
 ## the page → content-script hop
 
 page-script wraps `window.ethereum.request(...)`:
+
 ```ts
 function request(args) {
   return new Promise((resolve, reject) => {
     const requestId = randomId();
     pending.set(requestId, { resolve, reject });
 
-    window.postMessage({
-      type: 'chromatika_dapp_request',
-      method: args.method,
-      params: args.params,
-      requestId,
-    }, window.location.origin);    // explicit targetOrigin
+    window.postMessage(
+      {
+        type: "chromatika_dapp_request",
+        method: args.method,
+        params: args.params,
+        requestId,
+      },
+      window.location.origin
+    ); // explicit targetOrigin
   });
 }
 
-window.addEventListener('message', (event) => {
+window.addEventListener("message", (event) => {
   // VALIDATION 1: must come from the same window
   if (event.source !== window) return;
 
   // VALIDATION 2: must have our message type
-  if (event.data?.type !== 'chromatika_dapp_response') return;
+  if (event.data?.type !== "chromatika_dapp_response") return;
 
   // VALIDATION 3: must have a known requestId
   const entry = pending.get(event.data.requestId);
@@ -46,6 +51,7 @@ window.addEventListener('message', (event) => {
 ```
 
 three checks:
+
 - `event.source === window` (it came from our own window, not a sibling iframe)
 - `event.data.type` matches our expected message type
 - `event.data.requestId` was issued by us (i.e. we sent the matching request)
@@ -53,37 +59,42 @@ three checks:
 ## the content-script side
 
 content script listens for `window` postMessages too:
+
 ```ts
-window.addEventListener('message', async (event) => {
+window.addEventListener("message", async (event) => {
   // VALIDATION 1: must come from the same window
   if (event.source !== window) return;
 
   // VALIDATION 2: must be a request type we handle
-  if (event.data?.type !== 'chromatika_dapp_request') return;
+  if (event.data?.type !== "chromatika_dapp_request") return;
 
   // VALIDATION 3: validate origin matches the page's origin
   if (event.origin !== window.location.origin) return;
 
   // forward to background
   const result = await chrome.runtime.sendMessage({
-    type: 'dapp_request',
-    origin: event.origin,        // attached by content-script, not from page-supplied data
+    type: "dapp_request",
+    origin: event.origin, // attached by content-script, not from page-supplied data
     method: event.data.method,
     params: event.data.params,
     requestId: event.data.requestId,
   });
 
   // post response back to page world
-  window.postMessage({
-    type: 'chromatika_dapp_response',
-    requestId: event.data.requestId,
-    result: result.result,
-    error: result.error,
-  }, window.location.origin);
+  window.postMessage(
+    {
+      type: "chromatika_dapp_response",
+      requestId: event.data.requestId,
+      result: result.result,
+      error: result.error,
+    },
+    window.location.origin
+  );
 });
 ```
 
 key points:
+
 - `event.origin` is the **content-script's** view of the page origin, not something the page can spoof
 - `origin` is attached to the message **by the content script** before sending to background, so background can trust it
 - forwarding back uses an explicit `targetOrigin` so the message can't leak to cross-origin frames
@@ -91,6 +102,7 @@ key points:
 ## the content-script → background hop
 
 `chrome.runtime.sendMessage` carries a `sender` object that chrome attaches:
+
 ```ts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // sender.tab.url is the page url; sender.origin is the page origin
@@ -99,16 +111,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   // VALIDATION 4: cross-check that message.origin matches sender.origin
   const senderOrigin = new URL(sender.tab.url).origin;
   if (message.origin !== senderOrigin) {
-    sendResponse({ error: 'origin mismatch' });
+    sendResponse({ error: "origin mismatch" });
     return true;
   }
 
   // dispatch to handler
   handleDappRequest(senderOrigin, message.method, message.params)
-    .then(result => sendResponse({ result }))
-    .catch(error => sendResponse({ error }));
+    .then((result) => sendResponse({ result }))
+    .catch((error) => sendResponse({ error }));
 
-  return true;   // async response
+  return true; // async response
 });
 ```
 
@@ -117,6 +129,7 @@ chromium's `MessageSender` includes `tab.url` (the URL of the tab that sent the 
 ## iframes and embedded contexts
 
 an iframe at `https://embed.example.com` running inside `https://parent.example.com` sees:
+
 - `window.location.origin === 'https://embed.example.com'`
 - content-script for that frame validates against `embed.example.com`
 - chrome reports `sender.tab.url` of the parent tab BUT `sender.frameId` distinguishes the frame

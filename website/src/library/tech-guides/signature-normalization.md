@@ -4,25 +4,25 @@ ika returns signature bytes in protocol-specific formats. `parseSignatureFromSig
 
 ## the signatures we deal with
 
-| curve | algorithm | output bytes | components |
-|-------|-----------|--------------|------------|
-| SECP256K1 | ECDSASecp256k1 | 64 bytes | `r` (32 bytes) + `s` (32 bytes), compact |
-| SECP256K1 | Taproot (BIP340 Schnorr) | 64 bytes | `R` (32 bytes x-only) + `s` (32 bytes) |
-| SECP256K1 | ECDSASecp256r1 | 64 bytes | `r` (32 bytes) + `s` (32 bytes), compact - **secp256r1 not used by chromatika today** |
-| ED25519 | EdDSA | 64 bytes | `R` (32 bytes) + `S` (32 bytes) |
-| RISTRETTO | SchnorrkelSubstrate | 64 bytes | not used by chromatika today |
+| curve     | algorithm                | output bytes | components                                                                            |
+| --------- | ------------------------ | ------------ | ------------------------------------------------------------------------------------- |
+| SECP256K1 | ECDSASecp256k1           | 64 bytes     | `r` (32 bytes) + `s` (32 bytes), compact                                              |
+| SECP256K1 | Taproot (BIP340 Schnorr) | 64 bytes     | `R` (32 bytes x-only) + `s` (32 bytes)                                                |
+| SECP256K1 | ECDSASecp256r1           | 64 bytes     | `r` (32 bytes) + `s` (32 bytes), compact - **secp256r1 not used by chromatika today** |
+| ED25519   | EdDSA                    | 64 bytes     | `R` (32 bytes) + `S` (32 bytes)                                                       |
+| RISTRETTO | SchnorrkelSubstrate      | 64 bytes     | not used by chromatika today                                                          |
 
 every chromatika signature is 64 bytes from ika. the ECDSA outputs **don't** include `v` - chromatika recovers `v` separately for EVM (see [ecdsa-secp256k1.md](/library/tech/ecdsa-secp256k1)).
 
 ## the call
 
 ```ts
-import { parseSignatureFromSignOutput, Curve, SignatureAlgorithm } from '@ika.xyz/sdk';
+import { parseSignatureFromSignOutput, Curve, SignatureAlgorithm } from "@ika.xyz/sdk";
 
 const { r, s } = parseSignatureFromSignOutput(
-  sigBytes,                              // Uint8Array from ika
-  Curve.SECP256K1,                       // 0
-  SignatureAlgorithm.ECDSASecp256k1,     // 0
+  sigBytes, // Uint8Array from ika
+  Curve.SECP256K1, // 0
+  SignatureAlgorithm.ECDSASecp256k1 // 0
 );
 // r, s are each Uint8Array(32)
 ```
@@ -40,26 +40,30 @@ if anything's off, `parseSignatureFromSignOutput` throws. callers should not cat
 ## the ika constants (recap)
 
 ```js
-Curve.SECP256K1 = 0
-Curve.SECP256R1 = 1
-Curve.ED25519 = 2
-Curve.RISTRETTO = 3
+Curve.SECP256K1 = 0;
+Curve.SECP256R1 = 1;
+Curve.ED25519 = 2;
+Curve.RISTRETTO = 3;
 
-SignatureAlgorithm.ECDSASecp256k1 = 0
-SignatureAlgorithm.Taproot = 1
-SignatureAlgorithm.ECDSASecp256r1 = 2
-SignatureAlgorithm.EdDSA = 3
-SignatureAlgorithm.SchnorrkelSubstrate = 4
+SignatureAlgorithm.ECDSASecp256k1 = 0;
+SignatureAlgorithm.Taproot = 1;
+SignatureAlgorithm.ECDSASecp256r1 = 2;
+SignatureAlgorithm.EdDSA = 3;
+SignatureAlgorithm.SchnorrkelSubstrate = 4;
 ```
 
-per CLAUDE.md, `fromCurveToNumber` is **not** exported from `@ika.xyz/sdk` main entry - it's internal. hardcode the constants above; don't try to import the helper.
+`fromCurveToNumber` is **not** exported from `@ika.xyz/sdk` main entry - it's internal. hardcode the constants above; don't try to import the helper.
 
 ## EVM v-recovery (separate step)
 
 ECDSA-secp256k1 doesn't include `v` in the standard signature - it's an EVM convention. chromatika picks `v` after parsing:
 
 ```ts
-const { r, s } = parseSignatureFromSignOutput(sigBytes, Curve.SECP256K1, SignatureAlgorithm.ECDSASecp256k1);
+const { r, s } = parseSignatureFromSignOutput(
+  sigBytes,
+  Curve.SECP256K1,
+  SignatureAlgorithm.ECDSASecp256k1
+);
 const digest = ethers.keccak256(preimage);
 const knownAddress = await getEvmAddress();
 
@@ -72,7 +76,7 @@ if (candidate27 === knownAddress.toLowerCase()) {
 } else if (candidate28 === knownAddress.toLowerCase()) {
   v = 28;
 } else {
-  throw new Error('signature does not recover to expected address');
+  throw new Error("signature does not recover to expected address");
 }
 ```
 
@@ -91,10 +95,11 @@ bitcoin signatures use DER encoding instead of compact `r||s`. format:
 DER has variable-length encoding because both `r` and `s` may have different effective lengths (leading zeros stripped, and a leading 0x00 padding added if the high bit is set to indicate positive). bitcoinjs-lib has DER encode / decode helpers.
 
 chromatika converts ika's compact `(r, s)` to DER for Bitcoin signing:
+
 ```ts
 const derSig = bitcoin.script.signature.encode(
-  Buffer.concat([r, s]),    // 64-byte compact
-  hashType,                  // 0x01 for SIGHASH_ALL
+  Buffer.concat([r, s]), // 64-byte compact
+  hashType // 0x01 for SIGHASH_ALL
 );
 // derSig is the DER-encoded sig + 1-byte hash type
 ```
@@ -112,6 +117,7 @@ ed25519 signatures are 64 bytes per RFC 8032: `R || S` where both are little-end
 ## the chromatika rule
 
 across all paths:
+
 1. call `parseSignatureFromSignOutput(sigBytes, curve, algorithm)` with the right enums
 2. trust the returned `(r, s)` / `(R, S)` to be canonical
 3. for EVM, recover `v` separately

@@ -76,6 +76,7 @@ practical implication: if you're driving a Sui-passkey vault via `createDWallet`
 ```
 
 determinism guaranteed by:
+
 - WebAuthn PRF / HMAC-secret spec: same credential + same salt + same operation = same output
 - credential public key is part of the PRF input behind the scenes, so even if two credentials shared the same salt, they'd produce different outputs
 - chromatika persists `prfSaltB64` in the vault - same salt on restore = same PRF output
@@ -83,12 +84,13 @@ determinism guaranteed by:
 ## what doesn't work
 
 - **non-PRF authenticators**: some older passkey authenticators don't expose the PRF / HMAC-secret extension. chromatika **rejects** registration on those - no way to deterministically seed the ika identity. surface a clear error suggesting a different authenticator
-- **lost passkey**: if the user loses all their passkey credentials and didn't register a recovery-words branch, the vault is unrecoverable. recovery words are an envelope-level fallback (see [recovery-words-envelope.md](/library/tech/recovery-words-envelope)); they unlock the vault but the **ika identity** still requires one of the registered seeds. for passkey vaults, the recovery-words branch has to either re-derive the same prfSecret somehow (impossible - it's authenticator-bound) or store the USK bytes separately so they can be re-loaded after recovery-words-only unlock. CLAUDE.md notes the recovery-words envelope unlocks the vault, after which the user usually re-registers a fresh primary credential
+- **lost passkey**: if the user loses all their passkey credentials and didn't register a recovery-words branch, the vault is unrecoverable. recovery words are an envelope-level fallback (see [recovery-words-envelope.md](/library/tech/recovery-words-envelope)); they unlock the vault but the **ika identity** still requires one of the registered seeds. for passkey vaults, the recovery-words branch has to either re-derive the same prfSecret somehow (impossible - it's authenticator-bound) or store the USK bytes separately so they can be re-loaded after recovery-words-only unlock. the recovery-words envelope unlocks the vault, after which the user usually re-registers a fresh primary credential
 - **cross-curve identity reuse**: same passkey, same salt, different chromatika install = same ika seed = same dWallet. but two different passkey vaults on the same install with **different salts** = different identities even if it's the same authenticator
 
 ## the fee-payer "throws today" workaround
 
 in practice, Sui-passkey vaults are an emerging surface. the canonical implementation either:
+
 - pops the passkey assertion to sign each Sui PTB (slow but secure)
 - pre-derives a sui ed25519 fee-payer keypair from the prfSecret (`prfSecret` → `ikaRootSeedFromPasskeyPRF` produces the ika seed; a separate keccak with a different domain tag could produce a sui keypair seed, but this isn't the current implementation)
 - uses passkey-derived addresses for ika operations once ika supports passkey-anchored fee payment

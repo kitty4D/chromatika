@@ -22,14 +22,15 @@ similar to MWA's reflector but with different wire format + crypto primitive (Ch
 ## the project id
 
 WalletConnect requires a per-app `projectId` for relay access:
+
 ```ts
 const signClient = await SignClient.init({
   projectId: import.meta.env.VITE_WALLETCONNECT_PROJECT_ID,
   metadata: {
-    name: 'Chromatika',
-    description: 'Chromatika browser extension wallet',
-    url: 'chrome-extension://<chromatika-id>',
-    icons: ['data:image/svg+xml;base64,...'],
+    name: "Chromatika",
+    description: "Chromatika browser extension wallet",
+    url: "chrome-extension://<chromatika-id>",
+    icons: ["data:image/svg+xml;base64,..."],
   },
 });
 ```
@@ -43,8 +44,8 @@ const signClient = await SignClient.init({
 const { uri, approval } = await signClient.connect({
   requiredNamespaces: {
     solana: {
-      methods: ['solana_signTransaction', 'solana_signMessage'],
-      chains: ['solana:mainnet', 'solana:devnet'],
+      methods: ["solana_signTransaction", "solana_signMessage"],
+      chains: ["solana:mainnet", "solana:devnet"],
       events: [],
     },
   },
@@ -67,9 +68,9 @@ const account = session.namespaces.solana.accounts[0];
 ```ts
 const result = await signClient.request({
   topic: session.topic,
-  chainId: 'solana:mainnet',
+  chainId: "solana:mainnet",
   request: {
-    method: 'solana_signTransaction',
+    method: "solana_signTransaction",
     params: { transaction: base64SerializedTx },
   },
 });
@@ -80,7 +81,7 @@ the phone wallet pops a UI for the user to approve. result returns over the rela
 
 ## the x402 dispatcher integration
 
-per CLAUDE.md, chromatika dispatches x402 Solana payments based on whether `session.solanaWcAccount` is set:
+chromatika dispatches x402 Solana payments based on whether `session.solanaWcAccount` is set:
 
 ```ts
 // in x402-dispatch.ts
@@ -110,11 +111,12 @@ on chrome restart, chromatika reinitializes `SignClient` and the session is auto
 ```ts
 await signClient.disconnect({
   topic: session.topic,
-  reason: { code: 6000, message: 'User disconnected' },
+  reason: { code: 6000, message: "User disconnected" },
 });
 ```
 
 after disconnect:
+
 1. the phone wallet's WC sessions list shows it as ended
 2. chromatika removes `wcSessionTopic` from the vault record
 3. subsequent sign attempts fail; user must re-pair
@@ -124,6 +126,7 @@ if the user revokes phone-side first (e.g. via Phantom's WC sessions UI), chroma
 ## why WC alongside MWA
 
 different wallets support different protocols:
+
 - **Seeker**: built-in MWA (reflector) + WC v2
 - **Phantom Android**: MWA + WC
 - **Phantom iOS**: WC only (no MWA on iOS)

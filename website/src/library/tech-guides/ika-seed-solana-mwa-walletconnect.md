@@ -74,12 +74,14 @@ determinism: same wallet signature + same index = same keccak output = same ed25
 ## unlock vs ika seed: same signature, two purposes
 
 the wallet signs `IKA_USK_DERIVATION_MESSAGE` **once** at pairing. that signature is used for two distinct things:
+
 1. **ika user-share seed**: `keccak256(signature || index_0_le)` → 32-byte seed for `UserShareEncryptionKeys`
 2. **unlock envelope key (optional)**: `HKDF-SHA256(signature, info='chromatika wallet-signature envelope v1', salt=kdfSalt)` → envelope key wrapping the master key
 
 the signature itself is **encrypted** in the wallet-signature envelope. on unlock, the user re-signs the envelope's challenge string (a separate message, NOT `IKA_USK_DERIVATION_MESSAGE`) to produce the envelope key, which decrypts the persisted `ikaUskSignatureB64` (the original `IKA_USK_DERIVATION_MESSAGE` signature). that decrypted signature is then keccak'd to re-derive the ika seed if needed.
 
 so:
+
 - **ika seed signature**: `signature_over(IKA_USK_DERIVATION_MESSAGE)` - signed once, persisted encrypted
 - **unlock signature**: `signature_over(envelope_challenge)` - signed every unlock
 

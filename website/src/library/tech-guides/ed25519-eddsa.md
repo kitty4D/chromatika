@@ -13,6 +13,7 @@ ed25519 is the elliptic curve + signature scheme that Sui, Solana, Aptos, ika ED
 ## signature shape
 
 per RFC 8032, an ed25519 signature is 64 bytes = `R(32) || S(32)`. signing produces:
+
 ```
 nonce_prefix = SHA-512(seed)[32..64]
 r = SHA-512(nonce_prefix || message) mod L   // L = curve order
@@ -23,6 +24,7 @@ sig = R || S
 ```
 
 verify:
+
 ```
 check 8 * S * B == 8 * R + 8 * SHA-512(R || A || message) * A
 ```
@@ -38,6 +40,7 @@ ika_user_share_seed = keccak256(signature || encryption_key_index_le)
 ```
 
 restore on a new device works because:
+
 1. user pairs the same Seeker
 2. asks Seeker to sign the same message
 3. RFC 8032 determinism = same signature
@@ -66,7 +69,8 @@ ika MPC produces an ed25519 signature for a given preimage:
 
 ## ika curve / signature-algorithm constants
 
-ika's protocol numbers (from CLAUDE.md):
+ika's protocol numbers:
+
 - `Curve.SECP256K1 = 0`
 - `Curve.SECP256R1 = 1`
 - `Curve.ED25519 = 2`
@@ -82,6 +86,7 @@ ika's protocol numbers (from CLAUDE.md):
 ## chain-side public-key serialization
 
 different chains serialize ed25519 public keys differently:
+
 - **Sui**: `flag_byte || pubkey(32)` where `flag_byte = 0x00` for ed25519. address = `blake2b_256(flag || pubkey)`
 - **Solana**: bare 32-byte pubkey, address = base58 of pubkey (no hash)
 - **Aptos**: `blake2b_256(pubkey || 0x00)` for single-key (legacy). multi-key uses different layout

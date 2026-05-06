@@ -18,6 +18,7 @@ async function createDwalletLabelCiphertext({
 ```
 
 similar API for the lab demos:
+
 ```ts
 async function encryptLabCreateInputDemo({ plainU64, networkEncryptionPublicKeyHex? })
 async function encryptLabCreateInputDemoBatch({ plainU64s, networkEncryptionPublicKeyHex? })   // up to 16
@@ -89,7 +90,7 @@ async function encryptLabCreateInputDemoBatch({ plainU64s, networkEncryptionPubl
 async function resolveNetworkEncryptionPublicKey(
   connection: Connection,
   programId: PublicKey,
-  overrideHex?: string,
+  overrideHex?: string
 ): Promise<Uint8Array> {
   // 1. user-supplied override
   if (overrideHex && /^[0-9a-fA-F]{64}$/.test(overrideHex)) {
@@ -97,19 +98,19 @@ async function resolveNetworkEncryptionPublicKey(
   }
 
   // 2. try seeds in order
-  const seeds = ['network_encryption_key', 'network-encryption-key', 'NetworkEncryptionKey'];
+  const seeds = ["network_encryption_key", "network-encryption-key", "NetworkEncryptionKey"];
   for (const seed of seeds) {
     const [pda] = PublicKey.findProgramAddressSync([Buffer.from(seed)], programId);
     const account = await connection.getAccountInfo(pda);
     if (!account) continue;
-    if (account.data.length === 40) return account.data.slice(8, 40);   // 8-byte discriminator + 32 bytes
+    if (account.data.length === 40) return account.data.slice(8, 40); // 8-byte discriminator + 32 bytes
     if (account.data.length === 32) return account.data.slice(0, 32);
   }
 
   // 3. all seeds failed
   throw new Error(
     `network encryption key PDA not found at any tried seed for program ${programId}; ` +
-    `paste 32-byte hex via networkEncryptionPublicKeyHex or confirm RPC + program id match Encrypt pre-alpha`
+      `paste 32-byte hex via networkEncryptionPublicKeyHex or confirm RPC + program id match Encrypt pre-alpha`
   );
 }
 ```

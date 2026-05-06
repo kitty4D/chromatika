@@ -18,17 +18,17 @@ versioned tx (Message v0)
 
 ```ts
 async function buildX402SolanaTx({
-  requirements,                  // PaymentRequirements decoded from payment-required header
-  callerHint,                    // { url, method }
-  signerAddress,                 // base58 of the signer (dWallet or WC account)
+  requirements, // PaymentRequirements decoded from payment-required header
+  callerHint, // { url, method }
+  signerAddress, // base58 of the signer (dWallet or WC account)
 }): Promise<{
-  message: Uint8Array,           // serialized v0 message bytes (what gets signed)
-  versionedTx: VersionedTransaction,
+  message: Uint8Array; // serialized v0 message bytes (what gets signed)
+  versionedTx: VersionedTransaction;
 }> {
   const connection = new Connection(SOLANA_RPC_URL);
   const signer = new PublicKey(signerAddress);
   const usdcMint = new PublicKey(USDC_MINT);
-  const amount = BigInt(requirements.amount);          // USDC base units (6 decimals)
+  const amount = BigInt(requirements.amount); // USDC base units (6 decimals)
   const destination = new PublicKey(requirements.payTo);
 
   // 1. derive sender ATA
@@ -44,36 +44,42 @@ async function buildX402SolanaTx({
   const instructions = [];
 
   if (!destAtaInfo) {
-    instructions.push(createAssociatedTokenAccountIdempotentInstruction(
-      signer,        // payer (signer pays the rent)
-      destAta,       // ata to create
-      destination,   // owner of the ata
-      usdcMint,
-    ));
+    instructions.push(
+      createAssociatedTokenAccountIdempotentInstruction(
+        signer, // payer (signer pays the rent)
+        destAta, // ata to create
+        destination, // owner of the ata
+        usdcMint
+      )
+    );
   }
 
   // 4. SPL token transfer
-  instructions.push(createTransferInstruction(
-    senderAta,
-    destAta,
-    signer,
-    Number(amount),   // u64 - chromatika's amounts fit; cast is safe
-  ));
+  instructions.push(
+    createTransferInstruction(
+      senderAta,
+      destAta,
+      signer,
+      Number(amount) // u64 - chromatika's amounts fit; cast is safe
+    )
+  );
 
   // 5. memo v2 with nonce + optional caller memo
   const memoText = JSON.stringify({
     nonce: requirements.nonce,
-    memo: requirements.memo ?? '',
+    memo: requirements.memo ?? "",
     callerHint: callerHint.url,
   });
-  instructions.push(new TransactionInstruction({
-    keys: [],
-    programId: MEMO_PROGRAM_ID_V2,   // MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr
-    data: Buffer.from(memoText, 'utf-8'),
-  }));
+  instructions.push(
+    new TransactionInstruction({
+      keys: [],
+      programId: MEMO_PROGRAM_ID_V2, // MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr
+      data: Buffer.from(memoText, "utf-8"),
+    })
+  );
 
   // 6. fetch recent blockhash
-  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash('finalized');
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash("finalized");
 
   // 7. compile to v0 message
   const messageV0 = new TransactionMessage({
@@ -94,21 +100,24 @@ async function buildX402SolanaTx({
 the **serialized v0 message bytes** (`messageV0.serialize()`) is what the signer signs. NOT the full tx; just the message portion (header + account keys + recent blockhash + instructions). after signing, the signature is written into the `versionedTx.signatures[0]` slot.
 
 ```ts
-versionedTx.signatures[0] = ed25519Signature;   // 64 bytes
-const serializedSigned = versionedTx.serialize();   // full signed tx bytes
-const paymentSignatureHeader = base64(JSON.stringify({
-  scheme: 'exact',
-  chain: 'solana',
-  transaction: base64(serializedSigned),
-  signature: base64(ed25519Signature),
-  signer: signerAddress,
-  nonce: requirements.nonce,
-}));
+versionedTx.signatures[0] = ed25519Signature; // 64 bytes
+const serializedSigned = versionedTx.serialize(); // full signed tx bytes
+const paymentSignatureHeader = base64(
+  JSON.stringify({
+    scheme: "exact",
+    chain: "solana",
+    transaction: base64(serializedSigned),
+    signature: base64(ed25519Signature),
+    signer: signerAddress,
+    nonce: requirements.nonce,
+  })
+);
 ```
 
 ## why use ATAs
 
 USDC on Solana lives in **associated token accounts** - one ATA per (mint, owner) pair. transferring USDC means transferring **between ATAs**, not between wallet addresses directly. you have to:
+
 - know your sender ATA (deterministic via PDA derivation: `getAssociatedTokenAddressSync(mint, owner)`)
 - know the destination ATA (either provided in `requirements.destinationAta` or derive from `requirements.payTo`)
 - if destination ATA doesn't exist, create it (the sender pays the small rent)
@@ -126,6 +135,7 @@ memo content is JSON-encoded for forward compatibility - if we want to add field
 ## the blockhash freshness rule
 
 Solana txs include a recent blockhash; the network rejects txs whose blockhash is more than 150 blocks (~60 seconds) old. so:
+
 - chromatika fetches the blockhash inside the build flow, **right before** signing
 - the signed tx must be submitted within ~60s or it expires
 - x402 servers settle synchronously after receiving `payment-signature`, so this window is comfortable

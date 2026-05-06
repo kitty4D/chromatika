@@ -37,26 +37,26 @@ dapps using `getWallets()` from `@wallet-standard/core` see chromatika in their 
 
 ## sui features chromatika implements
 
-| feature | spec | what chromatika does |
-|---------|------|---------------------|
-| `sui:signTransaction` | `@mysten/wallet-standard` | builds intent, computes BLAKE2b digest, ika ED25519 sign, returns `{ signature, transactionBytes }` |
-| `sui:signAndExecuteTransaction` | `@mysten/wallet-standard` | sign + submit via active Sui RPC, returns digest + effects |
-| `sui:signPersonalMessage` | `@mysten/wallet-standard` | ika ED25519 SHA-512 path (BLAKE2b divergence per [sui-personal-message-divergence.md](/library/tech/sui-personal-message-divergence)) |
-| `standard:connect` | wallet-standard core | opens dapp connect approval popup |
-| `standard:disconnect` | wallet-standard core | revokes the origin's permission |
-| `standard:events` | wallet-standard core | emits `change` events for accounts / chains |
+| feature                         | spec                      | what chromatika does                                                                                                                  |
+| ------------------------------- | ------------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
+| `sui:signTransaction`           | `@mysten/wallet-standard` | builds intent, computes BLAKE2b digest, ika ED25519 sign, returns `{ signature, transactionBytes }`                                   |
+| `sui:signAndExecuteTransaction` | `@mysten/wallet-standard` | sign + submit via active Sui RPC, returns digest + effects                                                                            |
+| `sui:signPersonalMessage`       | `@mysten/wallet-standard` | ika ED25519 SHA-512 path (BLAKE2b divergence per [sui-personal-message-divergence.md](/library/tech/sui-personal-message-divergence)) |
+| `standard:connect`              | wallet-standard core      | opens dapp connect approval popup                                                                                                     |
+| `standard:disconnect`           | wallet-standard core      | revokes the origin's permission                                                                                                       |
+| `standard:events`               | wallet-standard core      | emits `change` events for accounts / chains                                                                                           |
 
 note: Sui signature format is `[scheme_flag(1) || sig(64) || pubkey(32)]` = 97 bytes base64. see [sui-tx-sign-via-ika.md](/library/tech/sui-tx-sign-via-ika).
 
 ## solana features chromatika implements
 
-| feature | spec | what chromatika does |
-|---------|------|---------------------|
-| `solana:signTransaction` | `@solana/wallet-standard-features` | sign serialized v0 message via ika ED25519, return signed tx |
+| feature                         | spec                               | what chromatika does                                          |
+| ------------------------------- | ---------------------------------- | ------------------------------------------------------------- |
+| `solana:signTransaction`        | `@solana/wallet-standard-features` | sign serialized v0 message via ika ED25519, return signed tx  |
 | `solana:signAndSendTransaction` | `@solana/wallet-standard-features` | sign + broadcast via Solana RPC, return tx signature (base58) |
-| `solana:signMessage` | `@solana/wallet-standard-features` | ika ED25519 sign of raw bytes, return 64-byte sig |
-| `standard:connect` | wallet-standard core | opens dapp connect approval popup |
-| `standard:disconnect` | wallet-standard core | revokes the origin's permission |
+| `solana:signMessage`            | `@solana/wallet-standard-features` | ika ED25519 sign of raw bytes, return 64-byte sig             |
+| `standard:connect`              | wallet-standard core               | opens dapp connect approval popup                             |
+| `standard:disconnect`           | wallet-standard core               | revokes the origin's permission                               |
 
 note: Solana signatures are bare 64-byte `R || S` ed25519, base58 or hex encoded depending on caller.
 
@@ -92,7 +92,7 @@ internal: `chromatika_dapp_permissions_v1` stores `{ origin, selectedSecpDwallet
 when the user switches the active dWallet for a curve via `setActiveDwallet`, chromatika re-emits the `change` event to all connected origins:
 
 ```ts
-features['standard:events'].emit('change', { accounts: newAccounts });
+features["standard:events"].emit("change", { accounts: newAccounts });
 ```
 
 dapps that subscribe via `wallet.features['standard:events'].on('change', cb)` get notified.

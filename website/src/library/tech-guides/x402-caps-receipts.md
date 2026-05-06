@@ -34,38 +34,41 @@ chrome.storage.local["chromatika_x402_receipts_v1"] = [
 ## the cap check (pre-popup, synchronous)
 
 ```ts
-async function wouldExceedCaps(host: string, amountUsd: number): Promise<{
-  exceeded: boolean,
-  perHostSpentUsd: number,
-  globalSpentUsd: number,
-  perHostCapUsd: number | null,
-  globalCapUsd: number | null,
+async function wouldExceedCaps(
+  host: string,
+  amountUsd: number
+): Promise<{
+  exceeded: boolean;
+  perHostSpentUsd: number;
+  globalSpentUsd: number;
+  perHostCapUsd: number | null;
+  globalCapUsd: number | null;
 }> {
   const caps = await readCaps();
   const receipts = await readReceipts();
 
   const todayStart = startOfLocalDay();
-  const todayReceipts = receipts.filter(r =>
-    r.createdAtMs >= todayStart && (r.status === 'pending' || r.status === 'settled')
+  const todayReceipts = receipts.filter(
+    (r) => r.createdAtMs >= todayStart && (r.status === "pending" || r.status === "settled")
     // failed / rejected receipts don't count against budget
   );
 
   const perHostSpent = todayReceipts
-    .filter(r => r.host === host)
+    .filter((r) => r.host === host)
     .reduce((sum, r) => sum + r.amountUsd, 0);
   const globalSpent = todayReceipts.reduce((sum, r) => sum + r.amountUsd, 0);
 
-  const perHostCap = caps.perCounterpartyDailyCapUsd[host]
-    ?? caps.defaultPerCounterpartyDailyCapUsd
-    ?? Infinity;
+  const perHostCap =
+    caps.perCounterpartyDailyCapUsd[host] ?? caps.defaultPerCounterpartyDailyCapUsd ?? Infinity;
   const globalCap = caps.globalDailyCapUsd ?? Infinity;
 
-  const exceeded = (perHostSpent + amountUsd > perHostCap) || (globalSpent + amountUsd > globalCap);
+  const exceeded = perHostSpent + amountUsd > perHostCap || globalSpent + amountUsd > globalCap;
   return { exceeded, perHostSpent, globalSpent, perHostCap, globalCap };
 }
 ```
 
 key behaviors:
+
 - runs **synchronously before** opening the approval popup. if exceeded, no popup → no user attention wasted
 - pending payments count against the budget (so a user can't approve 10 payments simultaneously hoping they all squeeze in - the second one sees the first as pending)
 - failed / rejected payments **don't** count
@@ -81,6 +84,7 @@ const DEFAULT_GLOBAL_DAILY_CAP_USD = 25;
 ```
 
 new install starts with `$5/seller` and `$25 total/day` budgets. user can adjust via:
+
 - `x402SetPerCounterpartyCap({ host, capUsd | null })` - set or clear per-host
 - `x402SetGlobalCap({ capUsd | null })` - set or clear global
 - `x402SetDefaultCap({ capUsd })` - default for new hosts
@@ -108,7 +112,7 @@ async function recordPaymentInitiated(host, amountUsd, callerHint): Promise<stri
     id,
     host,
     amountUsd,
-    status: 'pending',
+    status: "pending",
     txHash: null,
     error: null,
     quality: null,
@@ -142,19 +146,20 @@ created → 'pending'   (signed, not yet seen settlement)
 
 ```ts
 chrome.runtime.sendMessage({
-  type: 'chromatika_x402_record_settlement',
+  type: "chromatika_x402_record_settlement",
   receiptId,
   paymentResponseHeaderB64,
 });
 ```
 
 background:
+
 ```ts
 async function recordX402Settlement(receiptId, paymentResponseHeaderB64) {
   const decoded = decodePaymentResponseHeader(paymentResponseHeaderB64);
   // { scheme, chain, txHash, settledAt, amountSettled }
   await updateReceipt(receiptId, {
-    status: decoded.txHash ? 'settled' : 'failed',
+    status: decoded.txHash ? "settled" : "failed",
     txHash: decoded.txHash,
     settledAtMs: decoded.settledAt * 1000,
   });
@@ -166,12 +171,13 @@ fire-and-forget from the page side; non-blocking on the dapp. if the settlement 
 ## the quality flag
 
 ```ts
-async function setReceiptQuality(id, quality: 'good' | 'bad' | null) {
+async function setReceiptQuality(id, quality: "good" | "bad" | null) {
   await updateReceipt(id, { quality });
 }
 ```
 
 users mark thumbs-up / thumbs-down on receipts. the data is stored locally; future surfaces could:
+
 - auto-allowlist hosts with high thumbs-up ratio (raise their cap automatically)
 - auto-blocklist hosts with thumbs-down (set their cap to 0)
 - aggregate across users (privacy-preserving) for community blocklists
@@ -186,19 +192,19 @@ today the flag is **just stored**. no automated action. user-driven curation onl
 
 ## tRPC procedure list
 
-| procedure | what |
-|-----------|------|
-| `x402GetCaps` | returns caps + today's spend |
-| `x402SetPerCounterpartyCap({ host, capUsd \| null })` | set / clear per-host cap |
-| `x402SetGlobalCap({ capUsd \| null })` | set / clear global cap |
-| `x402SetDefaultCap({ capUsd })` | default for new hosts |
-| `x402ListReceipts({ limit })` | list receipts |
-| `x402SetReceiptQuality({ id, quality })` | thumbs-up/down |
-| `x402QuoteAndSign(...)` | dispatcher entry from fetch interception (not user-facing) |
-| `getPendingX402Request({ id })` | popup reads pending request |
-| `approvePendingX402({ id })` | popup approves, signing happens |
-| `rejectPendingX402({ id, reason })` | popup rejects |
-| `x402RecordSettlement({ receiptId, paymentResponseHeaderB64 })` | page-side settlement update |
+| procedure                                                       | what                                                       |
+| --------------------------------------------------------------- | ---------------------------------------------------------- |
+| `x402GetCaps`                                                   | returns caps + today's spend                               |
+| `x402SetPerCounterpartyCap({ host, capUsd \| null })`           | set / clear per-host cap                                   |
+| `x402SetGlobalCap({ capUsd \| null })`                          | set / clear global cap                                     |
+| `x402SetDefaultCap({ capUsd })`                                 | default for new hosts                                      |
+| `x402ListReceipts({ limit })`                                   | list receipts                                              |
+| `x402SetReceiptQuality({ id, quality })`                        | thumbs-up/down                                             |
+| `x402QuoteAndSign(...)`                                         | dispatcher entry from fetch interception (not user-facing) |
+| `getPendingX402Request({ id })`                                 | popup reads pending request                                |
+| `approvePendingX402({ id })`                                    | popup approves, signing happens                            |
+| `rejectPendingX402({ id, reason })`                             | popup rejects                                              |
+| `x402RecordSettlement({ receiptId, paymentResponseHeaderB64 })` | page-side settlement update                                |
 
 ## library
 

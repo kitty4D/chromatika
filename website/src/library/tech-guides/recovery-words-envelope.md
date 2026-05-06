@@ -76,6 +76,7 @@ different vaults can have **different** recovery phrases. if a user reuses one p
 a vault with `seedSource: 'mnemonic'` uses BIP39 to **derive every key in the vault** (sui keypair, solana keypair, ika seed). a vault with a recovery-words envelope but `seedSource: 'passkey-prf'` uses BIP39 only for the unlock branch - the **dWallet identity** comes from the passkey PRF or whatever the primary source is. typing recovery words on the passkey vault unlocks the same masterKey, which decrypts the same vault payload, which contains the same passkey-derived ika keys.
 
 so:
+
 - mnemonic vault → recovery phrase **is** the vault. losing it = losing everything.
 - passkey vault + recovery branch → recovery phrase is a **backup unlock**. losing it = losing one of multiple unlock paths, but the vault still works as long as the passkey works.
 

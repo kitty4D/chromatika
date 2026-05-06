@@ -98,6 +98,7 @@ the WAAP signature is **not** used for ika seed in this path - it's still used f
 ## restore on a new device
 
 ### deterministic path
+
 ```
 1. log into the same WAAP account on a new chromatika install
 2. WAAP returns the same sui_address + pubkey + signing capability
@@ -107,6 +108,7 @@ the WAAP signature is **not** used for ika seed in this path - it's still used f
 ```
 
 ### recovery-words path
+
 ```
 1. user types BIP39 phrase on new install
 2. WAAP login is also re-paired to register the WalletSignatureEnvelope (secondary)

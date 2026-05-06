@@ -6,7 +6,7 @@ a high-level, multi-backend interface for "encrypt arbitrary user data with the 
 
 ```ts
 export interface EncryptionBackend {
-  readonly id: string;                                       // 'encrypt-xyz' | 'direct-ed25519' | 'seal'
+  readonly id: string; // 'encrypt-xyz' | 'direct-ed25519' | 'seal'
   readonly capabilities: EncryptionBackendCapabilities;
 
   encryptForRecipient(plaintext: Uint8Array, recipient: RecipientId): Promise<EncryptedRef>;
@@ -14,21 +14,21 @@ export interface EncryptionBackend {
 }
 
 export interface EncryptionBackendCapabilities {
-  supportsCrossRecipient: boolean;                           // can encrypt to a different recipient
-  supportsThresholdAccess: boolean;                          // threshold-of-N key servers (Seal)
-  supportsInlineBody: boolean;                               // body fits inline without walrus blob storage
-  maxInlinePlaintextBytes: number;                           // caller-enforced cap
+  supportsCrossRecipient: boolean; // can encrypt to a different recipient
+  supportsThresholdAccess: boolean; // threshold-of-N key servers (Seal)
+  supportsInlineBody: boolean; // body fits inline without walrus blob storage
+  maxInlinePlaintextBytes: number; // caller-enforced cap
 }
 
 export type RecipientId =
-  | { kind: 'self' }                                         // active vault's own dWallet
-  | { kind: 'ed25519'; pubkey: Uint8Array }                  // cross-recipient via X25519 ECDH (stub)
-  | { kind: 'sui-address'; address: string };                // Seal Move policy (stub)
+  | { kind: "self" } // active vault's own dWallet
+  | { kind: "ed25519"; pubkey: Uint8Array } // cross-recipient via X25519 ECDH (stub)
+  | { kind: "sui-address"; address: string }; // Seal Move policy (stub)
 
 export type EncryptedRef =
-  | { backend: 'encrypt-xyz'; payload: EncryptXyzPayload; createdAtMs: number }
-  | { backend: 'direct-ed25519'; payload: DirectEd25519Payload; createdAtMs: number }
-  | { backend: 'seal'; payload: SealPayload; createdAtMs: number };
+  | { backend: "encrypt-xyz"; payload: EncryptXyzPayload; createdAtMs: number }
+  | { backend: "direct-ed25519"; payload: DirectEd25519Payload; createdAtMs: number }
+  | { backend: "seal"; payload: SealPayload; createdAtMs: number };
 ```
 
 ## the dispatch
@@ -37,7 +37,7 @@ export type EncryptedRef =
 
 ```ts
 const backendRegistry: Record<string, EncryptionBackend> = {
-  'self-recipient-default': encryptXyzBackend,
+  "self-recipient-default": encryptXyzBackend,
   // future: 'cross-recipient-default': directEd25519Backend
   // future: 'threshold-policy-default': sealBackend
 };
@@ -48,9 +48,12 @@ callers pass plaintext + a `RecipientId`, get back an `EncryptedRef`. they don't
 ```ts
 async function decryptRefViaRegistry(ref: EncryptedRef): Promise<Uint8Array> {
   switch (ref.backend) {
-    case 'encrypt-xyz':     return encryptXyzBackend.decrypt(ref);
-    case 'direct-ed25519':  return directEd25519Backend.decrypt(ref);  // stub
-    case 'seal':            return sealBackend.decrypt(ref);            // stub
+    case "encrypt-xyz":
+      return encryptXyzBackend.decrypt(ref);
+    case "direct-ed25519":
+      return directEd25519Backend.decrypt(ref); // stub
+    case "seal":
+      return sealBackend.decrypt(ref); // stub
   }
 }
 ```
@@ -65,54 +68,78 @@ today's only implemented backend. uses encrypt.xyz pre-alpha gRPC for self-recip
 
 ```ts
 interface EncryptXyzPayload {
-  bodyCiphertextB64: string;                                 // AES-GCM ciphertext (no tag separation; webcrypto bundles)
-  bodyIvB64: string;                                         // 12-byte AES-GCM IV
-  wrappedKeyCiphertextIdHexes: [string, string];             // two encrypt.xyz ciphertext-identifier hexes for the K halves
-  recipientPubkeyB64: string;                                // 32-byte ed25519 pubkey of the recipient (active vault's dWallet)
-  recipientLockedAtVaultId: string;                          // vault id at encryption time (used to detect "wrong vault" on decrypt)
-  programIdB58: string;                                      // encrypt program id used at encryption
-  fheTypePerHalf: 5;                                         // EUint128 (always)
+  bodyCiphertextB64: string; // AES-GCM ciphertext (no tag separation; webcrypto bundles)
+  bodyIvB64: string; // 12-byte AES-GCM IV
+  wrappedKeyCiphertextIdHexes: [string, string]; // two encrypt.xyz ciphertext-identifier hexes for the K halves
+  recipientPubkeyB64: string; // 32-byte ed25519 pubkey of the recipient (active vault's dWallet)
+  recipientLockedAtVaultId: string; // vault id at encryption time (used to detect "wrong vault" on decrypt)
+  programIdB58: string; // encrypt program id used at encryption
+  fheTypePerHalf: 5; // EUint128 (always)
 }
 ```
 
 ### encrypt path
 
 ```ts
-async function encryptXyzEncryptForRecipient(plaintext: Uint8Array, recipient: RecipientId): Promise<EncryptedRef> {
-  if (recipient.kind !== 'self') throw new EncryptionBackendError({ backend: 'encrypt-xyz', reason: 'unsupported-recipient', message: 'only self-recipient supported in pre-alpha' });
+async function encryptXyzEncryptForRecipient(
+  plaintext: Uint8Array,
+  recipient: RecipientId
+): Promise<EncryptedRef> {
+  if (recipient.kind !== "self")
+    throw new EncryptionBackendError({
+      backend: "encrypt-xyz",
+      reason: "unsupported-recipient",
+      message: "only self-recipient supported in pre-alpha",
+    });
 
   // 1. generate fresh 32-byte AES-256 key + 12-byte IV
   const K = crypto.getRandomValues(new Uint8Array(32));
   const iv = crypto.getRandomValues(new Uint8Array(12));
 
   // 2. AES-GCM encrypt the body under K
-  const aesKey = await crypto.subtle.importKey('raw', K, { name: 'AES-GCM' }, false, ['encrypt']);
-  const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, aesKey, plaintext));
+  const aesKey = await crypto.subtle.importKey("raw", K, { name: "AES-GCM" }, false, ["encrypt"]);
+  const ciphertext = new Uint8Array(
+    await crypto.subtle.encrypt({ name: "AES-GCM", iv }, aesKey, plaintext)
+  );
 
   // 3. wrap K in two halves via encrypt.xyz CreateInput (single batched gRPC call)
   const halfA = K.slice(0, 16);
   const halfB = K.slice(16, 32);
   const inputs = [
-    { ciphertextBytes: mockEncryptScalarBytesFromBytes(halfA, FHE_TYPE_EUINT128), fheType: FHE_TYPE_EUINT128 },
-    { ciphertextBytes: mockEncryptScalarBytesFromBytes(halfB, FHE_TYPE_EUINT128), fheType: FHE_TYPE_EUINT128 },
+    {
+      ciphertextBytes: mockEncryptScalarBytesFromBytes(halfA, FHE_TYPE_EUINT128),
+      fheType: FHE_TYPE_EUINT128,
+    },
+    {
+      ciphertextBytes: mockEncryptScalarBytesFromBytes(halfB, FHE_TYPE_EUINT128),
+      fheType: FHE_TYPE_EUINT128,
+    },
   ];
-  const { ciphertextIdentifiers } = await encryptXyzCreateInput(GRPC_URL, encodeCreateInputRequest({
-    chain: 0, inputs, proof: new Uint8Array(),
-    authorized: programId.toBytes(),
-    networkEncryptionPublicKey: networkPubkey,
-  }));
-  if (ciphertextIdentifiers.length !== 2) throw 'expected 2 identifiers';
+  const { ciphertextIdentifiers } = await encryptXyzCreateInput(
+    GRPC_URL,
+    encodeCreateInputRequest({
+      chain: 0,
+      inputs,
+      proof: new Uint8Array(),
+      authorized: programId.toBytes(),
+      networkEncryptionPublicKey: networkPubkey,
+    })
+  );
+  if (ciphertextIdentifiers.length !== 2) throw "expected 2 identifiers";
 
   // 4. zero K
   K.fill(0);
 
   // 5. assemble the ref
   return {
-    backend: 'encrypt-xyz',
+    backend: "encrypt-xyz",
     payload: {
       bodyCiphertextB64: base64Encode(ciphertext),
       bodyIvB64: base64Encode(iv),
-      wrappedKeyCiphertextIdHexes: [bytesToHex(ciphertextIdentifiers[0]), bytesToHex(ciphertextIdentifiers[1])],
+      wrappedKeyCiphertextIdHexes: [
+        bytesToHex(ciphertextIdentifiers[0]),
+        bytesToHex(ciphertextIdentifiers[1]),
+      ],
       recipientPubkeyB64: base64Encode(activeDwalletEd25519Pubkey),
       recipientLockedAtVaultId: activeVaultId,
       programIdB58: programId.toBase58(),
@@ -124,6 +151,7 @@ async function encryptXyzEncryptForRecipient(plaintext: Uint8Array, recipient: R
 ```
 
 key design choices:
+
 - **K is per-encrypt random**, not derived from any persistent secret. each note has its own AES key. compromise of one K doesn't compromise others
 - **two halves via EUint128**: encrypt.xyz EUint128 fits 16 bytes. AES-256 needs 32. split + wrap two halves; same gRPC round-trip
 - **`recipientLockedAtVaultId`**: persists which vault was active at encryption time. on decrypt, validates the active vault id still matches - prevents accidentally trying to decrypt vault A's note while vault B is active
@@ -132,16 +160,24 @@ key design choices:
 
 ```ts
 async function encryptXyzDecrypt(ref: EncryptedRef): Promise<Uint8Array> {
-  if (ref.backend !== 'encrypt-xyz') throw 'wrong backend';
+  if (ref.backend !== "encrypt-xyz") throw "wrong backend";
   const { payload } = ref;
 
   // 1. validate active vault matches what was active at encryption time
   if (sessionState.activeVaultId !== payload.recipientLockedAtVaultId) {
-    throw new EncryptionBackendError({ backend: 'encrypt-xyz', reason: 'wrong-vault', message: 'active vault changed; switch to ' + payload.recipientLockedAtVaultId });
+    throw new EncryptionBackendError({
+      backend: "encrypt-xyz",
+      reason: "wrong-vault",
+      message: "active vault changed; switch to " + payload.recipientLockedAtVaultId,
+    });
   }
   const activePubkey = await getDwalletEd25519PublicKey();
   if (base64Encode(activePubkey) !== payload.recipientPubkeyB64) {
-    throw new EncryptionBackendError({ backend: 'encrypt-xyz', reason: 'wrong-vault', message: 'dWallet pubkey mismatch' });
+    throw new EncryptionBackendError({
+      backend: "encrypt-xyz",
+      reason: "wrong-vault",
+      message: "dWallet pubkey mismatch",
+    });
   }
 
   // 2. unwrap K via two sequential ReadCiphertext gRPC calls (signed)
@@ -152,10 +188,12 @@ async function encryptXyzDecrypt(ref: EncryptedRef): Promise<Uint8Array> {
   K.set(halfB, 16);
 
   // 3. AES-GCM decrypt the body
-  const aesKey = await crypto.subtle.importKey('raw', K, { name: 'AES-GCM' }, false, ['decrypt']);
+  const aesKey = await crypto.subtle.importKey("raw", K, { name: "AES-GCM" }, false, ["decrypt"]);
   const ciphertext = base64Decode(payload.bodyCiphertextB64);
   const iv = base64Decode(payload.bodyIvB64);
-  const plaintext = new Uint8Array(await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, aesKey, ciphertext));
+  const plaintext = new Uint8Array(
+    await crypto.subtle.decrypt({ name: "AES-GCM", iv }, aesKey, ciphertext)
+  );
 
   // 4. zero K
   K.fill(0);
@@ -165,6 +203,7 @@ async function encryptXyzDecrypt(ref: EncryptedRef): Promise<Uint8Array> {
 ```
 
 `unwrapEncryptHalfWithSignedRead(idHex)` is what costs the user MPC fees:
+
 1. encode `ReadCiphertextMessage` BCS-style (chain=0, ciphertext id, empty rekey, epoch=0)
 2. ika MPC ED25519 signs the message via `signMessageSol`
 3. sends `ReadCiphertext` gRPC request with the signed message
@@ -201,13 +240,26 @@ UI catches and shows specific copy: `wrong-vault` → "switch to vault X to read
 
 ```ts
 const directEd25519Backend: EncryptionBackend = {
-  id: 'direct-ed25519',
-  capabilities: { supportsCrossRecipient: true, supportsThresholdAccess: false, supportsInlineBody: true, maxInlinePlaintextBytes: 8192 },
+  id: "direct-ed25519",
+  capabilities: {
+    supportsCrossRecipient: true,
+    supportsThresholdAccess: false,
+    supportsInlineBody: true,
+    maxInlinePlaintextBytes: 8192,
+  },
   async encryptForRecipient(_plaintext, _recipient) {
-    throw new EncryptionBackendError({ backend: 'direct-ed25519', reason: 'not-implemented', message: 'X25519 ECDH path not wired yet' });
+    throw new EncryptionBackendError({
+      backend: "direct-ed25519",
+      reason: "not-implemented",
+      message: "X25519 ECDH path not wired yet",
+    });
   },
   async decrypt(_ref) {
-    throw new EncryptionBackendError({ backend: 'direct-ed25519', reason: 'not-implemented', message: 'X25519 ECDH path not wired yet' });
+    throw new EncryptionBackendError({
+      backend: "direct-ed25519",
+      reason: "not-implemented",
+      message: "X25519 ECDH path not wired yet",
+    });
   },
 };
 ```

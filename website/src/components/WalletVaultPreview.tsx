@@ -1,7 +1,83 @@
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
+import { useCallback, useRef, useState } from "react";
 import { TechCarousel } from "./TechCarousel";
 
-/** static mock of the wallet vault tab: popup-shaped frame plus tech carousel aside. */
+const PREVIEW_ACK_KEY = "chromatika_site_wallet_preview_ack";
+
+/** Resting opacity for `wallet-preview-intro-panel` (framer sets inline; must match intent). */
+const PANEL_REST_OPACITY = 0.85;
+
+/** True when this page load is a full reload (normal F5, hard reload). Not back-forward cache. */
+function isPageReload(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    const entries = performance.getEntriesByType("navigation") as PerformanceNavigationTiming[];
+    if (entries.length > 0) {
+      return entries[0].type === "reload";
+    }
+    const legacy = (performance as unknown as { navigation?: { type: number } }).navigation;
+    return legacy?.type === 1; // legacy TYPE_RELOAD
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * sessionStorage is not cleared by "empty cache and hard reload" (only the HTTP cache). Clearing
+ * our ack on real reload matches the expectation that a refresh shows the intro again.
+ */
+function readAcked(): boolean {
+  if (typeof window === "undefined") return false;
+  try {
+    if (isPageReload()) {
+      sessionStorage.removeItem(PREVIEW_ACK_KEY);
+      return false;
+    }
+    return sessionStorage.getItem(PREVIEW_ACK_KEY) === "1";
+  } catch {
+    return false;
+  }
+}
+
+/** Live preview: real `wallet-extension` preview build in `public/wallet-live/`. */
 export function WalletVaultPreview() {
+  const prefersReduced = useReducedMotion();
+  /** Strict Mode dev remount runs exit on AnimatePresence; only persist after a real user dismiss. */
+  const userDismissedRef = useRef(false);
+  const [overlayOpen, setOverlayOpen] = useState(() => !readAcked());
+
+  const commitAck = useCallback(() => {
+    try {
+      sessionStorage.setItem(PREVIEW_ACK_KEY, "1");
+    } catch {
+      /* private mode or quota */
+    }
+  }, []);
+
+  const handleExitComplete = useCallback(() => {
+    if (!userDismissedRef.current) return;
+    userDismissedRef.current = false;
+    commitAck();
+  }, [commitAck]);
+
+  const requestDismiss = useCallback(() => {
+    if (userDismissedRef.current) return;
+    userDismissedRef.current = true;
+    setOverlayOpen(false);
+  }, []);
+
+  const scrimEnter = prefersReduced
+    ? { duration: 0.08 }
+    : { duration: 0.42, ease: [0.22, 1, 0.36, 1] as const };
+
+  const panelEnter = prefersReduced
+    ? { duration: 0.08 }
+    : { duration: 0.5, delay: 0.05, ease: [0.22, 1, 0.36, 1] as const };
+
+  const exitTx = prefersReduced
+    ? { duration: 0.09 }
+    : { duration: 0.34, ease: [0.22, 1, 0.36, 1] as const };
+
   return (
     <section className="wallet-preview" aria-label="wallet preview and tech highlights">
       <div className="wallet-preview-split">
@@ -10,102 +86,92 @@ export function WalletVaultPreview() {
         </div>
 
         <div className="wallet-preview-frame-outer">
-          <div className="wallet-preview-frame" role="img" aria-label="mock Chromatika vault tab">
-            <div className="wallet-preview-chrome">
-              <p className="wallet-preview-kicker">fixture · vault tab</p>
-
-              <div className="wallet-preview-body">
-                <div className="wallet-preview-cockpit">
-                  <div className="wp-rocket">
-                    <div className="wp-pilots" aria-label="cockpit pilots">
-                      <span className="wp-pilot">
-                        <span className="wp-pilot-dot" />
-                        David
-                      </span>
-                      <span className="wp-pilot wp-pilot--co">
-                        <span className="wp-pilot-dot wp-pilot-dot--co" />
-                        Toly
-                      </span>
-                    </div>
-                    <div className="wp-gauge-row">
-                      <div className="wp-gauge wp-gauge--sui" data-health="green">
-                        <div className="wp-gauge-track">
-                          <div className="wp-gauge-fill" style={{ transform: "scaleX(0.82)" }} />
-                        </div>
-                        <span className="wp-gauge-cap">SUI 12.40</span>
-                      </div>
-                      <div className="wp-gauge wp-gauge--ika" data-health="green">
-                        <div className="wp-gauge-track">
-                          <div className="wp-gauge-fill" style={{ transform: "scaleX(0.71)" }} />
-                        </div>
-                        <span className="wp-gauge-cap">IKA 8.2</span>
-                      </div>
-                    </div>
-                    <div className="wp-rocket-illus" aria-hidden="true">
-                      <svg className="wp-rocket-svg" viewBox="0 0 200 48" fill="none">
-                        <path
-                          d="M20 38L100 8l80 30-80 6L20 38z"
-                          stroke="currentColor"
-                          strokeWidth="1.2"
-                          opacity="0.35"
-                        />
-                        <path
-                          d="M96 12l8 26M72 22l56 8"
-                          stroke="currentColor"
-                          strokeWidth="0.8"
-                          opacity="0.25"
-                        />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <div className="wp-base-card" data-vault-health="green">
-                    <div className="wp-base-inner">
-                      <div className="wp-base-copy">
-                        <div className="wp-vault-name">main vault</div>
-                        <div className="wp-vault-kicker">dWallet Vault Account</div>
-                        <div className="wp-addr">0x7a3f…c21e</div>
-                      </div>
-                      <div className="wp-base-rail" aria-hidden="true">
-                        <span className="wp-icon-faux" />
-                        <span className="wp-icon-faux" />
-                        <span className="wp-icon-faux" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="wallet-preview-dwallets">
-                  <div className="wp-section-head">
-                    <span className="wp-section-title">your dWallets</span>
-                    <span className="wp-manage-faux" aria-hidden="true" />
-                  </div>
-                  <ul className="wp-dw-list">
-                    <li className="wp-dw-card">
-                      <div className="wp-dw-top">
-                        <span className="wp-dw-name">David · secp</span>
-                        <span className="wp-dw-pill">main</span>
-                      </div>
-                      <div className="wp-dw-addr">0x4b8e…91aa</div>
-                      <div className="wp-dw-chips">
-                        <span>evm</span>
-                        <span>btc</span>
-                      </div>
-                    </li>
-                    <li className="wp-dw-card">
-                      <div className="wp-dw-top">
-                        <span className="wp-dw-name">Toly · ed25519</span>
-                        <span className="wp-dw-pill wp-dw-pill--alt">sol · sui · apt</span>
-                      </div>
-                      <div className="wp-dw-addr">6Fh9…qR2m</div>
-                      <div className="wp-dw-chips">
-                        <span>solana</span>
-                        <span>sui</span>
-                      </div>
-                    </li>
-                  </ul>
-                </div>
-              </div>
+          <div className="wallet-preview-frame">
+            <div className="wallet-preview-iframe-wrap">
+              <iframe
+                src="/wallet-live/vault-home.html"
+                title="Chromatika vault home (live preview)"
+                className="wallet-preview-iframe"
+                width="400"
+                height="720"
+                loading="lazy"
+                sandbox="allow-scripts allow-same-origin"
+              />
+              <AnimatePresence onExitComplete={handleExitComplete}>
+                {overlayOpen ? (
+                  <motion.div
+                    key="wallet-preview-intro"
+                    className="wallet-preview-intro"
+                    role="button"
+                    tabIndex={0}
+                    aria-label="Start interacting with the wallet preview"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0, transition: exitTx }}
+                    transition={scrimEnter}
+                    onClick={requestDismiss}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        requestDismiss();
+                      }
+                    }}
+                  >
+                    <div className="wallet-preview-intro-scrim" aria-hidden="true" />
+                    <motion.div
+                      className="wallet-preview-intro-panel"
+                      initial={{ opacity: 0, y: 12, scale: 0.97 }}
+                      animate={{ opacity: PANEL_REST_OPACITY, y: 0, scale: 1 }}
+                      exit={
+                        prefersReduced
+                          ? { opacity: 0, transition: exitTx }
+                          : {
+                              opacity: 0,
+                              y: -12,
+                              scale: 0.98,
+                              transition: exitTx,
+                            }
+                      }
+                      transition={panelEnter}
+                      whileHover={
+                        prefersReduced
+                          ? undefined
+                          : {
+                              y: -3,
+                              transition: {
+                                duration: 0.28,
+                                ease: [0.22, 1, 0.36, 1],
+                              },
+                            }
+                      }
+                    >
+                      <span className="wallet-preview-intro-badge">browser embed</span>
+                      <h2 className="wallet-preview-intro-title">interactive preview</h2>
+                      <p className="wallet-preview-intro-body">
+                        this is the real chromatika wallet shell with demo data. some actions stay
+                        off in the browser embed on purpose (sends, settings writes, chain calls).
+                      </p>
+                      <p className="wallet-preview-intro-cta">
+                        <motion.span
+                          className="wallet-preview-intro-cta-inner"
+                          animate={prefersReduced ? undefined : { scale: [1, 1.045, 1] }}
+                          transition={
+                            prefersReduced
+                              ? undefined
+                              : {
+                                  duration: 2.75,
+                                  repeat: Infinity,
+                                  ease: "easeInOut",
+                                }
+                          }
+                        >
+                          try the demo
+                        </motion.span>
+                      </p>
+                    </motion.div>
+                  </motion.div>
+                ) : null}
+              </AnimatePresence>
             </div>
           </div>
         </div>

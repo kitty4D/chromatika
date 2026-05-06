@@ -17,13 +17,13 @@ remote URL: `https://raw.githubusercontent.com/MetaMask/eth-phishing-detect/main
 {
   "version": 2,
   "tolerance": 2,
-  "fuzzylist": [],                  // domains to fuzzy-match against (typo-squat detection)
-  "whitelist": [],                  // explicit allowlist (overrides blocklist)
+  "fuzzylist": [], // domains to fuzzy-match against (typo-squat detection)
+  "whitelist": [], // explicit allowlist (overrides blocklist)
   "blacklist": [
     "phishing-domain-1.com",
     "phishing-domain-2.com",
     // ...
-  ]
+  ],
 }
 ```
 
@@ -35,7 +35,7 @@ chromatika uses `blacklist` (and increasingly `fuzzylist` for typo-squat detecti
 // on install / startup
 async function syncPhishingRules() {
   // 1. load bundled list
-  const bundled = await import('eth-phishing-detect/src/config.json');
+  const bundled = await import("eth-phishing-detect/src/config.json");
 
   // 2. try to fetch remote (skip if offline)
   let remote = bundled;
@@ -51,14 +51,14 @@ async function syncPhishingRules() {
     id: idx + 1,
     priority: 1,
     action: {
-      type: 'redirect',
+      type: "redirect",
       redirect: {
-        regexSubstitution: `${chrome.runtime.getURL('phishing-warning.html')}?blocked=${domain}`,
+        regexSubstitution: `${chrome.runtime.getURL("phishing-warning.html")}?blocked=${domain}`,
       },
     },
     condition: {
-      urlFilter: `||${domain}^`,                     // matches any path on the domain
-      resourceTypes: ['main_frame'],
+      urlFilter: `||${domain}^`, // matches any path on the domain
+      resourceTypes: ["main_frame"],
     },
   }));
 
@@ -72,13 +72,14 @@ async function syncPhishingRules() {
 }
 
 // schedule daily refresh
-chrome.alarms.create('chromatika-phishing-refresh', { periodInMinutes: 24 * 60 });
-chrome.alarms.onAlarm.addListener(alarm => {
-  if (alarm.name === 'chromatika-phishing-refresh') void syncPhishingRules();
+chrome.alarms.create("chromatika-phishing-refresh", { periodInMinutes: 24 * 60 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "chromatika-phishing-refresh") void syncPhishingRules();
 });
 ```
 
 key points:
+
 - bundled list runs first (works offline)
 - remote refresh on install / startup / daily alarm
 - 4900 cap leaves chrome's 100-rule headroom for future features (e.g. user allowlist)
@@ -87,6 +88,7 @@ key points:
 ## the redirect destination
 
 flagged domains route to `phishing-warning.html` bundled with the extension:
+
 ```
 chrome-extension://<id>/phishing-warning.html?blocked=phishing-domain.com
 ```
@@ -114,6 +116,7 @@ async function checkPhishing({ host }): Promise<boolean> {
 ## the dNR limit
 
 chrome's `declarativeNetRequest.MAX_NUMBER_OF_DYNAMIC_RULES` is 5000. we use 4900 to leave headroom. if `eth-phishing-detect` ever pushes past 4900 entries (it's been growing slowly, currently ~3500), chromatika will start truncating. priorities:
+
 1. exact-match blacklist first (most directly malicious)
 2. fuzzy-match patterns next (typo-squats)
 

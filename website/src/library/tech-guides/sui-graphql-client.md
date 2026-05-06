@@ -1,10 +1,11 @@
 # `SuiGraphQLClient` (Mysten's Sui GraphQL transport)
 
-chromatika prefers `SuiGraphQLClient` (`@mysten/sui` `client.core.*`) for every Sui operation Mysten exposes on GraphQL. JSON-RPC stays for legacy gaps only. ika's `IkaClient` is wired to chromatika's vault-shared `SuiGraphQLClient` - never JSON-RPC for supported paths.
+chromatika uses `SuiGraphQLClient` (`@mysten/sui` `client.core.*`) for **every** Sui operation. the wallet no longer talks Mysten JSON-RPC at all - the migration completed 2026-05-01. ika + nft + kiosk + activity + SuiNS all ride one vault-shared `SuiGraphQLClient`, with hand-rolled queries via `client.query` for the small set of reads the SDK doesn't yet wrap.
 
 ## why GraphQL over JSON-RPC
 
 Mysten is migrating Sui's read API from JSON-RPC to GraphQL. GraphQL:
+
 - single endpoint per network (cleaner than RPC method dispatch)
 - structured + typed queries (vs JSON-RPC's stringly-typed methods)
 - field selection (only fetch what you need; reduces wire traffic)
@@ -15,14 +16,15 @@ Mysten is migrating Sui's read API from JSON-RPC to GraphQL. GraphQL:
 ## construction
 
 ```ts
-import { SuiGraphQLClient } from '@mysten/sui/graphql';
+import { SuiGraphQLClient } from "@mysten/sui/graphql";
 
 const client = new SuiGraphQLClient({
-  url: 'https://sui-mainnet.mystenlabs.com/graphql',
+  url: "https://sui-mainnet.mystenlabs.com/graphql",
 });
 ```
 
 per network:
+
 - mainnet: `https://sui-mainnet.mystenlabs.com/graphql`
 - testnet: `https://sui-testnet.mystenlabs.com/graphql`
 - devnet: `https://sui-devnet.mystenlabs.com/graphql`
@@ -33,10 +35,9 @@ custom networks can override via the network registry (`chromatika_custom_networ
 
 ```ts
 function createSuiGraphQLClientFromRegistryNetworkId(): SuiGraphQLClient {
-  const tier = sessionState.activeSuiNetworkTier;        // 'vault' or 'dwallet'
-  const networkId = tier === 'dwallet'
-    ? sessionState.activeDwalletSuiNetworkId
-    : sessionState.activeSuiNetworkId;
+  const tier = sessionState.activeSuiNetworkTier; // 'vault' or 'dwallet'
+  const networkId =
+    tier === "dwallet" ? sessionState.activeDwalletSuiNetworkId : sessionState.activeSuiNetworkId;
   const url = SUI_NETWORK_URLS[networkId];
   return new SuiGraphQLClient({ url });
 }
@@ -48,31 +49,50 @@ every read scopes to the right network tier (vault vs dWallet), so a vault-tier 
 
 - ika operations: `IkaClient` is constructed with this client (`IkaClient` 0.3.x runs on `client.core.*` for `ClientWithCoreApi`). DKG, presign, sign, re-encrypt - all over GraphQL
 - balance reads: `client.core.getCoins`, `getBalance` etc.
-- object reads: `client.core.getObjects`, `multiGetObjects` (chunked 12 at a time per the patch; see below)
+- object reads: `client.core.getObjects`, `multiGetObjects` (auto-chunked 12 at a time via the runtime wrapper described below)
 - NFT discovery (Sui via Display): `client.core.queryObjects` with `showDisplay: true`
 - transaction submission: `client.core.executeTransactionBlock`
 - coin pagination: `listCoins` returns `{ objects, hasNextPage, cursor }` (use `for(;;)` with explicit `break`)
+- activity feed: `queryTransactionBlocksGraphQL` (hand-rolled `client.query` wrapper at `sui-client.ts:queryTransactionBlocksGraphQL`) for filtered / address-scoped tx lists - covers the gap until Mysten ships a `client.core.listTransactions` wrapper
 
-## the chunking patch (`@mysten/sui@2.13.2.patch`)
+## the chunking wrapper (`installGetObjectsChunking`)
 
-chromatika applies a pnpm patch to `@mysten/sui` 2.13.2 (`wallet-extension/patches/@mysten__sui@2.13.2.patch`). it changes:
-- `getObjects` and `multiGetObjects` chunk `objectIds` by **12** (instead of upstream's 50)
-- 100ms pause between chunks
+`@mysten/sui`'s default `client.core.getObjects` batches 50 object ids per POST. that overruns common ~5000-byte GraphQL body limits at edge proxies and triggers burst rate-limits. chromatika fixes this **at runtime** instead of patching the SDK:
 
-reason: the GraphQL POST body grows linearly with the id list. 50 ids per chunk regularly exceeds common ~5000-byte GraphQL body limits at edge proxies. chunking by 12 keeps under the limit; 100ms pause reduces burst rate-limit hits.
+```ts
+// wallet-extension/src/background/sui-client.ts
+function installGetObjectsChunking(client: SuiGraphQLClient): void {
+  const orig = client.core.getObjects.bind(client.core);
+  client.core.getObjects = async (input) => {
+    // chunk input.ids 12 at a time, sleep 100ms between chunks, merge results
+    ...
+  };
+}
+```
 
-bumping `@mysten/sui` requires refreshing the patch. see [mysten-sui-pinning-and-patches.md](/library/tech/mysten-sui-pinning-and-patches).
+applied to **every** `new SuiGraphQLClient(...)` site (ika client, vault client, kiosk client, etc.). the wrapper is version-agnostic, so bumping `@mysten/sui` doesn't require any extra setup - the wallet rides whatever upstream version `package.json` overrides specify.
 
-## what we still use JSON-RPC for
+## hand-rolled queries via `client.query`
 
-- **activity feed**: `SuiJsonRpcClient.queryTransactionBlocks` because GraphQL `client.core.*` exposes `getTransaction` (by digest) but no filtered / address-scoped list equivalent (yet). on a Mysten SDK bump that adds `client.core.listTransactions` or a `Query.address.transactions` wrapper, migrate. tracked future
-- (was: NFT and Sui Kiosk, now both on GraphQL)
+the SDK doesn't yet wrap every Sui read chromatika needs (filtered / scoped tx lists, for example). pattern at `sui-client.ts:queryTransactionBlocksGraphQL`:
 
-if you find any ika or Sui op that's hitting JSON-RPC where GraphQL is available, that's a bug - fix at the call site.
+```ts
+const res = await client.query({
+  query: gql`
+    query QueryTxs($filter: TransactionBlockFilter, $limit: Int) {
+      transactionBlocks(filter: $filter, first: $limit) { nodes { digest, ... } }
+    }
+  `,
+  variables: { filter, limit },
+});
+```
+
+if a future surface needs a Sui read GraphQL doesn't yet expose, write a `client.query` wrapper at the `SuiGraphQLClient` construction boundary. **don't** reach for `SuiJsonRpcClient` - it's not in the wallet anymore.
 
 ## the per-vault sharing
 
 ika's `IkaClient` constructor takes a `SuiGraphQLClient`. chromatika constructs **one** `SuiGraphQLClient` per session per active network tier and reuses it across:
+
 - ika operations
 - direct GraphQL reads (NFTs, balances, etc.)
 - Aftermath's swap submission
@@ -86,11 +106,9 @@ GraphQL errors come back in the response body's `errors` array (HTTP 200 even on
 ## library
 
 - `@mysten/sui/graphql` `SuiGraphQLClient`
-- `@mysten/sui/client` `SuiClient` (the JSON-RPC client; used for activity feed only)
-- internal: `wallet-extension/src/background/sui-client.ts` `createSuiGraphQLClientFromRegistryNetworkId`
+- internal: `wallet-extension/src/background/sui-client.ts` `createSuiGraphQLClientFromRegistryNetworkId`, `installGetObjectsChunking`, `queryTransactionBlocksGraphQL`
 
 ## related
 
-- [mysten-sui-pinning-and-patches.md](/library/tech/mysten-sui-pinning-and-patches) - the chunking patch + version pinning
 - [2pc-mpc-overview.md](/library/tech/2pc-mpc-overview) - the ika client that builds on this transport
 - [nft-api-providers.md](/library/tech/nft-api-providers) - NFT reads that use this client
