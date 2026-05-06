@@ -186,7 +186,7 @@ export const kbArticles: KbArticle[] = [
     title: "guides and knowledge base on this site",
     categoryId: "start",
     summary:
-      "How the themed knowledge base, user guides markdown, and tech guides markdown relate on chromatika.dev.",
+      "How the themed knowledge base, user guides markdown, and tech guides markdown relate on www.chromatika.xyz.",
     body: [
       "The knowledge base (/knowledge-base and /article/* / /category/*) collects short themed articles: start here, identity, vault security, chains, hardware, and product status.",
       "User guides render from markdown under website/src/library/user-guides/ at /library/user/*. They are exhaustive, task-first reference.",

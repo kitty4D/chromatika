@@ -1,13 +1,19 @@
 import { useEffect } from "react";
+import {
+  absoluteSiteUrl,
+  DEFAULT_OG_IMAGE_ALT,
+  DEFAULT_OG_IMAGE_PATH,
+  DEFAULT_SITE_DESCRIPTION,
+  HOME_DOCUMENT_TITLE,
+  SITE_ORIGIN,
+} from "./site-seo";
 
-const DEFAULT_TITLE = "Chromatika: knowledge base";
-const DEFAULT_DESCRIPTION =
-  "Chromatika site: user guides, tech guides, and a knowledge base for this dWallet-first multi-chain browser wallet.";
-const SITE_URL = "https://chromatika.dev";
+const DEFAULT_TITLE = HOME_DOCUMENT_TITLE;
+const DEFAULT_DESCRIPTION = DEFAULT_SITE_DESCRIPTION;
 
 /** Per-route metadata. Pass undefined fields to fall back to defaults. */
 export type DocHead = {
-  /** Page title shown in browser tab. Falls back to "Chromatika: knowledge base". */
+  /** Page title shown in browser tab. Falls back to DEFAULT_TITLE (home / index). */
   title?: string;
   /** Meta description (under ~160 chars). Falls back to a generic site description. */
   description?: string;
@@ -59,15 +65,26 @@ export function useDocHead(head: DocHead): void {
     const t = title ? `${title} - Chromatika` : DEFAULT_TITLE;
     const d = description ?? DEFAULT_DESCRIPTION;
     const path = canonicalPath ?? window.location.pathname;
-    const canonical = `${SITE_URL}${path}`;
+    const canonical = `${SITE_ORIGIN}${path}`;
 
     document.title = t;
     setMeta("description", d);
     setMeta("og:title", t, true);
     setMeta("og:description", d, true);
     setMeta("og:url", canonical, true);
+    setMeta("og:locale", "en_US", true);
+    setMeta("twitter:card", "summary_large_image");
     setMeta("twitter:title", t);
     setMeta("twitter:description", d);
+    const ogImageAbs = absoluteSiteUrl(DEFAULT_OG_IMAGE_PATH);
+    setMeta("og:image", ogImageAbs, true);
+    setMeta("og:image:secure_url", ogImageAbs, true);
+    setMeta("og:image:type", "image/png", true);
+    setMeta("og:image:width", "1200", true);
+    setMeta("og:image:height", "630", true);
+    setMeta("og:image:alt", DEFAULT_OG_IMAGE_ALT, true);
+    setMeta("twitter:image", ogImageAbs);
+    setMeta("twitter:image:alt", DEFAULT_OG_IMAGE_ALT);
     setLink("canonical", canonical);
     setJsonLd(jsonLd);
   }, [title, description, canonicalPath, jsonLd]);

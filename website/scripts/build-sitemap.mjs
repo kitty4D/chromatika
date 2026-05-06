@@ -7,7 +7,7 @@
  *   - KB categories + articles: regex over src/data/kb.ts
  *   - Library docs: fs glob over src/library/{user,tech}-guides/*.md
  *
- * site URL can be overridden via SITE_URL env var; defaults to https://chromatika.dev.
+ * site URL can be overridden via SITE_URL env var; otherwise syncs from src/lib/site-seo.ts (SITE_ORIGIN).
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -15,7 +15,18 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "..");
-const SITE_URL = (process.env.SITE_URL || "https://chromatika.dev").replace(/\/+$/, "");
+
+function readSiteOriginFromSiteSeo() {
+  const p = path.join(ROOT, "src", "lib", "site-seo.ts");
+  const text = fs.readFileSync(p, "utf8");
+  const m = text.match(/export const SITE_ORIGIN = "([^"]+)"/);
+  if (!m) {
+    throw new Error(`SITE_ORIGIN not found in ${p}`);
+  }
+  return m[1].replace(/\/+$/, "");
+}
+
+const SITE_URL = (process.env.SITE_URL || readSiteOriginFromSiteSeo()).replace(/\/+$/, "");
 
 function readSlugList(filePath, listToken) {
   const text = fs.readFileSync(filePath, "utf8");

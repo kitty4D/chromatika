@@ -71,7 +71,7 @@ note: a separate `chromatika_alerts_applied_rules_v1` storage tracks `{ alarmToR
    publish-alert.mjs feed --in signed-array.json --out feed.json
    - wraps as { v: 1, generatedAtMs, alerts: [...] }
 
-3. publisher hosts feed at https://chromatika.dev/safety-alerts.json (or wherever)
+3. publisher hosts feed at https://www.chromatika.xyz/safety-alerts.json (or wherever)
 
 4. chromatika polls every 5 min:
    chrome.alarms 'chromatika-alerts-poll'
@@ -98,7 +98,7 @@ note: a separate `chromatika_alerts_applied_rules_v1` storage tracks `{ alarmToR
 
 - feed fetch is anonymous HTTP GET. no cookies, no auth headers, no wallet-specific params
 - the feed is **static JSON** - same URL for all users, same content regardless of who's polling. no per-user response variation possible
-- ISP / DNS resolvers can see "this user polls chromatika.dev every 5 min" but not what's in the wallet
+- ISP / DNS resolvers can see "this user polls www.chromatika.xyz every 5 min" but not what's in the wallet
 - dNR rules are local; no phone-home on navigation to flagged domains
 
 ## composition with eth-phishing-detect
