@@ -6,7 +6,8 @@
  * Dest:   website/public/wallet-live/
  *
  * Behavior:
- *   - If --build is passed (or PREVIEW_BUILD=1), trigger the wallet-extension preview build first.
+ *   - On Vercel (`VERCEL=1`), `--build` is ignored so deploy does not need
+ *     wallet-extension/node_modules; use committed `public/wallet-live/` or sync locally.
  *   - If the source is missing without --build, log a hint and exit 0 (don't fail the website build).
  *   - Always rsync-style: empty the dest dir first, then copy everything fresh.
  */
@@ -21,7 +22,9 @@ const REPO_ROOT = path.resolve(WEBSITE_ROOT, "..");
 const SRC_DIR = path.resolve(REPO_ROOT, "wallet-extension", "preview-dist");
 const DEST_DIR = path.resolve(WEBSITE_ROOT, "public", "wallet-live");
 
-const shouldBuild = process.argv.includes("--build") || process.env.PREVIEW_BUILD === "1";
+const shouldBuild =
+  process.env.VERCEL !== "1" &&
+  (process.argv.includes("--build") || process.env.PREVIEW_BUILD === "1");
 
 if (shouldBuild) {
   console.log("sync-wallet-preview: building wallet-extension preview...");
