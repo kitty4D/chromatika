@@ -11,11 +11,12 @@
 
 import { DAVID } from './personas';
 import { DEFAULT_EXPLORER_PREFERENCES } from '@/config/explorers';
-import { BALANCES_DEFAULT } from './balances';
+import { BALANCES_DEFAULT, BALANCES_TOLY } from './balances';
 import { NETWORKS } from './networks';
 import { ACTIVITY_DAVID } from './activity';
 import {
   DWALLET_CAPS_DAVID,
+  DWALLET_CAPS_TOLY,
   DWALLET_ADDRESS_BOOK,
   DWALLET_DISPLAY_NAMES,
   DWALLET_CARD_ORDER,
@@ -26,6 +27,7 @@ import {
   PORTFOLIO_RAIL_BALANCES_APTOS,
   VAULT_SUMMARIES,
 } from './dwallets';
+import { previewPersistIkaBaseMode, readPreviewIkaBaseMode } from '../preview-local-storage';
 
 type FixtureValue = unknown;
 type FixtureFactory = (input: unknown) => FixtureValue;
@@ -34,16 +36,28 @@ type FixtureEntry = FixtureValue | FixtureFactory;
 const REGISTRY: Record<string, FixtureEntry> = {
   // Hooks every wallet-shell screen touches on mount. Without these, screens flash
   // a loading state before settling into the demo content.
-  'getIkaBaseMode': 'sui',
+  'getIkaBaseMode': () => readPreviewIkaBaseMode(),
+  // mirrors prod `network.setIkaBaseMode`: persist ika base + fire storage listeners
+  'setIkaBaseMode': (input: unknown) => {
+    const mode = (input as { mode?: unknown })?.mode === 'solana' ? 'solana' : 'sui';
+    previewPersistIkaBaseMode(mode);
+    return undefined;
+  },
   'getExplorerPreferences': DEFAULT_EXPLORER_PREFERENCES,
-  'balances': BALANCES_DEFAULT,
+  'balances': () =>
+    readPreviewIkaBaseMode() === 'solana' ? (BALANCES_TOLY as unknown) : (BALANCES_DEFAULT as unknown),
+  'activeVaultId': () => {
+    const mode = readPreviewIkaBaseMode();
+    const v = VAULT_SUMMARIES.find((x) => x.baseChain === mode);
+    return v?.id ?? DAVID.id;
+  },
   'getNetworks': NETWORKS,
   'walletExists': true,
   'lockState': { locked: false, vaultExists: true, autoLockMinutes: 30 },
-  'activeVaultId': DAVID.id,
   'getActivity': ACTIVITY_DAVID,
   'listVaults': VAULT_SUMMARIES,
-  'listOwnedDWalletCaps': DWALLET_CAPS_DAVID,
+  'listOwnedDWalletCaps': () =>
+    readPreviewIkaBaseMode() === 'solana' ? DWALLET_CAPS_TOLY : DWALLET_CAPS_DAVID,
   'dwalletAddressBook': DWALLET_ADDRESS_BOOK,
   'getDwalletDisplayNames': DWALLET_DISPLAY_NAMES,
   'getDwalletCardOrder': DWALLET_CARD_ORDER,

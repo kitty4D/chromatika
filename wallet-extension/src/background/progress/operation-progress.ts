@@ -28,7 +28,8 @@ const STORAGE_KEY = STORAGE_KEYS.OP_PROGRESS_V1;
  */
 export type OperationProgressAction =
   | { kind: 'recreate-ed25519-dwallet'; label: string; cluster: string }
-  | { kind: 'recreate-secp256k1-dwallet'; label: string; cluster: string };
+  | { kind: 'recreate-secp256k1-dwallet'; label: string; cluster: string }
+  | { kind: 'retry-team-funding'; label: string };
 
 export type OperationProgress = {
   id: string;

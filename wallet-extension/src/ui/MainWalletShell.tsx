@@ -3,7 +3,7 @@
  * overlay routing matches side panel (overlays first, then AnimatePresence keyed by tab only).
  */
 
-import { lazy, Suspense, useLayoutEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { trpc } from '@/lib/trpc';
 import type { VaultSummary } from '@/ui/VaultPicker';
@@ -78,6 +78,8 @@ export type MainWalletShellProps = {
   onVaultSwitched: () => void;
   onDwalletBarSwitched: () => void;
   settingsInitialTab?: SettingsTab;
+  /** fired when balance summary flips to locked while the shell is mounted (defense in depth) */
+  onSessionLockDetected?: () => void;
 };
 
 export function MainWalletShell({
@@ -103,6 +105,7 @@ export function MainWalletShell({
   onVaultSwitched,
   onDwalletBarSwitched,
   settingsInitialTab,
+  onSessionLockDetected,
 }: MainWalletShellProps) {
   const titleBarMeasureRef = useRef<HTMLDivElement>(null);
   const [titleBarH, setTitleBarH] = useState(48);
@@ -116,6 +119,10 @@ export function MainWalletShell({
   /** optional pre-selected pcToken market when the Send overlay opens via "Send" on a pcToken Portfolio row. */
   const [sendInitialPcMarketId, setSendInitialPcMarketId] = useState<string | undefined>(undefined);
   const vaultNameHints = useVaultNameHints(vaultSummaries);
+
+  useEffect(() => {
+    if (balances?.locked) onSessionLockDetected?.();
+  }, [balances?.locked, onSessionLockDetected]);
 
   function openSendOverlay(opts?: { pcMarketId?: string }) {
     setSendInitialPcMarketId(opts?.pcMarketId);
@@ -212,6 +219,11 @@ export function MainWalletShell({
             || action.kind === 'recreate-secp256k1-dwallet'
           ) {
             setWalletOverlay('dwalletMgmt');
+          } else if (action.kind === 'retry-team-funding') {
+            // mutation re-runs `triggerTeamFunding` against the active session's Sui address.
+            // it owns its own progress banner via `beginOperation` so we just fire and ignore;
+            // any error is surfaced through the banner with another retry affordance.
+            void trpc.retryTeamFunding.mutate().catch(() => { /* banner handles surfacing */ });
           }
         }}
       />
@@ -244,9 +256,7 @@ export function MainWalletShell({
                   <button type="button" className="sp-backBtn" onClick={() => setWalletOverlay(null)}>
                     ← back
                   </button>
-                  <p className="sp-muted" style={{ marginTop: 12 }}>
-                    Chromatika is locked — unlock to manage dWallets.
-                  </p>
+                  <ShellRouteFallback />
                 </div>
               )
             ) : walletOverlay === 'send' ? (

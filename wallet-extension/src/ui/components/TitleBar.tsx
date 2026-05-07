@@ -4,6 +4,11 @@ import type { IkaBaseMode } from '@/background/ika-base-mode';
 import '@/ui/mode-selector/mode-selector.css';
 import '@/ui/wallet-chrome-extras.css';
 
+// Resolve `/<asset>` against vite's BASE_URL so the same code works in the chrome
+// extension (BASE_URL = '/' -> `/ika.svg`) AND in iframe preview builds where the
+// wallet ships under a subpath (e.g. '/wallet-live/' -> `/wallet-live/ika.svg`).
+const PUBLIC_BASE = (import.meta.env.BASE_URL ?? '/');
+
 /** shared chrome actions (title bar + bottom drawer) */
 export function ChromeIkaStakingIconButton({ onClick }: { onClick: () => void }) {
   return (
@@ -14,7 +19,7 @@ export function ChromeIkaStakingIconButton({ onClick }: { onClick: () => void })
       title="IKA staking"
       onClick={onClick}
     >
-      <img src="/ika.svg" alt="" width={18} height={18} className="ct-ikaStakingBtn-logo" />
+      <img src={`${PUBLIC_BASE}ika.svg`} alt="" width={18} height={18} className="ct-ikaStakingBtn-logo" />
     </button>
   );
 }

@@ -18,7 +18,7 @@ import { ikaModeFromActiveVault } from '@/lib/derive-ika-mode-from-vault';
 import { UnlockScreen } from '@/ui/unlock-screen';
 import { useUnlockMethods } from '@/ui/unlock-methods';
 import { CodeCurrent } from '@/ui/effects/code-current';
-import { useWalletAppState } from '@/ui/use-wallet-app-state';
+import { shouldShowUnlockScreen, useWalletAppState } from '@/ui/use-wallet-app-state';
 import type { Tab } from '@/ui/types';
 
 import './wallet.css';
@@ -334,6 +334,18 @@ export function App() {
     );
   }
 
+  if (vaultExists === true && unlocked === null) {
+    return (
+      <WithPopupHeader
+        ikaMode={ikaBaseDisplay}
+        onIkaMode={handleIkaModeSelect}
+        track="center"
+      >
+        <div className="sp-loading">Loading…</div>
+      </WithPopupHeader>
+    );
+  }
+
   // setup
   if (!vaultExists) {
     return (
@@ -382,9 +394,10 @@ export function App() {
   }
 
   // unlock
-  if (vaultExists && !unlocked) {
-    const hidePassword = !unlockMethodsState.passwordEnvelopeAvailable
-      && unlockMethodsState.extraMethods.length > 0;
+  if (shouldShowUnlockScreen(vaultExists, unlocked, balances)) {
+    const hidePassword =
+      !unlockMethodsState.passwordEnvelopeAvailable
+      && (unlockMethodsState.extraMethods.length > 0 || bioEnrolled);
     return (
       <WithPopupHeader ikaMode={ikaBaseDisplay} onIkaMode={handleIkaModeSelect} unlockChrome>
         <CodeCurrent options={{ targetSelectors: ['.sp-input', '.sp-btnPrimary'], count: 24 }}>
@@ -537,6 +550,10 @@ export function App() {
       refresh={refresh}
       onVaultSwitched={refresh}
       onDwalletBarSwitched={refresh}
+      onSessionLockDetected={() => {
+        setBalances(null);
+        setUnlocked(false);
+      }}
     />
   );
 }

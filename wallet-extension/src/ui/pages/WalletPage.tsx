@@ -266,11 +266,11 @@ export function WalletPage({
           <div className="wallet-bento__span">
             <SwapCard
               onClose={() => setShowSwap(false)}
-              onSuccess={() => {
-                setShowSwap(false);
+              onSwapCommitted={() => {
                 onRefresh();
                 void refreshCaps();
               }}
+              onSuccess={() => setShowSwap(false)}
             />
           </div>
         )}

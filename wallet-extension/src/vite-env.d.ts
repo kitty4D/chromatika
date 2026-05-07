@@ -1,6 +1,7 @@
 /// <reference types="vite/client" />
 
 declare const __CHROMATIKA_BUILD_STAMP__: string;
+declare const __CHROMATIKA_PREVIEW_IFRAME__: boolean;
 
 interface ImportMetaEnv {
   readonly VITE_CMC_API_KEY?: string;

@@ -83,11 +83,7 @@ export function IkaStakingPage({
   }
 
   if (balances?.locked) {
-    return (
-      <div className="sp-page">
-        <p className="sp-muted">unlock the wallet to use IKA staking.</p>
-      </div>
-    );
+    return null;
   }
 
   if (balances && 'ikaBase' in balances && balances.ikaBase === 'solana') {

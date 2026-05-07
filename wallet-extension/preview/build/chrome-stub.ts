@@ -11,6 +11,8 @@
  * Imported for side effect at the top of every preview entry. Idempotent.
  */
 
+import { previewChromeStorageNamespace } from './preview-local-storage';
+
 declare global {
   interface Window {
     chrome?: unknown;
@@ -18,6 +20,22 @@ declare global {
 }
 
 function makeNoopFn(path: string) {
+  // chrome.runtime.getURL is special: production wallet code uses it for static asset
+  // paths (`chrome.runtime.getURL('logos/btc.svg')` etc) and feeds the result into
+  // <img src=...>. real chrome returns a string synchronously, so we mirror that here -
+  // returning a Promise would stringify to "[object Promise]" and break the asset.
+  // we resolve against `document.baseURI` so the preview's `<base>` (set via vite's
+  // base config) is honored: '/wallet-live/' -> '/wallet-live/logos/btc.svg', etc.
+  if (path === 'chrome.runtime.getURL') {
+    return (rel?: unknown) => {
+      const r = typeof rel === 'string' ? rel : '';
+      try {
+        return new URL(r, document.baseURI).href;
+      } catch {
+        return r;
+      }
+    };
+  }
   // returns a function that, when called, also resolves any callback arg with undefined
   // and returns a Promise<undefined>. Most chrome APIs are dual-shape (callback OR
   // promise) so we cover both.
@@ -65,18 +83,22 @@ function makeStub(path: string): unknown {
 // no-op proxies instead of throwing on missing namespaces.
 const existing = (globalThis as { chrome?: Record<string, unknown> }).chrome;
 const stub = makeStub('chrome') as Record<string, unknown>;
+const previewStorageNs = previewChromeStorageNamespace();
+
+function previewChromeTrap(target: object, prop: string | symbol) {
+  if (prop === 'storage') return previewStorageNs;
+  const own = Reflect.get(target, prop);
+  if (own !== undefined) return own;
+  return Reflect.get(stub, prop);
+}
+
 if (existing && typeof existing === 'object') {
   // Wrap so any real fields the browser exposed stay accessible, but missing fields
-  // fall through to the proxy.
-  (globalThis as { chrome?: unknown }).chrome = new Proxy(existing, {
-    get(target, prop) {
-      const v = (target as Record<string | symbol, unknown>)[prop];
-      if (v !== undefined) return v;
-      return (stub as Record<string | symbol, unknown>)[prop];
-    },
-  });
+  // fall through to the proxy. `storage` is always our preview shim so ika base mode +
+  // `useIkaBaseMode` storage listeners behave like prod.
+  (globalThis as { chrome?: unknown }).chrome = new Proxy(existing, { get: previewChromeTrap });
 } else {
-  (globalThis as { chrome?: unknown }).chrome = stub;
+  (globalThis as { chrome?: unknown }).chrome = new Proxy({} as object, { get: previewChromeTrap });
 }
 
 export {};

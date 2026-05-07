@@ -82,6 +82,7 @@
     "@wallet-standard/wallet": "1.1.0",
     "@walletconnect/sign-client": "^2.23.9",
     "@walletconnect/utils": "^2.23.9",
+    "aftermath-ts-sdk": "2.0.0",
     "bitcoinjs-lib": "^7.0.1",
     "buffer": "^6.0.3",
     "eth-phishing-detect": "^1.2.0",

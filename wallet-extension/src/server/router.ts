@@ -18,6 +18,7 @@ import { pcTokenProcedures } from './routers/pc-token';
 import { desoProcedures } from './routers/deso';
 import { policyVaultProcedures } from './routers/policy-vault';
 import { scanProcedures } from './routers/scan';
+import { onboardingProcedures } from './routers/onboarding';
 
 /**
  * tRPC root router, flat namespace built from per-domain procedure groups.
@@ -44,6 +45,7 @@ export const appRouter = router({
   ...desoProcedures,
   ...policyVaultProcedures,
   ...scanProcedures,
+  ...onboardingProcedures,
 });
 
 export type AppRouter = typeof appRouter;

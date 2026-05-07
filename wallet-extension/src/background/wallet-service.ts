@@ -392,7 +392,7 @@ export async function unlockVaultByPasskey(
   autoLockMinutes?: number,
 ): Promise<void> {
   const r = await unlockVaultPasskeyPrf({ envelopeId, prfSecret });
-  await finalizeUnlock(r, autoLockMinutes);
+  await finalizeUnlock(r, { autoLockMinutes });
 }
 
 /**
@@ -405,7 +405,7 @@ export async function unlockVaultByWalletSignature(
   autoLockMinutes?: number,
 ): Promise<void> {
   const r = await unlockVaultWalletSignature({ envelopeId, signature });
-  await finalizeUnlock(r, autoLockMinutes);
+  await finalizeUnlock(r, { autoLockMinutes });
 }
 
 /** unlock via a BIP39 phrase (lazor recovery, opt-in passkey/waap recovery codes). */
@@ -415,7 +415,7 @@ export async function unlockVaultByRecoveryWords(
   autoLockMinutes?: number,
 ): Promise<void> {
   const r = await unlockVaultRecoveryWordsStore({ envelopeId, bip39Seed });
-  await finalizeUnlock(r, autoLockMinutes);
+  await finalizeUnlock(r, { autoLockMinutes });
 }
 
 /** public-metadata view of available unlock methods, for the unlock screen. */
@@ -425,7 +425,7 @@ export async function listVaultEnvelopes() {
 
 export async function unlockVault(password: string, autoLockMinutes?: number): Promise<void> {
   const r = await unlockVaultBytes(password);
-  await finalizeUnlock(r, autoLockMinutes);
+  await finalizeUnlock(r, { autoLockMinutes });
 
   // warm presign pools immediately on unlock so the first signing op is fast.
   // skip in `seeker_direct` ika fee mode - each presign requires phone prompts, and prompting

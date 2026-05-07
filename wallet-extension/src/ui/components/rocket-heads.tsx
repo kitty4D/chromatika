@@ -1,5 +1,15 @@
 import type { ReactNode } from 'react';
 
+// Resolve `/pilots/<asset>` against the build's base URL so the same code works in
+// the chrome extension (BASE_URL = '/' => `/pilots/foo.png`) AND in iframe-embedded
+// preview builds where the wallet ships under a subpath (e.g. '/wallet-live/' =>
+// `/wallet-live/pilots/foo.png`). Vite injects BASE_URL at build time per config.base.
+function pilotAsset(name: string): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  // BASE_URL is always trailing-slashed per vite spec; concatenating keeps it tidy
+  return `${base}pilots/${name}`;
+}
+
 export const ROCKET_HEAD_IDS = [
   'pilot-david',
   'pilot-toly',
@@ -19,11 +29,11 @@ export const ROCKET_HEAD_LABELS: Record<RocketHeadId, string> = {
 export function pilotFrontPreviewHref(headId: string): string | null {
   switch (headId) {
     case 'pilot-adeniyi':
-      return '/pilots/adeniyi-f.png';
+      return pilotAsset('adeniyi-f.png');
     case 'pilot-david':
-      return '/pilots/david-f.png';
+      return pilotAsset('david-f.png');
     case 'pilot-toly':
-      return '/pilots/toly-f.png';
+      return pilotAsset('toly-f.png');
     default:
       return null;
   }
@@ -66,33 +76,33 @@ export function RocketHeadDefs(): ReactNode {
     <defs>
       {/* crew pilots: back */}
       <symbol id="head-pilot-adeniyi" viewBox="0 0 64 64">
-        <image href="/pilots/adeniyi-b.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('adeniyi-b.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       <symbol id="head-pilot-david" viewBox="0 0 64 64">
-        <image href="/pilots/david-b.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('david-b.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       <symbol id="head-pilot-toly" viewBox="0 0 64 64">
-        <image href="/pilots/toly-b.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('toly-b.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       {/* crew pilots: side (drawn from driver seat, flip for passenger) */}
       <symbol id="head-pilot-adeniyi-s" viewBox="0 0 64 64">
-        <image href="/pilots/adeniyi-s.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('adeniyi-s.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       <symbol id="head-pilot-david-s" viewBox="0 0 64 64">
-        <image href="/pilots/david-s.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('david-s.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       <symbol id="head-pilot-toly-s" viewBox="0 0 64 64">
-        <image href="/pilots/toly-s.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('toly-s.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       {/* crew pilots: front */}
       <symbol id="head-pilot-adeniyi-f" viewBox="0 0 64 64">
-        <image href="/pilots/adeniyi-f.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('adeniyi-f.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       <symbol id="head-pilot-david-f" viewBox="0 0 64 64">
-        <image href="/pilots/david-f.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('david-f.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
       <symbol id="head-pilot-toly-f" viewBox="0 0 64 64">
-        <image href="/pilots/toly-f.png" width="64" height="64" preserveAspectRatio="xMidYMid meet" />
+        <image href={pilotAsset('toly-f.png')} width="64" height="64" preserveAspectRatio="xMidYMid meet" />
       </symbol>
     </defs>
   );

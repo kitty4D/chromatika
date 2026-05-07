@@ -28,6 +28,17 @@ import type { AppearanceMode } from '@/background/appearance-mode';
 
 const DEFAULT_AUTO_LOCK_MINUTES = 30;
 
+/** unlock screen: explicit lock, or UI still thinks unlocked while balance summary says session is gone */
+export function shouldShowUnlockScreen(
+  vaultExists: boolean | null,
+  unlocked: boolean | null,
+  balances: Balances | null,
+): boolean {
+  if (vaultExists !== true) return false;
+  if (unlocked === false) return true;
+  return unlocked === true && balances?.locked === true;
+}
+
 export interface UseWalletAppStateOpts {
   devMode: boolean;
   dev?: {
@@ -234,21 +245,85 @@ export function useWalletAppState(opts: UseWalletAppStateOpts): WalletAppState {
     }
   }, [devMode, skipLifecycle, balances, vaultExists, unlocked]);
 
-  // MV3 SW can restart while side panel / popup stays open - refresh on visibility
+  // MV3 SW can restart while side panel / popup stays open: on focus / visibility,
+  // re-check lock state before refreshing balances. also re-check on user input so a
+  // stale "unlocked" UI snaps to the unlock screen as soon as the user interacts.
   useEffect(() => {
     if (devMode || skipLifecycle) return;
-    function onVis() {
+    function onVisOrFocus() {
       if (document.visibilityState !== 'visible') return;
-      if (vaultExists !== true || unlocked !== true) return;
-      refreshBalances();
+      if (vaultExists !== true) return;
+      void trpc.lockState
+        .query()
+        .then((ls) => {
+          if (!ls.unlocked) {
+            setBalances(null);
+            setUnlocked(false);
+            return;
+          }
+          if (unlocked === true) refreshBalances();
+        })
+        .catch(() => {
+          setBalances(null);
+          setUnlocked(false);
+        });
     }
-    document.addEventListener('visibilitychange', onVis);
-    window.addEventListener('focus', onVis);
+    document.addEventListener('visibilitychange', onVisOrFocus);
+    window.addEventListener('focus', onVisOrFocus);
     return () => {
-      document.removeEventListener('visibilitychange', onVis);
-      window.removeEventListener('focus', onVis);
+      document.removeEventListener('visibilitychange', onVisOrFocus);
+      window.removeEventListener('focus', onVisOrFocus);
     };
   }, [devMode, skipLifecycle, vaultExists, unlocked, refreshBalances]);
+
+  useEffect(() => {
+    if (devMode || skipLifecycle) return;
+    if (vaultExists !== true || unlocked !== true) return;
+
+    let lastGestureCheck = 0;
+    let lastMoveCheck = 0;
+
+    function runLockCheck() {
+      void trpc.lockState
+        .query()
+        .then((ls) => {
+          if (!ls.unlocked) {
+            setBalances(null);
+            setUnlocked(false);
+          }
+        })
+        .catch(() => {
+          setBalances(null);
+          setUnlocked(false);
+        });
+    }
+
+    function onGesture() {
+      const now = Date.now();
+      if (now - lastGestureCheck < 400) return;
+      lastGestureCheck = now;
+      runLockCheck();
+    }
+
+    function onMove() {
+      const now = Date.now();
+      if (now - lastMoveCheck < 1200) return;
+      lastMoveCheck = now;
+      runLockCheck();
+    }
+
+    window.addEventListener('pointerdown', onGesture, true);
+    window.addEventListener('keydown', onGesture, true);
+    window.addEventListener('wheel', onGesture, { capture: true, passive: true });
+    window.addEventListener('mousemove', onMove, { capture: true, passive: true });
+
+    return () => {
+      window.removeEventListener('pointerdown', onGesture, true);
+      window.removeEventListener('keydown', onGesture, true);
+      window.removeEventListener('wheel', onGesture, true);
+      window.removeEventListener('mousemove', onMove, true);
+    };
+  }, [devMode, skipLifecycle, vaultExists, unlocked]);
 
   // biometric enrollment check - only when waiting at unlock
   useEffect(() => {

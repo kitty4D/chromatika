@@ -10,14 +10,23 @@
  * - new spec: dapp opens `wss://<host>/reflect` (no id). server allocates a random 16-byte id,
  *   responds with a REFLECTOR_ID frame, and the dapp embeds that id into the QR. wallet later
  *   connects with `?id=<base64url>`.
- * - old spec (used by every published Android wallet still in the wild as of 2026-05): dapp
- *   picks its own numeric id and opens `wss://<host>/reflect?id=<numeric>`. server uses that id
- *   as the room key, sends NO REFLECTOR_ID frame. wallet connects with the same `?id=<numeric>`
- *   from the QR.
+ * - old spec: dapp picks its own numeric id and opens `wss://<host>/reflect?id=<numeric>`.
+ *   server uses that id as the room key, sends NO REFLECTOR_ID frame. wallet connects with the
+ *   same `?id=<numeric>` from the QR.
  *
- * once paired the server sends APP_PING (empty frame) to both endpoints and then forwards every
- * frame from one to the other. frames cap at 4 KiB; half-open sessions die after 30 s,
- * fully-open after 90 s. these semantics are identical between the two specs.
+ * NOTE: as of 2026-05, every published Android wallet we tested (Phantom, Solflare, Jupiter,
+ * Backpack, the Seeker native wallet) silently fails to open a WebSocket to ANY reflector after
+ * scanning a QR — both with new-spec URIs and old-spec URIs, both against this reflector and
+ * the official `development.reflector.solanamobile.com`. only `fakewallet` (this repo's
+ * reference walletlib) actually pairs. so the dual-spec support here is currently exercised
+ * only by fakewallet; production wallets are broken in some way we couldn't pin down without
+ * source access. the dual-spec design is still correct, it's just that the production wallets
+ * never get far enough to care which url shape we accept.
+ *
+ * once paired the server sends APP_PING (empty frame) to both endpoints and then forwards
+ * every frame from one to the other. frames cap at MAX_FRAME_BYTES (see ./reflector-do.ts);
+ * half-open and fully-open timeouts also live there. these semantics are identical between
+ * the two specs.
  *
  * routing strategy:
  * - GET /reflect (no `id`): new-spec dapp side. allocate a random reflector_unique_id, route to

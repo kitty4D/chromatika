@@ -10,6 +10,12 @@ import { usePilotChoreography } from '@/ui/hooks/use-pilot-choreography';
 
 export type VaultHealthVisual = 'green' | 'yellow' | 'red' | 'empty';
 
+// see rocket-heads.tsx pilotAsset; same base-prefix logic for cockpit + seat rasters
+function pilotAsset(name: string): string {
+  const base = import.meta.env.BASE_URL ?? '/';
+  return `${base}pilots/${name}`;
+}
+
 const SUI_LOGO = (
   <svg viewBox="0 0 783 1000" width="19" height="24" fill="none" aria-hidden>
     <path
@@ -142,7 +148,7 @@ export function RocketSeatGauge({
 
           {/* layer 1: cockpit dashboard (background) */}
           <image
-            href="/pilots/blockpit.png"
+            href={pilotAsset('blockpit.png')}
             x="0" y="0" width="320" height="140"
             preserveAspectRatio="xMidYMid meet"
             className="cv-cockpitImage"
@@ -200,13 +206,13 @@ export function RocketSeatGauge({
 
           {/* layer 3: seats (closest to viewer) */}
           <image
-            href="/pilots/seat.png"
+            href={pilotAsset('seat.png')}
             x="32" y="50" width="120" height="120"
             preserveAspectRatio="xMidYMid meet"
             className="cv-seatImage"
           />
           <image
-            href="/pilots/seat.png"
+            href={pilotAsset('seat.png')}
             x="169" y="50" width="120" height="120"
             preserveAspectRatio="xMidYMid meet"
             className="cv-seatImage"

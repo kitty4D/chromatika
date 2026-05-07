@@ -16,7 +16,7 @@ import type { SettingsTab } from '@/ui/pages/SettingsPage';
 import { MainWalletShell } from '@/ui/MainWalletShell';
 import { NeedIkaBaseVaultGate } from '@/ui/NeedIkaBaseVaultGate';
 import { ikaModeFromActiveVault } from '@/lib/derive-ika-mode-from-vault';
-import { useWalletAppState } from '@/ui/use-wallet-app-state';
+import { shouldShowUnlockScreen, useWalletAppState } from '@/ui/use-wallet-app-state';
 import type { Tab, Balances, Networks } from '@/ui/types';
 import './wallet.css';
 
@@ -187,6 +187,8 @@ function SidePanelMain() {
     onUnlockWithBiometric,
     balances,
     balanceError,
+    setBalanceError,
+    setBalances,
     networks,
     advanced,
     setAdvanced,
@@ -203,6 +205,7 @@ function SidePanelMain() {
     setAppearance,
     loadVaults,
     refresh,
+    refreshBalances,
   } = state;
 
   const [tab, setTab] = useState<Tab>(devMode ? devTab : 'vault');
@@ -320,7 +323,7 @@ function SidePanelMain() {
     );
   }
 
-  if (!unlocked) {
+  if (shouldShowUnlockScreen(vaultExists, unlocked, balances)) {
     return (
       <div className="sp-root sp-unlock">
         <TitleBar variant="wallet" mode={ikaBaseDisplay} onSelect={(m) => void handleIkaModeSelect(m)} modeSize="xs" />
@@ -339,10 +342,57 @@ function SidePanelMain() {
                   extraMethods={unlockMethodsState.extraMethods}
                   hidePasswordSection={
                     !unlockMethodsState.passwordEnvelopeAvailable
-                    && unlockMethodsState.extraMethods.length > 0
+                    && (unlockMethodsState.extraMethods.length > 0 || bioEnrolled)
                   }
                 />
               </CodeCurrent>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!balances) {
+    const loadFailed = Boolean(balanceError);
+    return (
+      <div className="sp-root">
+        <TitleBar variant="wallet" mode={ikaBaseDisplay} onSelect={(m) => void handleIkaModeSelect(m)} modeSize="xs" />
+        <div className="sp-bodyScroll">
+          <div className="sp-contentTrackShell">
+            <div className="sp-contentTrack ch-scrollbar sp-contentTrack--center">
+              <div style={{ maxWidth: 420, padding: '0 var(--ch-content-pad)', textAlign: 'center' }}>
+                <p style={{ margin: 0, fontWeight: loadFailed ? 700 : 400 }}>
+                  {loadFailed ? "couldn't load wallet" : 'loading wallet…'}
+                </p>
+                {loadFailed && (
+                  <p className="sp-muted" style={{ color: 'rgba(255,99,132,0.95)', fontSize: 13, margin: '12px 0 0 0', lineHeight: 1.4 }}>
+                    {balanceError}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="sp-btn sp-btnPrimary"
+                  style={{ marginTop: 12, width: '100%' }}
+                  onClick={() => refreshBalances({ clearStaleError: true })}
+                >
+                  retry
+                </button>
+                {loadFailed && (
+                  <button
+                    type="button"
+                    className="sp-btn"
+                    style={{ marginTop: 10, width: '100%' }}
+                    onClick={() => {
+                      setBalanceError(null);
+                      setBalances(null);
+                      setUnlocked(false);
+                    }}
+                  >
+                    enter password instead
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -433,6 +483,10 @@ function SidePanelMain() {
       onVaultSwitched={refresh}
       onDwalletBarSwitched={refresh}
       settingsInitialTab={devMode ? devSettingsTab : undefined}
+      onSessionLockDetected={() => {
+        setBalances(null);
+        setUnlocked(false);
+      }}
     />
   );
 }

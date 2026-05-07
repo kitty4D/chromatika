@@ -157,7 +157,7 @@ export async function createWaapVault(
   // immediately unlock the freshly-created waap wallet, same pattern as passkey above.
   await finalizeUnlock(
     { keyBytes: created.masterKeyBytes, key: created.key, kdfMeta: created.kdfMeta, payload },
-    30,
+    { autoLockMinutes: 30, isFreshlyCreated: true },
   );
   return { vaultId: id, suiAddress: input.waapSuiAddress };
 }

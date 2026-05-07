@@ -138,6 +138,9 @@ importers:
       '@walletconnect/utils':
         specifier: ^2.23.9
         version: 2.23.9(typescript@6.0.3)(zod@4.3.6)
+      aftermath-ts-sdk:
+        specifier: 2.0.0
+        version: 2.0.0(@mysten/sui@2.16.0(typescript@6.0.3))
       bitcoinjs-lib:
         specifier: ^7.0.1
         version: 7.0.1(typescript@6.0.3)
@@ -2785,6 +2788,11 @@ packages:
 
   aes-js@4.0.0-beta.5:
     resolution: {integrity: sha512-G965FqalsNyrPqgEGON7nIx1e/OVENSgiEIzyC63haUMuvNnwIgIjMs52hlTCKhkBny7A2ORNlfY9Zu+jmGk1Q==}
+
+  aftermath-ts-sdk@2.0.0:
+    resolution: {integrity: sha512-VkA2hapWYuJ47JlcidonEtUAylTkInqFCes6yCW/ah/9pJ5AbzUHl6rX8FTdwEtNhkC8mOXNLYFvYDlVR1KUgw==}
+    peerDependencies:
+      '@mysten/sui': '>=2.0.0 <3.0.0'
 
   agent-base@7.1.4:
     resolution: {integrity: sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ==}
@@ -9979,6 +9987,11 @@ snapshots:
   adm-zip@0.5.17: {}
 
   aes-js@4.0.0-beta.5: {}
+
+  aftermath-ts-sdk@2.0.0(@mysten/sui@2.16.0(typescript@6.0.3)):
+    dependencies:
+      '@mysten/sui': 2.16.0(typescript@6.0.3)
+      dayjs: 1.11.13
 
   agent-base@7.1.4: {}
 

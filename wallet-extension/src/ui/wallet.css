@@ -1674,6 +1674,15 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   gap: 10px;
   padding-bottom: 4px;
 }
+/* errors for passkey-only / bio-only: keep in footer so flex middle band does not pin buttons to viewport bottom */
+.sp-unlockFooterError {
+  flex: 0 0 auto;
+  width: 90%;
+  max-width: 320px;
+  text-align: center;
+  margin: 0;
+  box-sizing: border-box;
+}
 .sp-unlockPrimary { width: 90%; }
 .sp-unlockBio { width: 90%; }
 
@@ -1991,6 +2000,18 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 .sp-swapQuoteRow {
   display: flex; justify-content: space-between; align-items: center;
   padding: 3px 0; font-size: 12px;
+}
+.sp-swapQuoteRow--route {
+  align-items: flex-start;
+  gap: 10px;
+}
+.sp-swapQuoteRouteVal {
+  max-width: 55%;
+  min-width: 0;
+  text-align: right;
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.35;
 }
 .sp-swapQuoteLabel { color: var(--sp-muted); }
 .sp-swapQuoteVal { font-weight: 600; color: var(--sp-text); font-family: monospace; font-size: 12px; }

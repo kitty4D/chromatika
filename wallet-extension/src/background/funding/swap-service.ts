@@ -1,20 +1,20 @@
 /**
  * swap-service.ts - aftermath router integration for phase B Sui-native IKA top-up.
  *
- * zero new npm deps: uses fetch() to Aftermath REST API, deserializes returned
- * transaction bytes into a @mysten/sui Transaction, signs with suiKeypair.
- *
- * aftermath aggregates across Cetus, DeepBook, Turbos, FlowX, etc. so we get
- * the best route without integrating each DEX individually.
+ * uses `aftermath-ts-sdk` Router (replaced deprecated REST `/router/trade/*` which 404s).
+ * builds a Mysten `Transaction`, serializes bytes for the quote cache, signs via fee payer.
  */
 
+import { Aftermath } from 'aftermath-ts-sdk';
 import { Transaction } from '@mysten/sui/transactions';
+import { toBase64 } from '@mysten/sui/utils';
+import type { SessionState } from '@/background/session';
 import { getSession } from '@/background/session';
 import { executeSuiTransaction } from '@/background/sui/execute-transaction';
 import { getSuiFeePayerSuiAddress } from '@/background/sui/sui-fee-payer-signing';
+import type { SuiNetworkId } from '@/config/sui';
 import { ikaCoinType, getSuiBalanceMist, getIkaBalanceBaseUnits } from '@/background/ika/coins';
 import {
-  AFTERMATH_API_BASE,
   SUI_COIN_TYPE,
   MIN_SUI_RESERVE_MIST,
   DEFAULT_SLIPPAGE_BPS,
@@ -66,23 +66,33 @@ function getCachedQuote(id: string): SwapQuote | null {
   return cachedQuote;
 }
 
-// ---------- aftermath REST helpers ----------
+function aftermathSdkNetwork(network: SuiNetworkId): 'MAINNET' | 'TESTNET' {
+  return network === 'testnet' ? 'TESTNET' : 'MAINNET';
+}
 
-function aftermathBaseUrl(): string {
-  const s = getSession();
-  const net = s?.network ?? 'mainnet';
-  return AFTERMATH_API_BASE[net];
+function summarizeAftermathRoute(route: {
+  routes: Array<{ paths: Array<{ protocolName: string }> }>;
+  netTradeFeePercentage?: number;
+}): string {
+  const names: string[] = [];
+  for (const r of route.routes) {
+    for (const p of r.paths) {
+      names.push(p.protocolName);
+    }
+  }
+  const chain = names.length ? [...new Set(names)].join(' → ') : 'aggregated';
+  const fee = route.netTradeFeePercentage;
+  if (fee !== undefined && fee > 0) {
+    return `${chain} (~${(fee * 100).toFixed(2)}% route fee)`;
+  }
+  return chain;
 }
 
 /**
- * fetch a swap route + transaction bytes from Aftermath router.
- *
- * aftermath's /router/transactions endpoint returns a serialized Transaction
- * that we can deserialize and sign locally.
- *
- * docs: https://aftermath.finance/docs/router (the public-facing route endpoint)
+ * fetch a swap route and build serialized tx bytes via Aftermath SDK Router.
  */
 async function fetchAftermathRoute(
+  session: SessionState,
   fromCoinType: string,
   toCoinType: string,
   amountInBaseUnits: bigint,
@@ -95,73 +105,37 @@ async function fetchAftermathRoute(
   txBytesB64: string;
   routeSummary: string;
 }> {
-  const base = aftermathBaseUrl();
   const slippageDecimal = slippageBps / 10_000;
+  const af = new Aftermath(aftermathSdkNetwork(session.network));
+  await af.init();
+  const router = af.Router();
 
-  // step 1: get route + quote
-  const routeRes = await fetch(`${base}/router/trade/route`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      coinInType: fromCoinType,
-      coinOutType: toCoinType,
-      coinInAmount: amountInBaseUnits.toString(),
-      slippage: slippageDecimal,
-      senderAddress,
-    }),
+  const route = await router.getCompleteTradeRouteGivenAmountIn({
+    coinInType: fromCoinType,
+    coinOutType: toCoinType,
+    coinInAmount: amountInBaseUnits,
   });
 
-  if (!routeRes.ok) {
-    const body = await routeRes.text().catch(() => '');
-    throw new Error(
-      `aftermath router error (${routeRes.status}): ${body || routeRes.statusText}`,
-    );
-  }
-
-  const route = (await routeRes.json()) as {
-    coinOut?: { amount?: string };
-    spotPrice?: number;
-    priceImpact?: number;
-    routes?: Array<{ protocol?: string }>;
-  };
-
-  const expectedOut = BigInt(route.coinOut?.amount ?? '0');
+  const expectedOut = route.coinOut.amount;
   if (expectedOut === 0n) {
     throw new Error('no swap route found, IKA/SUI pool may not have liquidity on this network');
   }
 
-  const priceImpactPct = (route.priceImpact ?? 0).toFixed(4);
-  const protocols = (route.routes ?? []).map((r) => r.protocol ?? '?').join(' -> ');
-  const routeSummary = protocols || 'direct';
-
-  // step 2: get transaction bytes for this route
-  const txRes = await fetch(`${base}/router/trade/transaction`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      coinInType: fromCoinType,
-      coinOutType: toCoinType,
-      coinInAmount: amountInBaseUnits.toString(),
-      slippage: slippageDecimal,
-      senderAddress,
-    }),
+  const tx = await router.getTransactionForCompleteTradeRoute({
+    walletAddress: senderAddress,
+    completeRoute: route,
+    slippage: slippageDecimal,
   });
+  tx.setSender(senderAddress);
 
-  if (!txRes.ok) {
-    const body = await txRes.text().catch(() => '');
-    throw new Error(
-      `aftermath tx build error (${txRes.status}): ${body || txRes.statusText}`,
-    );
-  }
+  const built = await tx.build({ client: session.suiClient });
+  const txBytesB64 = toBase64(new Uint8Array(built));
 
-  const txData = (await txRes.json()) as { tx?: string; txBytes?: string };
-  const txBytesB64 = txData.tx ?? txData.txBytes ?? '';
-  if (!txBytesB64) {
-    throw new Error('aftermath returned empty transaction bytes');
-  }
-
-  // calculate min out with slippage
   const minOut = expectedOut - (expectedOut * BigInt(slippageBps)) / 10_000n;
+  const routeSummary = summarizeAftermathRoute(route);
+
+  // aftermath SDK route object does not expose price impact; keep a stable placeholder for the UI.
+  const priceImpactPct = '0.0000';
 
   return { expectedOut, minOut, priceImpactPct, txBytesB64, routeSummary };
 }
@@ -241,8 +215,14 @@ export async function getSwapQuote(
     );
   }
 
-  const { expectedOut, minOut, priceImpactPct, txBytesB64, routeSummary } =
-    await fetchAftermathRoute(SUI_COIN_TYPE, ikaType, amount, slippageBps, owner);
+  const { expectedOut, minOut, priceImpactPct, txBytesB64, routeSummary } = await fetchAftermathRoute(
+    s,
+    SUI_COIN_TYPE,
+    ikaType,
+    amount,
+    slippageBps,
+    owner,
+  );
 
   const quote: SwapQuote = {
     id: `swap-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -294,25 +274,31 @@ export async function executeSwap(quoteId: string, quoteFromClient?: SwapQuote):
     include: { effects: true, balanceChanges: true },
   });
 
-  // check for success
-  const status = (result as { effects?: { status?: { status?: string } } })
-    ?.effects?.status?.status;
-  if (status !== 'success') {
-    throw new Error(`swap transaction failed: ${status ?? 'unknown'}`);
+  // GraphQL `signAndExecuteTransaction` returns `{ $kind: 'Transaction' | 'FailedTransaction', … }`
+  // (same shape as ika presign). do not use JSON-RPC `effects.status.status`.
+  if (result.$kind === 'FailedTransaction') {
+    const failErr = result.FailedTransaction?.status?.error;
+    const reason = typeof failErr === 'string' ? failErr : JSON.stringify(failErr ?? 'unknown');
+    throw new Error(`swap transaction failed: ${reason}`);
+  }
+
+  const executed = result.Transaction;
+  if (!executed) {
+    throw new Error('swap transaction failed: missing transaction result');
   }
 
   // extract IKA received from balance changes
   const ikaType = quote.toCoinType;
-  const changes = (result as { balanceChanges?: Array<{ coinType?: string; amount?: string }> })
-    ?.balanceChanges ?? [];
+  const changes = (executed.balanceChanges ?? []) as Array<{ coinType?: string; amount?: string | bigint }>;
   const ikaChange = changes.find((c) => c.coinType === ikaType);
-  const received = ikaChange?.amount ?? quote.expectedOutBaseUnits;
+  const received =
+    ikaChange?.amount != null ? String(ikaChange.amount) : quote.expectedOutBaseUnits;
 
   // clear the cache
   cachedQuote = null;
 
   return {
-    txDigest: (result as { digest?: string }).digest ?? 'unknown',
+    txDigest: executed.digest ?? 'unknown',
     ikaReceivedBaseUnits: received,
   };
 }

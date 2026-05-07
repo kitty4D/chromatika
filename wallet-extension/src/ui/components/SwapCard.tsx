@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ikaFromBaseUnits } from '@/lib/sui-amount';
 import { trpc } from '@/lib/trpc';
 import type { SwapQuote } from '@/background/funding/swap-service';
 
@@ -14,7 +15,17 @@ function errText(e: unknown): string {
   }
 }
 
-export function SwapCard({ onClose, onSuccess }: { onClose: () => void; onSuccess: () => void }) {
+export function SwapCard({
+  onClose,
+  onSwapCommitted,
+  onSuccess,
+}: {
+  onClose: () => void;
+  /** runs as soon as the swap tx succeeds (before the success dwell). refresh balances here so fuel gauges update immediately. */
+  onSwapCommitted?: () => void;
+  /** runs after a short success dwell; typically closes the swap panel */
+  onSuccess: () => void;
+}) {
   const [step, setStep] = useState<SwapStep>('idle');
   const [quote, setQuote] = useState<SwapQuote | null>(null);
   const [customAmount, setCustomAmount] = useState('');
@@ -44,6 +55,7 @@ export function SwapCard({ onClose, onSuccess }: { onClose: () => void; onSucces
       const result = await trpc.executeSwap.mutate({ quoteId: quote.id, quote });
       setTxDigest(result.txDigest);
       setIkaReceived(result.ikaReceivedBaseUnits);
+      onSwapCommitted?.();
       setStep('success');
       setTimeout(onSuccess, 1500);
     } catch (e) {
@@ -60,9 +72,12 @@ export function SwapCard({ onClose, onSuccess }: { onClose: () => void; onSucces
     }
   }
 
+  /** IKA amounts from the quote are base units (9 decimals), same as on-chain balances. */
   function fmtIka(base: string): string {
     try {
-      return BigInt(base).toLocaleString();
+      const n = ikaFromBaseUnits(base);
+      if (!Number.isFinite(n)) return base;
+      return n.toLocaleString(undefined, { maximumFractionDigits: 6, minimumFractionDigits: 0 });
     } catch {
       return base;
     }
@@ -119,13 +134,9 @@ export function SwapCard({ onClose, onSuccess }: { onClose: () => void; onSucces
             <span className="sp-swapQuoteLabel">slippage</span>
             <span className="sp-swapQuoteVal">{(quote.slippageBps / 100).toFixed(1)}%</span>
           </div>
-          <div className="sp-swapQuoteRow">
-            <span className="sp-swapQuoteLabel">impact</span>
-            <span className="sp-swapQuoteVal">{quote.priceImpactPct}%</span>
-          </div>
-          <div className="sp-swapQuoteRow">
+          <div className="sp-swapQuoteRow sp-swapQuoteRow--route">
             <span className="sp-swapQuoteLabel">route</span>
-            <span className="sp-swapQuoteVal sp-muted">{quote.routeSummary}</span>
+            <span className="sp-swapQuoteVal sp-muted sp-swapQuoteRouteVal">{quote.routeSummary}</span>
           </div>
           <div className="sp-swapActions">
             <button type="button" className="sp-btn" onClick={() => setStep('idle')}>

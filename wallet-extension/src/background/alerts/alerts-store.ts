@@ -27,7 +27,7 @@ const MAX_KNOWN_ALERTS = 200;
 /** default v0 feed URL. override via `settings.customFeedUrl` (advanced) or VITE_ALERTS_FEED_URL. */
 export const DEFAULT_ALERTS_FEED_URL =
   (typeof import.meta !== 'undefined' && import.meta.env?.VITE_ALERTS_FEED_URL) ||
-  'https://chromatika.dev/safety-alerts.json';
+  'https://www.chromatika.xyz/safety-alerts.json';
 
 export interface AlertsSettings {
   /** suppress chrome.notifications + in-app banner. history page still shows alerts. */

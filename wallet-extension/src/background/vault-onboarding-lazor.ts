@@ -182,10 +182,11 @@ export async function createLazorVault(
     },
     payload,
   );
-  // immediately unlock the freshly-created lazor wallet.
+  // immediately unlock the freshly-created lazor wallet. Lazor is Solana-base, so the team
+  // faucet trigger inside `finalizeUnlock` will short-circuit on `record.baseChain === 'sui'`.
   await finalizeUnlock(
     { keyBytes: created.masterKeyBytes, key: created.key, kdfMeta: created.kdfMeta, payload },
-    30,
+    { autoLockMinutes: 30, isFreshlyCreated: true },
   );
 
   return {

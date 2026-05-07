@@ -4,6 +4,11 @@ import './mode-selector.css';
 
 type Size = 'xs' | 'sm' | 'md';
 
+// Resolve `/<asset>` against vite's BASE_URL so the same code works in the chrome
+// extension (BASE_URL = '/') AND in iframe preview builds where the wallet ships
+// under a subpath (e.g. '/wallet-live/').
+const PUBLIC_BASE = (import.meta.env.BASE_URL ?? '/');
+
 export function ModeSelectorPanel({
   active,
   onSelect,
@@ -51,7 +56,7 @@ export function ModeSelectorPanel({
         aria-pressed={active === 'sui'}
         title="Sui — ika dWallet base chain (tap again for vault management)"
       >
-        <img src="/sui-mode.svg" alt="" />
+        <img src={`${PUBLIC_BASE}sui-mode.svg`} alt="" />
       </button>
       {FEATURES.SOLANA_IKA_BASE_IN_UI && (
         <button
@@ -61,7 +66,7 @@ export function ModeSelectorPanel({
           aria-pressed={active === 'solana'}
           title="Solana — ika pre-alpha devnet (gRPC DKG + sign; tap again for vault management)"
         >
-          <img src="/solana-mode.svg" alt="" />
+          <img src={`${PUBLIC_BASE}solana-mode.svg`} alt="" />
         </button>
       )}
     </div>

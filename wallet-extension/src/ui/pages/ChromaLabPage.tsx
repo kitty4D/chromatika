@@ -249,14 +249,7 @@ export function ChromaLabPage({
   }
 
   if (!balances || balances.locked) {
-    return (
-      <div className="sp-page">
-        <div className="sp-pageTitle">chroma lab</div>
-        <p className="sp-muted" style={{ marginTop: 12 }}>
-          unlock the wallet to inspect ika / encrypt lab data and explorer links.
-        </p>
-      </div>
-    );
+    return null;
   }
 
   return (

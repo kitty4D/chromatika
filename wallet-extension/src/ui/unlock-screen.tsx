@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { humanizeUnlockError } from '@/lib/humanize-unlock-error';
 
 /**
  * extra non-password unlock method surfaced on the unlock screen. each entry comes from a
@@ -51,6 +52,21 @@ export function UnlockScreen(props: UnlockScreenProps) {
   const pressTimerRef = useRef<number | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
 
+  const showPassword = !hidePasswordSection;
+  const passkeyOnlyNoBio =
+    hidePasswordSection &&
+    !bioEnrolled &&
+    (extraMethods?.length === 1 && extraMethods[0]!.kind === 'passkey-prf');
+
+  /** password hidden, biometric is the sole unlock control (no passkey / waap rows) */
+  const biometricOnlyNoExtras =
+    hidePasswordSection &&
+    bioEnrolled &&
+    (extraMethods?.length ?? 0) === 0;
+
+  const showPasswordRef = useRef(showPassword);
+  showPasswordRef.current = showPassword;
+
   useEffect(() => () => {
     if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current);
   }, []);
@@ -59,6 +75,7 @@ export function UnlockScreen(props: UnlockScreenProps) {
   // panel: retry on rAF, on a short timeout, and whenever the window regains focus so
   // the password field is ready to type into the moment the surface is interactable.
   useEffect(() => {
+    if (!showPassword) return;
     const focusInput = () => inputRef.current?.focus();
     focusInput();
     const raf = window.requestAnimationFrame(focusInput);
@@ -69,7 +86,7 @@ export function UnlockScreen(props: UnlockScreenProps) {
       window.clearTimeout(timer);
       window.removeEventListener('focus', focusInput);
     };
-  }, []);
+  }, [showPassword]);
 
   // belt-and-suspenders for the "user just starts typing" case: if focus has wandered
   // off the input (or never landed) but the surface itself has focus, capture the first
@@ -83,6 +100,7 @@ export function UnlockScreen(props: UnlockScreenProps) {
   });
   useEffect(() => {
     function onWindowKeyDown(e: KeyboardEvent) {
+      if (!showPasswordRef.current) return;
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.key.length !== 1) return; // skip Tab/Enter/Arrow/etc.
       const active = document.activeElement as HTMLElement | null;
@@ -98,6 +116,39 @@ export function UnlockScreen(props: UnlockScreenProps) {
     return () => window.removeEventListener('keydown', onWindowKeyDown);
   }, []);
 
+  useEffect(() => {
+    if (!passkeyOnlyNoBio || !extraMethods?.[0]) return;
+    const { onClick } = extraMethods[0];
+    function onPasskeyShortcut(e: KeyboardEvent) {
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Tab' || e.key === 'Escape') return;
+      const active = document.activeElement as HTMLElement | null;
+      const tag = active?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || active?.isContentEditable) return;
+      e.preventDefault();
+      onClick();
+    }
+    window.addEventListener('keydown', onPasskeyShortcut, true);
+    return () => window.removeEventListener('keydown', onPasskeyShortcut, true);
+  }, [passkeyOnlyNoBio, extraMethods]);
+
+  useEffect(() => {
+    if (!biometricOnlyNoExtras || !onBiometricUnlock) return;
+    const runBio = onBiometricUnlock;
+    function onBiometricShortcut(e: KeyboardEvent) {
+      if (bioBusy) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.key === 'Tab' || e.key === 'Escape') return;
+      const active = document.activeElement as HTMLElement | null;
+      const tag = active?.tagName;
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || tag === 'BUTTON' || active?.isContentEditable) return;
+      e.preventDefault();
+      runBio();
+    }
+    window.addEventListener('keydown', onBiometricShortcut, true);
+    return () => window.removeEventListener('keydown', onBiometricShortcut, true);
+  }, [biometricOnlyNoExtras, onBiometricUnlock, bioBusy]);
+
   function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (pressTimerRef.current !== null) window.clearTimeout(pressTimerRef.current);
@@ -109,12 +160,13 @@ export function UnlockScreen(props: UnlockScreenProps) {
     onSubmit();
   }
 
-  const showPassword = !hidePasswordSection;
   const sloganCopy = (() => {
     if (showPassword && (extraMethods?.length ?? 0) > 0) return 'unlock with password or passkey.';
     if (!showPassword) return 'tap your unlock method.';
     return 'one password. every chain.';
   })();
+
+  const displayError = humanizeUnlockError(error);
 
   return (
     <form className="sp-unlockScreen" onSubmit={handleSubmit}>
@@ -133,15 +185,15 @@ export function UnlockScreen(props: UnlockScreenProps) {
             onChange={(e) => onPasswordChange(e.target.value)}
             autoFocus
           />
-          {error && <div className="sp-error">{error}</div>}
-        </div>
-      )}
-      {!showPassword && error && (
-        <div className="sp-unlockFieldWrap">
-          <div className="sp-error">{error}</div>
+          {displayError && <div className="sp-error">{displayError}</div>}
         </div>
       )}
       <div className="sp-unlockFooter">
+        {!showPassword && displayError ? (
+          <div className="sp-error sp-unlockFooterError" role="alert">
+            {displayError}
+          </div>
+        ) : null}
         {showPassword && (
           <button
             type="submit"

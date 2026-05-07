@@ -39,6 +39,9 @@ export default defineConfig({
   configFile: false,
   root: BUILD_ROOT,
   publicDir: resolve(REPO_ROOT, 'public'),
+  // emit relative asset paths so the bundle is portable: serves correctly when copied
+  // to any subpath (e.g. website/public/wallet-live/) without re-running the build.
+  base: './',
   plugins: [react()],
   resolve: {
     alias: {
@@ -46,6 +49,20 @@ export default defineConfig({
       // background graph (@ika.xyz/sdk, @mysten/sui, ledger libs, vault crypto, etc.)
       // because nothing else imports `@/server/router` runtime
       '@/lib/trpc': resolve(BUILD_ROOT, 'trpc-mock.ts'),
+      // pages that crash or stall in static preview (real chain reads, signing, real
+      // chrome.storage etc) are swapped for placeholder UI explaining "not available
+      // in live preview". the real modules ship in the actual extension bundle.
+      '@/ui/pages/IkaStakingPage': resolve(BUILD_ROOT, 'preview-placeholder-page.tsx'),
+      '@/ui/pages/ChromaLabPage': resolve(BUILD_ROOT, 'preview-placeholder-page.tsx'),
+      '@/ui/pages/PaymentsPage': resolve(BUILD_ROOT, 'preview-placeholder-page.tsx'),
+      '@/ui/pages/AgentsPage': resolve(BUILD_ROOT, 'preview-placeholder-page.tsx'),
+      '@/ui/pages/PolicyVaultPage': resolve(BUILD_ROOT, 'preview-placeholder-page.tsx'),
+      '@/ui/pages/VaultManagementScreen': resolve(BUILD_ROOT, 'preview-placeholder-page.tsx'),
+      '@/ui/pages/DWalletManagementScreen': resolve(BUILD_ROOT, 'preview-placeholder-page.tsx'),
+      // drawer strip becomes a "disabled-tooltip" version: shows the same four buttons
+      // but clicking any of them surfaces "X - not available in live preview" instead
+      // of trying to setTab('ikaStake') etc.
+      '@/ui/components/WalletChromeIkaLabStrip': resolve(BUILD_ROOT, 'preview-drawer.tsx'),
       '@': resolve(REPO_ROOT, 'src'),
     },
     dedupe: ['react', 'react-dom'],
@@ -53,6 +70,10 @@ export default defineConfig({
   define: {
     global: 'globalThis',
     __CHROMATIKA_BUILD_STAMP__: JSON.stringify(`preview-${new Date().toISOString()}`),
+    // surface the Solana ika base mode toggle in the title bar so visitors see both
+    // mode pills (the gate is otherwise off in production-style builds).
+    'import.meta.env.VITE_SOLANA_IKA_BASE': JSON.stringify('true'),
+    __CHROMATIKA_PREVIEW_IFRAME__: JSON.stringify(true),
   },
   build: {
     outDir: resolve(REPO_ROOT, 'preview-dist'),

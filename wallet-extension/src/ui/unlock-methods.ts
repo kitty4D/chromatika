@@ -109,18 +109,22 @@ export function useUnlockMethods(args: {
           hint: 'face id · fingerprint · pin',
           busy: busyEnvelopeId === env.id,
           onClick: () => {
-            setBusyEnvelopeId(env.id);
+            // invoke WebAuthn in the same synchronously-handled user-gesture turn as the click
+            // (or unlock-screen keydown shortcut). setState first can drop transient activation on
+            // Windows / Chrome before credentials.get runs.
+            const p = unlockWithPasskeyEnvelope(env, autoLockMinutes);
             setError(null);
-            void (async () => {
-              try {
-                await unlockWithPasskeyEnvelope(env, autoLockMinutes);
+            setBusyEnvelopeId(env.id);
+            void p
+              .then(() => {
                 onUnlocked();
-              } catch (e) {
+              })
+              .catch((e) => {
                 setError(e instanceof Error ? e.message : String(e));
-              } finally {
+              })
+              .finally(() => {
                 setBusyEnvelopeId(null);
-              }
-            })();
+              });
           },
         });
         continue;
@@ -138,18 +142,19 @@ export function useUnlockMethods(args: {
                 : env.source,
           busy: busyEnvelopeId === env.id,
           onClick: () => {
-            setBusyEnvelopeId(env.id);
+            const p = unlockWithWalletSignatureEnvelope(env, autoLockMinutes);
             setError(null);
-            void (async () => {
-              try {
-                await unlockWithWalletSignatureEnvelope(env, autoLockMinutes);
+            setBusyEnvelopeId(env.id);
+            void p
+              .then(() => {
                 onUnlocked();
-              } catch (e) {
+              })
+              .catch((e) => {
                 setError(e instanceof Error ? e.message : String(e));
-              } finally {
+              })
+              .finally(() => {
                 setBusyEnvelopeId(null);
-              }
-            })();
+              });
           },
         });
         continue;

@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import type { ReactNode } from 'react';
 import {
   ChevronRight,
   Wallet,
@@ -34,6 +35,7 @@ import { AlertsSettingsSection } from '@/ui/components/AlertsSettingsSection';
 import { PcTokenMarketsPanel } from '@/ui/components/PcTokenMarketsPanel';
 import { DeSoPanel } from '@/ui/components/DeSoPanel';
 import { X402ReceiptsSection } from '@/ui/components/X402ReceiptsSection';
+import { PreviewDisabledTooltip } from '@/ui/components/PreviewDisabledTooltip';
 import { DAppsPage } from '@/ui/pages/DAppsPage';
 import { NetworkSelectorPage } from '@/ui/pages/NetworkSelectorPage';
 import {
@@ -89,13 +91,24 @@ function SubScreenHeader({ title, onBack }: { title: string; onBack: () => void 
 }
 
 type MenuRowProps = {
-  icon: React.ReactNode;
+  icon: ReactNode;
   title: string;
   desc?: string;
   badge?: string;
   onClick: () => void;
   variant?: 'default' | 'danger';
 };
+
+const SETTINGS_PREVIEW_MENU_MSG = 'settings - not available in live preview';
+
+function gateSettingsMainMenuRow(node: ReactNode) {
+  if (!__CHROMATIKA_PREVIEW_IFRAME__) return node;
+  return (
+    <PreviewDisabledTooltip layout="block" message={SETTINGS_PREVIEW_MENU_MSG}>
+      {node}
+    </PreviewDisabledTooltip>
+  );
+}
 
 function MenuRow({ icon, title, desc, badge, onClick, variant = 'default' }: MenuRowProps) {
   return (
@@ -719,116 +732,141 @@ export function SettingsPage({
       <div className="sp-menuList">
         <div className="sp-menuGroupLabel">wallet</div>
 
-        {onOpenVaultManagement && (
-          <MenuRow
-            icon={<Wallet size={16} strokeWidth={2} />}
-            title="dWallet vaults"
-            desc="manage vaults, scan for more accounts, rename or remove"
-            onClick={onOpenVaultManagement}
-          />
-        )}
+        {onOpenVaultManagement &&
+          gateSettingsMainMenuRow(
+            <MenuRow
+              icon={<Wallet size={16} strokeWidth={2} />}
+              title="dWallet vaults"
+              desc="manage vaults, scan for more accounts, rename or remove"
+              onClick={onOpenVaultManagement}
+            />,
+          )}
 
         <div className="sp-menuGroupLabel">appearance</div>
 
-        <MenuRow
-          icon={<Palette size={16} strokeWidth={2} />}
-          title="appearance & cockpit"
-          desc={`${themeLabel} · pilot crew + animations`}
-          onClick={() => setStab('appearance')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<Palette size={16} strokeWidth={2} />}
+            title="appearance & cockpit"
+            desc={`${themeLabel} · pilot crew + animations`}
+            onClick={() => setStab('appearance')}
+          />,
+        )}
 
         <div className="sp-menuGroupLabel">privacy</div>
 
-        <MenuRow
-          icon={<Shield size={16} strokeWidth={2} />}
-          title="privacy & safety"
-          desc={`alerts · biometric unlock · media: ${safetyLabel}`}
-          onClick={() => setStab('safety')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<Shield size={16} strokeWidth={2} />}
+            title="privacy & safety"
+            desc={`alerts · biometric unlock · media: ${safetyLabel}`}
+            onClick={() => setStab('safety')}
+          />,
+        )}
 
         <div className="sp-menuGroupLabel">network</div>
 
-        <MenuRow
-          icon={<Globe size={16} strokeWidth={2} />}
-          title="dWallet network"
-          desc={`signing + dapps · evm: ${dwalletEvmName}`}
-          onClick={() => {
-            setNetworkTier('dwallet');
-            setStab('networks');
-          }}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<Globe size={16} strokeWidth={2} />}
+            title="dWallet network"
+            desc={`signing + dapps · evm: ${dwalletEvmName}`}
+            onClick={() => {
+              setNetworkTier('dwallet');
+              setStab('networks');
+            }}
+          />,
+        )}
 
-        <MenuRow
-          icon={<Boxes size={16} strokeWidth={2} />}
-          title="vault network"
-          desc="fee payer / owner chains for the active vault"
-          onClick={() => {
-            setNetworkTier('vault');
-            setStab('networks');
-          }}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<Boxes size={16} strokeWidth={2} />}
+            title="vault network"
+            desc="fee payer / owner chains for the active vault"
+            onClick={() => {
+              setNetworkTier('vault');
+              setStab('networks');
+            }}
+          />,
+        )}
 
-        <MenuRow
-          icon={<ExternalLink size={16} strokeWidth={2} />}
-          title="explorers & prices"
-          desc="block explorer choice + USD price source order"
-          onClick={() => setStab('explorers')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<ExternalLink size={16} strokeWidth={2} />}
+            title="explorers & prices"
+            desc="block explorer choice + USD price source order"
+            onClick={() => setStab('explorers')}
+          />,
+        )}
 
         <div className="sp-menuGroupLabel">apps & payments</div>
 
-        <MenuRow
-          icon={<Plug size={16} strokeWidth={2} />}
-          title="connected dapps"
-          desc="review or revoke sites linked to chromatika"
-          onClick={() => setStab('dapps')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<Plug size={16} strokeWidth={2} />}
+            title="connected dapps"
+            desc="review or revoke sites linked to chromatika"
+            onClick={() => setStab('dapps')}
+          />,
+        )}
 
-        <MenuRow
-          icon={<CreditCard size={16} strokeWidth={2} />}
-          title="payments (x402)"
-          desc="caps, receipts, and 402 payment history"
-          onClick={() => setStab('payments')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<CreditCard size={16} strokeWidth={2} />}
+            title="payments (x402)"
+            desc="caps, receipts, and 402 payment history"
+            onClick={() => setStab('payments')}
+          />,
+        )}
 
-        <MenuRow
-          icon={<EyeOff size={16} strokeWidth={2} />}
-          title="confidential compute"
-          desc="PC-Token markets and DeSo private feeds"
-          onClick={() => setStab('confidential')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<EyeOff size={16} strokeWidth={2} />}
+            title="confidential compute"
+            desc="PC-Token markets and DeSo private feeds"
+            onClick={() => setStab('confidential')}
+          />,
+        )}
 
         <div className="sp-menuGroupLabel">more</div>
 
-        <MenuRow
-          icon={<HardDrive size={16} strokeWidth={2} />}
-          title="hardware wallets"
-          desc="how to connect Ledger / Seeker"
-          onClick={() => setStab('hardware')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<HardDrive size={16} strokeWidth={2} />}
+            title="hardware wallets"
+            desc="how to connect Ledger / Seeker"
+            onClick={() => setStab('hardware')}
+          />,
+        )}
 
-        <MenuRow
-          icon={<HelpCircle size={16} strokeWidth={2} />}
-          title="help & hints"
-          desc={`screen help bubbles: ${uiHelpHints ? 'on' : 'off'}`}
-          onClick={() => setStab('help')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<HelpCircle size={16} strokeWidth={2} />}
+            title="help & hints"
+            desc={`screen help bubbles: ${uiHelpHints ? 'on' : 'off'}`}
+            onClick={() => setStab('help')}
+          />,
+        )}
 
-        <MenuRow
-          icon={<Wrench size={16} strokeWidth={2} />}
-          title="advanced"
-          desc={`raw addresses + dev tools: ${advanced ? 'on' : 'off'}`}
-          onClick={() => setStab('advanced')}
-        />
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<Wrench size={16} strokeWidth={2} />}
+            title="advanced"
+            desc={`raw addresses + dev tools: ${advanced ? 'on' : 'off'}`}
+            onClick={() => setStab('advanced')}
+          />,
+        )}
 
         <div style={{ marginTop: 14 }}>
-          <MenuRow
-            icon={<LockIcon size={16} strokeWidth={2} />}
-            title="lock wallet"
-            desc="sign out of this session and require password to unlock"
-            onClick={onLock}
-            variant="danger"
-          />
+          {gateSettingsMainMenuRow(
+            <MenuRow
+              icon={<LockIcon size={16} strokeWidth={2} />}
+              title="lock wallet"
+              desc="sign out of this session and require password to unlock"
+              onClick={onLock}
+              variant="danger"
+            />,
+          )}
         </div>
       </div>
     </div>

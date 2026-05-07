@@ -1,0 +1,19 @@
+# local dev secrets for the team funder Worker. copy to `.dev.vars` (gitignored), fill in,
+# then `pnpm wrangler dev` reads them automatically. NEVER commit `.dev.vars`.
+
+# Sui mainnet bech32 private key for the team funder wallet. starts with `suiprivkey1...`.
+# this wallet must hold mainnet SUI and mainnet IKA. wallet is HOT BY DESIGN; bound the worst
+# case by funding it with only a small float (a few SUI + a small chunk of IKA) and letting
+# the lifetime cap or manual top-up cadence be the operational mitigation.
+FUNDER_SUI_PRIVKEY=suiprivkey1...
+
+# bearer token chromatika builds present in the `Authorization: Bearer <token>` header.
+# random hex, ~32 bytes. must match `VITE_FUNDER_TOKEN` in the chromatika build.
+FUNDER_BEARER_TOKEN=dev-token-replace-me
+
+# optional: hard ceiling on total fundings ever served by this worker. absent = unlimited.
+# LIFETIME_CAP=500
+
+# optional: separate token for the admin `DELETE /address/<addr>` endpoint that clears a
+# single address's lifetime dedupe (operational tool when a paired user needs a re-fund).
+# ADMIN_BEARER_TOKEN=admin-dev-token-replace-me

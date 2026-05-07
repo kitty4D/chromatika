@@ -179,6 +179,7 @@ export default defineConfig({
     // some node-oriented deps (ledger, bitcoinjs, etc.) reference `global` - map to browser equivalent
     global: 'globalThis',
     __CHROMATIKA_BUILD_STAMP__: JSON.stringify(buildStamp),
+    __CHROMATIKA_PREVIEW_IFRAME__: JSON.stringify(false),
   },
   build: {
     sourcemap: true,

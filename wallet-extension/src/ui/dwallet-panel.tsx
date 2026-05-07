@@ -159,7 +159,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
       if (/wallet locked/i.test(raw)) {
         broadcast({ type: 'balances_updated' });
         setMsg(
-          `${raw} — the extension background may have restarted and cleared the unlock session. unlock the wallet again, then retry.`,
+          `${raw}. session may have reset: open the wallet and retry.`,
         );
       } else {
         setMsg(raw);

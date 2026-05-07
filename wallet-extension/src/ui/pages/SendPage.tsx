@@ -5,6 +5,7 @@ import type { Balances, Networks } from '@/ui/types';
 import { HiddenTransferForm } from '@/ui/components/HiddenTransferForm';
 import { PolicyVaultBanner } from '@/ui/components/PolicyVaultBanner';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
+import { PreviewDisabledTooltip } from '@/ui/components/PreviewDisabledTooltip';
 import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
 import { buildSolanaExplorerUrl } from '@/config/explorers';
 import { activityTxExplorerHref } from '@/lib/explorer-href';
@@ -362,15 +363,12 @@ export function SendPage({
             </div>
           )}
 
-          <button
-            type="button"
-            className="sp-btn sp-btnPrimary sp-btnFull"
-            disabled={
-              sending || (chain !== 'evm' && chain !== 'sui' && chain !== 'solana' && chain !== 'btc')
-            }
-            onClick={onSend}
-          >
-            {sending
+          {(() => {
+            const sendCtaLocked =
+              sending
+              || (chain !== 'evm' && chain !== 'sui' && chain !== 'solana' && chain !== 'btc')
+              || __CHROMATIKA_PREVIEW_IFRAME__;
+            const label = sending
               ? chain === 'sui'
                 ? 'signing…'
                 : chain === 'btc'
@@ -386,8 +384,25 @@ export function SendPage({
                       : 'send SOL'
                     : chain === 'btc'
                       ? 'send BTC'
-                      : `${chain} send coming soon`}
-          </button>
+                      : `${chain} send coming soon`;
+            const btn = (
+              <button
+                type="button"
+                className="sp-btn sp-btnPrimary sp-btnFull"
+                disabled={sendCtaLocked}
+                onClick={onSend}
+              >
+                {label}
+              </button>
+            );
+            return __CHROMATIKA_PREVIEW_IFRAME__ ? (
+              <PreviewDisabledTooltip message="send - not available in live preview" layout="block">
+                {btn}
+              </PreviewDisabledTooltip>
+            ) : (
+              btn
+            );
+          })()}
         </>
       )}
     </div>

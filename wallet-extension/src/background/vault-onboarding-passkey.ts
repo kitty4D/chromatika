@@ -143,7 +143,7 @@ export async function createPasskeyVault(
   // `finalizeUnlock`, which writes them to the unlock cache and zeros them.
   await finalizeUnlock(
     { keyBytes: created.masterKeyBytes, key: created.key, kdfMeta: created.kdfMeta, payload },
-    30,
+    { autoLockMinutes: 30, isFreshlyCreated: true },
   );
   return { vaultId: id, suiAddress };
 }
