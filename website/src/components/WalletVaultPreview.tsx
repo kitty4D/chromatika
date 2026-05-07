@@ -92,8 +92,6 @@ export function WalletVaultPreview() {
                 src="/wallet-live/vault-home.html"
                 title="Chromatika vault home (live preview)"
                 className="wallet-preview-iframe"
-                width="400"
-                height="720"
                 loading="lazy"
                 sandbox="allow-scripts allow-same-origin"
               />

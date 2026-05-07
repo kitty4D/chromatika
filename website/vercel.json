@@ -1,0 +1,10 @@
+{
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "rewrites": [
+    {
+      "source": "/((?!assets/|images/|logos/|guide/|wallet-live/|sitemap\\.xml|robots\\.txt|site\\.webmanifest|.*\\..*).*)",
+      "destination": "/index.html"
+    }
+  ]
+}

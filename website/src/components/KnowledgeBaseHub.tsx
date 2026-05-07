@@ -12,7 +12,7 @@ export function KnowledgeBaseHub() {
   });
 
   return (
-    <div className="home knowledge-base-hub">
+    <div className="knowledge-base-hub">
       <nav className="crumbs" aria-label="breadcrumb">
         <Link to="/">home</Link>
         <span aria-hidden="true">/</span>

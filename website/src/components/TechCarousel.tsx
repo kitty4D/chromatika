@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Link } from "react-router-dom";
 import { homeTechCarouselSlides } from "../data/home-tech";
 
 const AUTO_ADVANCE_MS = 7000;
@@ -62,8 +63,17 @@ function LazorkitCarouselMark({ className }: { className?: string }) {
   );
 }
 
+function carouselStepDirection(from: number, to: number, len: number): 1 | -1 {
+  const forward = (to - from + len) % len;
+  const backward = (from - to + len) % len;
+  return forward <= backward ? 1 : -1;
+}
+
 export function TechCarousel() {
+  const rootRef = useRef<HTMLDivElement>(null);
   const [i, setI] = useState(0);
+  /** horizontal enter matches chevrons; null only before first in-carousel navigation */
+  const [enterDir, setEnterDir] = useState<"next" | "prev" | null>(null);
   const [hovered, setHovered] = useState(false);
   const [focusedWithin, setFocusedWithin] = useState(false);
 
@@ -74,6 +84,7 @@ export function TechCarousel() {
 
   const go = useCallback(
     (dir: -1 | 1) => {
+      setEnterDir(dir === 1 ? "next" : "prev");
       setI((x) => (x + dir + n) % n);
     },
     [n]
@@ -81,8 +92,16 @@ export function TechCarousel() {
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === "ArrowLeft") go(-1);
-      if (e.key === "ArrowRight") go(1);
+      const root = rootRef.current;
+      if (!root?.contains(document.activeElement)) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        go(-1);
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        go(1);
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -93,13 +112,25 @@ export function TechCarousel() {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     if (pauseAuto) return;
     const t = window.setInterval(() => {
+      setEnterDir("next");
       setI((x) => (x + 1) % n);
     }, AUTO_ADVANCE_MS);
     return () => window.clearInterval(t);
   }, [pauseAuto, n]);
 
+  const titleGradient =
+    slide.id === "ika" || slide.id === "encrypt" ? " tech-carousel-title--gradient" : "";
+
+  const enterClass =
+    enterDir === null
+      ? "tech-carousel-panel--enter-none"
+      : enterDir === "next"
+        ? "tech-carousel-panel--enter-next"
+        : "tech-carousel-panel--enter-prev";
+
   return (
     <div
+      ref={rootRef}
       className="tech-carousel"
       aria-roledescription="carousel"
       aria-label="technologies used in chromatika"
@@ -124,18 +155,22 @@ export function TechCarousel() {
           >
             <ChevronLeftIcon />
           </button>
-          <span className="tech-carousel-dots" aria-hidden="true">
+          <div className="tech-carousel-segments" role="group" aria-label="Choose slide">
             {homeTechCarouselSlides.map((s, j) => (
               <button
                 key={s.id}
                 type="button"
-                className={`tech-carousel-dot ${j === i ? "tech-carousel-dot--active" : ""}`}
+                className={`tech-carousel-segment ${j === i ? "tech-carousel-segment--active" : ""}`}
                 aria-label={`Show ${s.title}`}
                 aria-current={j === i ? "true" : undefined}
-                onClick={() => setI(j)}
+                onClick={() => {
+                  if (j === i) return;
+                  setEnterDir(carouselStepDirection(i, j, n) === 1 ? "next" : "prev");
+                  setI(j);
+                }}
               />
             ))}
-          </span>
+          </div>
           <button
             type="button"
             className="tech-carousel-btn tech-carousel-btn--nav"
@@ -147,36 +182,49 @@ export function TechCarousel() {
         </div>
       </div>
 
-      <article key={slide.id} className="tech-carousel-panel" aria-live="polite">
+      <article
+        key={slide.id}
+        className={`tech-carousel-panel tech-carousel-panel--${slide.id} ${enterClass}`}
+        aria-live="polite"
+      >
         <div className="tech-carousel-panel-head">
-          <h2 className="tech-carousel-title">{slide.title}</h2>
+          <h2 className={`tech-carousel-title${titleGradient}`}>{slide.title}</h2>
           <div className="tech-carousel-logo-corner">
-            {slide.id === "lazorkit" ? (
-              <LazorkitCarouselMark className="tech-carousel-logo tech-carousel-logo--inline" />
-            ) : slide.logoSrc ? (
-              <img
-                src={slide.logoSrc}
-                alt=""
-                className={
-                  slide.id === "encrypt"
-                    ? "tech-carousel-logo tech-carousel-logo--encrypt"
-                    : "tech-carousel-logo"
-                }
-                decoding="async"
-              />
-            ) : null}
+            <div className="tech-carousel-logo-stage">
+              {slide.id === "lazorkit" ? (
+                <LazorkitCarouselMark className="tech-carousel-logo tech-carousel-logo--inline" />
+              ) : slide.logoSrc ? (
+                <img
+                  src={slide.logoSrc}
+                  alt=""
+                  className={
+                    slide.id === "encrypt"
+                      ? "tech-carousel-logo tech-carousel-logo--encrypt"
+                      : "tech-carousel-logo"
+                  }
+                  decoding="async"
+                />
+              ) : null}
+            </div>
           </div>
         </div>
         <p className="tech-carousel-intro">{slide.intro}</p>
-        <hr className="tech-carousel-split" aria-hidden="true" />
-        <h3 className="tech-carousel-how-title">how we use it</h3>
-        <p className="tech-carousel-body">{slide.howWeUse}</p>
-        {slide.howWeUseBullets && slide.howWeUseBullets.length > 0 ? (
-          <ul className="tech-carousel-bullets">
-            {slide.howWeUseBullets.map((item, bi) => (
-              <li key={`${slide.id}-b-${bi}`}>{item}</li>
-            ))}
-          </ul>
+        <div className="tech-carousel-how-block">
+          <p className="tech-carousel-how-kicker">integration</p>
+          <h3 className="tech-carousel-how-title">how we use it</h3>
+          <p className="tech-carousel-body">{slide.howWeUse}</p>
+          {slide.howWeUseBullets && slide.howWeUseBullets.length > 0 ? (
+            <ul className="tech-carousel-bullets">
+              {slide.howWeUseBullets.map((item, bi) => (
+                <li key={`${slide.id}-b-${bi}`}>{item}</li>
+              ))}
+            </ul>
+          ) : null}
+        </div>
+        {slide.guideHref ? (
+          <Link to={slide.guideHref} className="tech-carousel-guide-link">
+            learn more in our guide →
+          </Link>
         ) : null}
         <nav className="tech-carousel-links" aria-label={`${slide.title} external links`}>
           {slide.links.map((link) => (

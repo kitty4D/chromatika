@@ -152,16 +152,21 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
         <label htmlFor={inputId} className="visually-hidden">
           search knowledge base, user guides, and tech guides
         </label>
-        <input
-          id={inputId}
-          ref={inputRef}
-          type="search"
-          className="search-modal-input"
-          placeholder="knowledge base, user guides, tech guides…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          autoComplete="off"
-        />
+        <div className="search-modal-input-row">
+          <span className="search-modal-input-icon" aria-hidden>
+            <SearchGlyph />
+          </span>
+          <input
+            id={inputId}
+            ref={inputRef}
+            type="search"
+            className="search-modal-input"
+            placeholder="knowledge base, user guides, tech guides…"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            autoComplete="off"
+          />
+        </div>
         <ul className="search-modal-results" aria-label="search results">
           {!q.trim() && (
             <li className="search-modal-empty">

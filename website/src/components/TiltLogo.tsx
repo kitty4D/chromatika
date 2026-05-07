@@ -83,7 +83,11 @@ export function TiltLogo({ variant = "hero" }: { variant?: "hero" }) {
   }, []);
 
   return (
-    <div className={`tilt-logo-stage tilt-logo-stage--${variant}`} ref={stageRef}>
+    <div
+      className={`tilt-logo-stage tilt-logo-stage--${variant}`}
+      ref={stageRef}
+      aria-label="Chromatika mark"
+    >
       <img
         src="/images/chromatika.svg"
         alt=""

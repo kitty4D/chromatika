@@ -25,22 +25,24 @@ function LibrarySidebar({
       <p className="docs-sidebar-title">
         <Link to={basePath}>{label}</Link>
       </p>
-      <ul className="docs-nav-list library-nav-list">
-        {listLibraryNav(kind).map(({ slug, title }) => {
-          const to = `${basePath}/${slug}`;
-          const isActive = activeSlug === slug;
-          return (
-            <li key={slug}>
-              <Link
-                to={to}
-                className={isActive ? "docs-nav-link docs-nav-link--active" : "docs-nav-link"}
-              >
-                {title}
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      <nav className="docs-sidebar-scroll" aria-label={`${label} index`}>
+        <ul className="docs-nav-list library-nav-list">
+          {listLibraryNav(kind).map(({ slug, title }) => {
+            const to = `${basePath}/${slug}`;
+            const isActive = activeSlug === slug;
+            return (
+              <li key={slug}>
+                <Link
+                  to={to}
+                  className={isActive ? "docs-nav-link docs-nav-link--active" : "docs-nav-link"}
+                >
+                  {title}
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      </nav>
     </aside>
   );
 }

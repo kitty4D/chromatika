@@ -8,7 +8,9 @@ export function SiteFooter() {
       <div className="site-footer-inner">
         <div className="site-footer-top">
           <div className="site-footer-brand">
-            <span className="site-footer-mark">chromatika</span>
+            <span className="site-footer-mark">
+              <span className="site-footer-mark-text">chromatika</span>
+            </span>
             <span className="site-footer-tagline">pre-release browser wallet</span>
           </div>
           <div className="site-footer-cols" role="navigation" aria-label="footer">
@@ -56,8 +58,8 @@ export function SiteFooter() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://x.com/chromat_ika" target="_blank" rel="noopener noreferrer">
-                    @chromat_ika
+                  <a href="https://x.com/chromatika_xyz" target="_blank" rel="noopener noreferrer">
+                    @chromatika_xyz
                   </a>
                 </li>
               </ul>
