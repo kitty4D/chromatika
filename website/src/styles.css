@@ -2875,6 +2875,11 @@ body {
   /* chrome extension side-panel portrait (~400×720) wrapping a real wallet iframe */
   width: 100%;
   max-width: 400px;
+  /* aspect-ratio on the FRAME (not the inner wrap) so the card has a definite shape
+     before its flex children resolve. firefox computes aspect-ratio + flex:1 on the
+     inner wrap differently than chrome; pinning the shape here makes both browsers
+     render the same. */
+  aspect-ratio: 400 / 720;
   margin-inline-start: auto;
   border-radius: var(--radius-lg);
   border: 1px solid oklch(0.65 0.1 270 / 0.55);
@@ -2901,8 +2906,7 @@ body {
   display: flex;
   background: oklch(0.1 0.03 290);
   border-block: 1px solid oklch(0.55 0.08 260 / 0.25);
-  /* keep the aspect ratio close to the side-panel so the iframe doesn't crop the wallet UI */
-  aspect-ratio: 400 / 720;
+  /* aspect-ratio lives on .wallet-preview-frame now; this wrap just fills its flex slot */
   min-height: 0;
   overflow: hidden;
   border-radius: var(--radius-lg);
