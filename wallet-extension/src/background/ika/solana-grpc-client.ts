@@ -124,6 +124,11 @@ function nsaFromB64(b64: string): SolanaNetworkSignedAttestation {
 /**
  * submits BCS `SignedRequestData` to ika `SubmitTransaction`, with ED25519 user signature over the payload.
  */
+/** default per-call timeouts (ms). keeps the SW alive and surfaces hangs as errors. */
+const GRPC_TIMEOUT_DKG_MS = 60_000;
+const GRPC_TIMEOUT_PRESIGN_MS = 45_000;
+const GRPC_TIMEOUT_SIGN_MS = 120_000;
+
 export class SolanaIkaGrpcClient {
   private readonly client: DWalletServiceClient;
 
@@ -146,13 +151,29 @@ export class SolanaIkaGrpcClient {
     }).toBytes();
   }
 
-  async submitSignedRequestData(signedRequestData: Uint8Array): Promise<Uint8Array> {
+  async submitSignedRequestData(signedRequestData: Uint8Array, timeoutMs?: number): Promise<Uint8Array> {
     const userSig = await this.userSignatureBytes(signedRequestData);
-    const { response } = await this.client.submitTransaction({
-      userSignature: userSig,
-      signedRequestData: signedRequestData,
-    });
-    return response.responseData;
+    const controller = timeoutMs ? new AbortController() : undefined;
+    const timer = controller
+      ? setTimeout(() => controller.abort(), timeoutMs)
+      : undefined;
+    try {
+      const { response } = await this.client.submitTransaction(
+        {
+          userSignature: userSig,
+          signedRequestData: signedRequestData,
+        },
+        controller ? { abort: controller.signal } : undefined,
+      );
+      return response.responseData;
+    } catch (e) {
+      if (controller?.signal.aborted) {
+        throw new Error(`gRPC timed out after ${timeoutMs}ms`);
+      }
+      throw e;
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /**
@@ -192,7 +213,7 @@ export class SolanaIkaGrpcClient {
       },
     }).toBytes();
 
-    const respBytes = await this.submitSignedRequestData(new Uint8Array(data));
+    const respBytes = await this.submitSignedRequestData(new Uint8Array(data), GRPC_TIMEOUT_DKG_MS);
     const resp = bcs.TransactionResponseData.parse(new Uint8Array(respBytes)) as {
       Attestation?: {
         attestation_data: number[];
@@ -261,7 +282,7 @@ export class SolanaIkaGrpcClient {
       },
     }).toBytes();
 
-    const respBytes = await this.submitSignedRequestData(new Uint8Array(data));
+    const respBytes = await this.submitSignedRequestData(new Uint8Array(data), GRPC_TIMEOUT_PRESIGN_MS);
     const resp = bcs.TransactionResponseData.parse(new Uint8Array(respBytes)) as {
       Attestation?: { attestation_data: number[] };
       Error?: { message: string };
@@ -316,7 +337,7 @@ export class SolanaIkaGrpcClient {
       },
     }).toBytes();
 
-    const respBytes = await this.submitSignedRequestData(new Uint8Array(data));
+    const respBytes = await this.submitSignedRequestData(new Uint8Array(data), GRPC_TIMEOUT_PRESIGN_MS);
     const resp = bcs.TransactionResponseData.parse(new Uint8Array(respBytes)) as {
       Attestation?: { attestation_data: number[] };
       Error?: { message: string };
@@ -392,7 +413,7 @@ export class SolanaIkaGrpcClient {
       },
     }).toBytes();
 
-    const respBytes = await this.submitSignedRequestData(new Uint8Array(data));
+    const respBytes = await this.submitSignedRequestData(new Uint8Array(data), GRPC_TIMEOUT_SIGN_MS);
     const resp = bcs.TransactionResponseData.parse(new Uint8Array(respBytes)) as {
       Signature?: { signature: number[] };
       Error?: { message: string };

@@ -81,8 +81,14 @@ const DEFAULT_OPTIN = {
   initialSuiMist: '10000000', // 0.01 SUI
 };
 
-export function PolicyVaultPanel() {
-  const [state, setState] = useState<PolicyState | null>(null);
+/** policy panel state snapshot (dev `policyPanelDemo` frozen panel). */
+export type PolicyVaultPanelState = PolicyState;
+
+export function PolicyVaultPanel({ freezeDemoState }: { freezeDemoState?: PolicyVaultPanelState } = {}) {
+  const isFrozenDemo = freezeDemoState !== undefined;
+  const [state, setState] = useState<PolicyState | null>(() =>
+    freezeDemoState !== undefined ? freezeDemoState : null,
+  );
   const [auditEntries, setAuditEntries] = useState<AuditEntry[] | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -99,6 +105,12 @@ export function PolicyVaultPanel() {
   const [tickMs, setTickMs] = useState(Date.now());
 
   const refresh = useCallback(async () => {
+    if (isFrozenDemo && freezeDemoState !== undefined) {
+      setState(freezeDemoState);
+      setAuditEntries([]);
+      setErr(null);
+      return;
+    }
     try {
       const s = await trpc.getPolicyVaultState.query();
       setState(s);
@@ -118,7 +130,7 @@ export function PolicyVaultPanel() {
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
-  }, []);
+  }, [isFrozenDemo, freezeDemoState]);
 
   useEffect(() => {
     void refresh();
@@ -132,6 +144,11 @@ export function PolicyVaultPanel() {
 
   const run = useCallback(
     async (label: string, fn: () => Promise<unknown>, successMsg?: string) => {
+      if (isFrozenDemo) {
+        setErr(null);
+        setMsg(null);
+        return;
+      }
       setBusy(label);
       setErr(null);
       setMsg(null);
@@ -145,7 +162,7 @@ export function PolicyVaultPanel() {
         setBusy(null);
       }
     },
-    [refresh],
+    [refresh, isFrozenDemo],
   );
 
   if (!state) {

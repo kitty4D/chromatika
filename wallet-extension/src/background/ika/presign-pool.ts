@@ -164,6 +164,12 @@ export async function getPresignPoolStatus() {
 export async function replenishPool(key: PresignPoolKey, count = 3): Promise<{ added: number }> {
   const s0 = getSession();
   if (!s0) throw new Error('Wallet locked');
+  console.warn('[presign-pool] replenishPool called', {
+    key,
+    count,
+    baseChain: s0.activeVaultBaseChain,
+    network: s0.network,
+  });
   if (s0.activeVaultBaseChain === 'solana') {
     return replenishPoolSolana(key, count);
   }
@@ -175,6 +181,14 @@ export async function replenishPool(key: PresignPoolKey, count = 3): Promise<{ a
     const owner = getSuiFeePayerSuiAddress(s);
     const { ikaAmount, suiAmount } = await getRequiredCoinAmounts(s.ikaClient);
     const networkKey = await s.ikaClient.getLatestNetworkEncryptionKey();
+    console.warn('[presign-pool] sui-base presign creation', {
+      key,
+      curve,
+      sigAlgo,
+      networkKeyId: networkKey.id?.slice(0, 20),
+      ikaAmount: String(ikaAmount),
+      suiAmount: String(suiAmount),
+    });
     const pools = await loadPools(vaultId);
     pools[key] ??= [];
     let added = 0;
@@ -228,8 +242,9 @@ export async function replenishPool(key: PresignPoolKey, count = 3): Promise<{ a
       if (id) {
         pools[key]!.push(id);
         added++;
+        console.warn(`[presign-pool] ${key} iteration ${i + 1}: presign created`, { presignId: id.slice(0, 20) });
       } else {
-        console.warn(`[presign-pool] iteration ${i + 1}: tx succeeded but no presign_id found in events. raw events shape:`, JSON.stringify(result.Transaction.events, null, 2)?.slice(0, 2000));
+        console.warn(`[presign-pool] ${key} iteration ${i + 1}: tx succeeded but no presign_id found in events. raw events shape:`, JSON.stringify(result.Transaction.events, null, 2)?.slice(0, 2000));
       }
       // brief pause between iterations so the indexer reflects mutated coin versions
       if (i < count - 1) await new Promise((r) => setTimeout(r, 1500));

@@ -19,6 +19,8 @@ import { AlertBanner } from '@/ui/components/AlertBanner';
 import { OperationProgressBanner } from '@/ui/components/OperationProgressBanner';
 import { TeamFundingOfferBanner } from '@/ui/components/TeamFundingOfferBanner';
 import { WalletPage } from '@/ui/pages/WalletPage';
+import { PostCreatePolicyVaultPrompt } from '@/ui/components/PostCreatePolicyVaultPrompt';
+import type { ListedDwalletCap } from '@/ui/wallet-recording-stub-caps';
 import type { SettingsTab } from '@/ui/pages/SettingsPage';
 import type { Tab, Balances, Networks } from '@/ui/types';
 
@@ -86,6 +88,14 @@ export type MainWalletShellProps = {
    * existing `NeedIkaBaseVaultGate` flow renders with `vaultBaseChainOverride` preselected.
    */
   onAddVaultForBase?: (baseChain: 'sui' | 'solana') => void;
+  /**
+   * dev side panel urls: surface the post-create policy bottom sheet without a fresh dwallet dkg,
+   * e.g. policyPromptDemo=SECP256K1&simulatePolicyWrap=1
+   */
+  devPolicyPromptCurve?: 'SECP256K1' | 'ED25519';
+  devPolicyPromptSimulateWrap?: boolean;
+  /** dev `walletRecordingStub=1`: synthetic caps for dWallet bar + home without ika session */
+  recordingStubCaps?: ListedDwalletCap[];
 };
 
 export function MainWalletShell({
@@ -113,6 +123,9 @@ export function MainWalletShell({
   settingsInitialTab,
   onSessionLockDetected,
   onAddVaultForBase,
+  devPolicyPromptCurve,
+  devPolicyPromptSimulateWrap = false,
+  recordingStubCaps,
 }: MainWalletShellProps) {
   const titleBarMeasureRef = useRef<HTMLDivElement>(null);
   const [titleBarH, setTitleBarH] = useState(48);
@@ -218,6 +231,7 @@ export function MainWalletShell({
         onSelect={setSelectedDwalletId}
         onNavigateDwallet={goDwalletTab}
         onSwitched={onDwalletBarSwitched}
+        recordingStubCaps={recordingStubCaps}
       />
       <AlertBanner onOpenHistory={openSettings} />
       <OperationProgressBanner
@@ -323,6 +337,7 @@ export function MainWalletShell({
                       onOpenSend={() => openSendOverlay()}
                       onOpenPolicyVault={() => setTab('policy')}
                       uiHelpHints={uiHelpHints}
+                      recordingStubCaps={recordingStubCaps}
                     />
                   )}
                   {tab === 'dwallet' && (
@@ -382,6 +397,21 @@ export function MainWalletShell({
         />
         <BottomNav active={tab} onChange={onNavChange} />
       </div>
+      {devPolicyPromptCurve ? (
+        <PostCreatePolicyVaultPrompt
+          curve={devPolicyPromptCurve}
+          simulateWrapOnly={devPolicyPromptSimulateWrap}
+          onClose={() => {
+            /* dev url demo: dismissal is intentional no-op unless parent reloads url */
+          }}
+          onCustomize={() => {
+            setTab('policy');
+          }}
+          onWrapped={() => {
+            setTab('policy');
+          }}
+        />
+      ) : null}
     </div>
   );
 }

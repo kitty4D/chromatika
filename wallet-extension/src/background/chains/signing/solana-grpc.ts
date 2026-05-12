@@ -151,10 +151,10 @@ export async function signMessageSolSolanaGrpc(
   dwalletId: string,
   s: NonNullable<ReturnType<typeof getSession>>,
 ): Promise<{ signature: string; signId: string }> {
+  console.warn('[chromatika][solana-grpc] signMessageSolSolanaGrpc begin', { dwalletId, presignIdHex, messageBytesLen: message.length });
   if (!s.solanaConnection || !s.solanaIkaGrpc) {
     throw new Error('Solana session not ready (connection / gRPC)');
   }
-  // see `signSecp256k1MessageSolanaGrpc` for the rationale, same auto-refill guard runs here.
   await ensureFeePayerFunded(s);
   const feePk =
     s.solanaFeePayer?.publicKey
@@ -162,6 +162,7 @@ export async function signMessageSolSolanaGrpc(
     ?? (s.solanaMwaAccount ? new PublicKey(s.solanaMwaAccount.address) : null)
     ?? (s.solanaWcAccount ? new PublicKey(s.solanaWcAccount.address) : null);
   if (!feePk) throw new Error('Solana fee signer missing (keypair, Ledger, MWA, or WalletConnect)');
+  console.warn('[chromatika][solana-grpc] fee payer resolved', { feePk: feePk.toBase58() });
 
   const presignBytes = hexToU8(presignIdHex);
   const signAndSend = async (tx: SolanaLegacyTransaction): Promise<string> => {
@@ -233,6 +234,8 @@ export async function signMessageSolSolanaGrpc(
     throw new Error('Missing Solana ED25519 dWallet attestation, re-run DKG on 0.1.1');
   }
   const dwalletPublicKey = b64ToU8Local(meta.dwalletPublicKeyB64);
+  console.warn('[chromatika][solana-grpc] sending approve_message to Solana...');
+  const t0 = Date.now();
   await updateCurrentOperationStage('approve-message', 'Submitting approve_message tx to Solana');
   const { txSigBytes, slot } = await sendApproveMessageForEd25519Sign(
     s.solanaConnection,
@@ -240,7 +243,10 @@ export async function signMessageSolSolanaGrpc(
     { dwalletPublicKey, message },
     signAndSend,
   );
+  console.warn(`[chromatika][solana-grpc] approve_message done in ${Date.now() - t0}ms`, { slot });
   await updateCurrentOperationStage('ika-grpc-sign', 'Requesting Ika signature');
+  console.warn('[chromatika][solana-grpc] requesting ika gRPC sign...');
+  const t1 = Date.now();
   let sig64: Uint8Array;
   try {
     sig64 = await s.solanaIkaGrpc.requestSignEd25519Message(
@@ -268,6 +274,7 @@ export async function signMessageSolSolanaGrpc(
     }
     throw e;
   }
+  console.warn(`[chromatika][solana-grpc] ika sign returned in ${Date.now() - t1}ms`, { sigLen: sig64.length });
   const hex = Array.from(sig64, (b) => b.toString(16).padStart(2, '0')).join('');
   return { signature: `0x${hex}`, signId: 'solana-ika-grpc' };
 }

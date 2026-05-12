@@ -249,6 +249,7 @@ export function DWalletContextBar({
   onSelect,
   onNavigateDwallet,
   onSwitched,
+  recordingStubCaps,
 }: {
   balances: Balances | null;
   networks: Networks | null;
@@ -259,6 +260,8 @@ export function DWalletContextBar({
   onSelect?: (dwalletId: string) => void;
   onNavigateDwallet?: () => void;
   onSwitched?: () => void;
+  /** dev urls: bypass `listOwnedDWalletCaps` so the switcher renders without session */
+  recordingStubCaps?: Cap[];
 }) {
   const explorerPrefs = useExplorerPreferences();
   const [caps, setCaps] = useState<Cap[] | null>(null);
@@ -278,6 +281,18 @@ export function DWalletContextBar({
       setCaps(null);
       return;
     }
+    if (recordingStubCaps !== undefined && recordingStubCaps.length > 0) {
+      setCaps(recordingStubCaps);
+      void Promise.all([
+        trpc.dwalletAddressBook.query().then(setBook).catch(() => setBook(null)),
+        trpc.getDwalletDisplayNames
+          .query()
+          .then((r) => setNameMap(r.names))
+          .catch(() => setNameMap({})),
+        trpc.getDappPermissions.query().then(setPermissions).catch(() => setPermissions(null)),
+      ]);
+      return;
+    }
     void Promise.all([
       trpc.listOwnedDWalletCaps.query().then(setCaps).catch(() => setCaps([])),
       trpc.dwalletAddressBook.query().then(setBook).catch(() => setBook(null)),
@@ -287,11 +302,17 @@ export function DWalletContextBar({
         .catch(() => setNameMap({})),
       trpc.getDappPermissions.query().then(setPermissions).catch(() => setPermissions(null)),
     ]);
-  }, [balances]);
+  }, [balances, recordingStubCaps]);
 
   useEffect(() => {
     const t = window.setInterval(() => {
-      if (!balances || balances.locked) return;
+      if (
+        !balances
+        || balances.locked
+        || (recordingStubCaps !== undefined && recordingStubCaps.length > 0)
+      ) {
+        return;
+      }
       trpc.listOwnedDWalletCaps
         .query()
         .then(setCaps)
@@ -302,7 +323,7 @@ export function DWalletContextBar({
         .catch(() => {});
     }, 8000);
     return () => clearInterval(t);
-  }, [balances]);
+  }, [balances, recordingStubCaps]);
 
   const metaId = book?.SECP256K1?.dwalletId ?? book?.ED25519?.dwalletId;
   const active =
@@ -367,30 +388,65 @@ export function DWalletContextBar({
       : null;
   const addrDisplay = active ? addr || active.dwalletId : '';
 
+  function onSingleDwalletNavigateKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onNavigateDwallet?.();
+    }
+  }
+
   if (caps.length === 1) {
+    // Same bordered trigger chrome as multi-dWallet (minus chevron/menu). Legacy
+    // --singleWrap made one-cap wallets look visually flat versus the picker row.
     return (
-      <div className="cv-dwalletBar cv-dwalletBar--singleWrap">
-        <div className="cv-dwalletBar-row1">
-          <button type="button" className="cv-dwalletBar-singleNav" onClick={() => onNavigateDwallet?.()}>
+      <div className="cv-dwalletBar">
+        <div
+          className="cv-dwalletBar-triggerBtn"
+          role="button"
+          tabIndex={0}
+          onClick={() => onNavigateDwallet?.()}
+          onKeyDown={onSingleDwalletNavigateKey}
+          aria-label="open dWallet details"
+        >
+          <div className="cv-dwalletBar-row1">
             <span className="cv-dwalletBar-label">{activeLabel}</span>
-          </button>
-          <div className="cv-dwalletBar-row1-spacer" />
-          <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
-        </div>
-        <div className="cv-dwalletBar-row2">
-          {addrDisplay ? (
-            <ExplorerValueRow
-              fullValue={addrDisplay}
-              href={primaryHref}
-              truncateMid={{ head: 8, tail: 6 }}
-              copyLabel={addr ? 'copy dWallet address' : 'copy dWallet id'}
-              className="cv-dwalletBar-addrRow"
-              linkClassName="cd-explorerMonoLink cv-dwalletBar-addrLink"
-            />
-          ) : (
-            <span className="cv-dwalletBar-addrEmpty mono">…</span>
-          )}
-          <ConnectedDappsPill origins={activeOrigins} />
+            <div className="cv-dwalletBar-row1-spacer" />
+            <span
+              className="cv-dwalletBar-inlineGuard"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
+            </span>
+          </div>
+          <div className="cv-dwalletBar-row2">
+            {active && addrDisplay ? (
+              <span
+                className="cv-dwalletBar-inlineGuard cv-dwalletBar-addrGuard"
+                onClick={(e) => e.stopPropagation()}
+                onPointerDown={(e) => e.stopPropagation()}
+                onKeyDown={(e) => e.stopPropagation()}
+              >
+                <ExplorerValueRow
+                  fullValue={addrDisplay}
+                  href={primaryHref}
+                  truncateMid={{ head: 8, tail: 6 }}
+                  copyLabel={addr ? 'copy dWallet address' : 'copy dWallet id'}
+                  className="cv-dwalletBar-addrRow"
+                  linkClassName="cd-explorerMonoLink cv-dwalletBar-addrLink"
+                />
+              </span>
+            ) : (
+              <span className="cv-dwalletBar-addrEmpty mono">…</span>
+            )}
+            <span
+              className="cv-dwalletBar-inlineGuard"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <ConnectedDappsPill origins={activeOrigins} />
+            </span>
+          </div>
         </div>
       </div>
     );

@@ -80,27 +80,38 @@ export async function handleSolMethod(ctx: BridgeCtx): Promise<HandlerResult> {
   }
 
   if (method === 'solana_signTransaction') {
+    console.warn('[chromatika][solana_signTransaction] begin', { origin });
     const s = getSession();
-    if (!s) return { ok: false, error: 'Wallet locked' };
+    if (!s) {
+      console.warn('[chromatika][solana_signTransaction] no session');
+      return { ok: false, error: 'Wallet locked' };
+    }
     const permission = await getPermission(origin);
     if (consentMode === 'strict' && !canUseMethod(permission, method)) {
+      console.warn('[chromatika][solana_signTransaction] permission denied (strict)');
       return { ok: false, error: 'Permission denied for solana_signTransaction' };
     }
     if (!permission?.scope.accounts) {
+      console.warn('[chromatika][solana_signTransaction] not connected');
       return { ok: false, error: 'connect with solana_connect before signing' };
     }
     const raw = (params ?? [])[0];
     const edId = await resolveEd25519DwalletIdForDapp(origin);
+    console.warn('[chromatika][solana_signTransaction] resolved edId', { edId, rawType: typeof raw });
     try {
       const wire = solanaWireFromBridgeParam(raw);
+      console.warn('[chromatika][solana_signTransaction] wire parsed', { wireLen: wire.length });
       const encryptProgram = solanaWireInvokesEncryptProgram(wire);
+      console.warn('[chromatika][solana_signTransaction] calling signSolanaTransactionWire...');
       const signed = await signSolanaTransactionWire(wire, { ed25519DwalletId: edId });
+      console.warn('[chromatika][solana_signTransaction] signed ok', { signedLen: signed.length });
       await log(true, encryptProgram ? 'encrypt_program_invoked' : undefined, {
         solanaEncryptProgram: encryptProgram || undefined,
       });
       return { ok: true, result: { wire: Array.from(signed) } };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
+      console.warn('[chromatika][solana_signTransaction] FAILED', { error: msg });
       await log(false, msg);
       return { ok: false, error: msg };
     }

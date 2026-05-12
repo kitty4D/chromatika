@@ -259,7 +259,7 @@ export async function signBytesSecpThroughPolicy(
     );
   }
   const presign = await adapter.getPresignInParticularState(presignId, 'Completed', {
-    timeout: 120_000,
+    timeout: 45_000,
   });
 
   // dWallet + encShare for user-side msgSig.

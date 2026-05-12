@@ -59,6 +59,19 @@ export function isUpstreamTimeoutError(err: unknown): boolean {
   return msg.includes('upstream request timeout') || msg.includes('upstream connect error');
 }
 
+/**
+ * ika SDK `getPresignInParticularState` / `getSignInParticularState` polls until
+ * the on-chain object reaches the target state. when the MPC ceremony doesn't
+ * complete in time (validators busy / network lag), the SDK throws
+ * "Timeout waiting for presign <id> to reach state Completed".
+ * the presign was NOT consumed (signing PTB never ran), so we should take a fresh
+ * one and retry.
+ */
+export function isPresignCompletionTimeout(err: unknown): boolean {
+  const msg = (err instanceof Error ? err.message : String(err)).toLowerCase();
+  return msg.includes('timeout waiting for') && msg.includes('presign');
+}
+
 /** flatten `Error.cause`, `AggregateError.errors`, and `{ message }` for classification + logs. */
 function suiReadErrorTextDeep(err: unknown): string {
   const seen = new Set<unknown>();
@@ -257,11 +270,13 @@ export async function runSignWithRetry<T>(
       lastErr = e;
       const stale = isStaleObjectVersionError(e);
       const timeout = isUpstreamTimeoutError(e);
-      if ((!stale && !timeout) || attempt === maxAttempts - 1) throw e;
+      const presignTimeout = isPresignCompletionTimeout(e);
+      if ((!stale && !timeout && !presignTimeout) || attempt === maxAttempts - 1) throw e;
       // progressive backoff so the graphql indexer can catch up to recent coin mutations
       await sleep(2000 * (attempt + 1));
-      if (timeout) {
-        // presign was consumed by the tx that timed out, take a fresh one before retrying
+      if (timeout || presignTimeout) {
+        // timeout: presign consumed by committed tx, take fresh one.
+        // presignTimeout: MPC ceremony didn't complete, presign is stuck, take a different one.
         presignId = await getPresignId();
       }
       // stale object: presign intact (tx failed before consuming it), reuse same presignId

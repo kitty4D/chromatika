@@ -1,5 +1,5 @@
-/** home page: chain marks, foundation links, carousel slides (marketing copy).
- *  logos are copied from `wallet-extension/public/logos` (+ ika.svg from extension public). */
+/** home page: chain marks, carousel slides (marketing copy).
+ * logos are copied from `wallet-extension/public/logos` (+ ika.svg from extension public). */
 
 export type ChainMark = {
   id: string;
@@ -13,35 +13,6 @@ export const homeChains: ChainMark[] = [
   { id: "sol", name: "Solana", iconSrc: "/logos/sol.svg" },
   { id: "sui", name: "Sui", iconSrc: "/logos/sui.svg" },
   { id: "apt", name: "Aptos", iconSrc: "/logos/apt.svg" },
-];
-
-export type FoundationTech = {
-  id: string;
-  label: string;
-  href: string;
-  iconSrc: string;
-};
-
-export const homeFoundationTech: FoundationTech[] = [
-  {
-    id: "ika",
-    label: "ika",
-    href: "https://www.ika.xyz/",
-    iconSrc: "/logos/ika.svg",
-  },
-  {
-    id: "encrypt",
-    label: "encrypt",
-    href: "https://www.encrypt.xyz/",
-    iconSrc: "/logos/encrypt.svg",
-  },
-  {
-    id: "solana",
-    label: "solana",
-    href: "https://solana.com/",
-    iconSrc: "/logos/sol.svg",
-  },
-  { id: "sui", label: "sui", href: "https://sui.io/", iconSrc: "/logos/sui.svg" },
 ];
 
 export type TechCarouselExternalLink = {

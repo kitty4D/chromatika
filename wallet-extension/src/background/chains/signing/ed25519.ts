@@ -48,24 +48,53 @@ export async function signMessageSol(
       opts?.ed25519DwalletId?.trim() || s.dwalletMeta[curveKey]?.dwalletId;
     if (!dwalletId) throw new Error('No ED25519 dWallet - create one first');
     if (!s.solanaIkaGrpc) throw new Error('Solana ika gRPC not initialized');
+    console.warn('[chromatika][ed25519] solana-base sign begin', { dwalletId, messageBytesLen: message.length });
     const op = beginOperation('Signing Solana message');
-    try {
-      await op.updateStage('grpc-presign', 'Requesting Ika presign');
-      const { presignIdHex } = await s.solanaIkaGrpc.requestPresign('Curve25519', 'EdDSA');
-      const result = await signMessageSolSolanaGrpc(message, presignIdHex, dwalletId, s);
-      await op.succeed('Signed');
-      return result;
-    } catch (e) {
-      const action: OperationProgressAction | undefined =
-        e instanceof DWalletGoneError && e.curve === 'ED25519'
-          ? { kind: 'recreate-ed25519-dwallet', label: 'Recreate dWallet', cluster: e.cluster }
-          : undefined;
-      await op.fail(e instanceof Error ? e.message : String(e), action ? { action } : undefined);
-      throw e;
+
+    const SOLANA_SIGN_MAX_ATTEMPTS = 3;
+    const SOLANA_SIGN_BACKOFF_MS = 2_000;
+    let lastErr: unknown;
+
+    for (let attempt = 1; attempt <= SOLANA_SIGN_MAX_ATTEMPTS; attempt++) {
+      try {
+        console.warn(`[chromatika][ed25519] attempt ${attempt}/${SOLANA_SIGN_MAX_ATTEMPTS}: requesting presign`);
+        await op.updateStage('grpc-presign', `Requesting Ika presign${attempt > 1 ? ` (attempt ${attempt}/${SOLANA_SIGN_MAX_ATTEMPTS})` : ''}`);
+        const t0 = Date.now();
+        const { presignIdHex } = await s.solanaIkaGrpc.requestPresign('Curve25519', 'EdDSA');
+        console.warn(`[chromatika][ed25519] presign ok in ${Date.now() - t0}ms`, { presignIdHex });
+        const t1 = Date.now();
+        const result = await signMessageSolSolanaGrpc(message, presignIdHex, dwalletId, s);
+        console.warn(`[chromatika][ed25519] sign ok in ${Date.now() - t1}ms`);
+        await op.succeed('Signed');
+        return result;
+      } catch (e) {
+        lastErr = e;
+        console.warn(`[chromatika][ed25519] attempt ${attempt} failed`, { error: e instanceof Error ? e.message : String(e) });
+        if (e instanceof DWalletGoneError) break;
+        if (attempt < SOLANA_SIGN_MAX_ATTEMPTS) {
+          const backoff = SOLANA_SIGN_BACKOFF_MS * attempt;
+          await op.updateStage('retry-backoff', `Attempt ${attempt} failed, retrying in ${backoff / 1000}s...`);
+          await new Promise((r) => setTimeout(r, backoff));
+        }
+      }
     }
+
+    const action: OperationProgressAction | undefined =
+      lastErr instanceof DWalletGoneError && lastErr.curve === 'ED25519'
+        ? { kind: 'recreate-ed25519-dwallet', label: 'Recreate dWallet', cluster: lastErr.cluster }
+        : undefined;
+    await op.fail(lastErr instanceof Error ? lastErr.message : String(lastErr), action ? { action } : undefined);
+    throw lastErr;
   }
 
   // Sui-base path: presign-take is outside runSerializedIkaTx to avoid re-entrant mutex deadlock.
+  console.warn('[chromatika][ed25519] sui-base sign begin', {
+    dwalletId: opts?.ed25519DwalletId?.slice(0, 20) || s.dwalletMeta.ED25519?.dwalletId?.slice(0, 20),
+    metaBaseChain: s.dwalletMeta.ED25519?.baseChain,
+    vaultBaseChain: s.activeVaultBaseChain,
+    network: s.network,
+    messageBytesLen: message.length,
+  });
   const op = beginOperation('Signing message (ika MPC)');
   try {
     const result = await runSignWithRetry(
@@ -92,17 +121,66 @@ async function signMessageSolCore(
     ed25519DwalletIdOverride?.trim() || s.dwalletMeta[curveKey]?.dwalletId;
   if (!dwalletId) throw new Error('No ED25519 dWallet - create one first');
 
+  const metaBaseChain = s.dwalletMeta[curveKey]?.baseChain;
+  const adapterChain = metaBaseChain ?? 'sui';
+  console.warn('[chromatika][signMessageSolCore] begin', {
+    presignId,
+    dwalletId,
+    metaBaseChain,
+    adapterChain,
+    vaultBaseChain: s.activeVaultBaseChain,
+    network: s.network,
+    graphqlUrl: graphqlUrlForNetwork(s.network),
+    messageBytesLen: message.length,
+  });
+
   // Sui-base only, Solana base shortcuts in `signMessageSol`. adapter still picks Sui by default.
-  const adapter = getIkaAdapter(s, s.dwalletMeta[curveKey]?.baseChain ?? 'sui');
+  const adapter = getIkaAdapter(s, adapterChain);
+
+  // log ika config to verify correct network packages
+  try {
+    const cfg = adapter.ikaClient.ikaConfig;
+    console.warn('[chromatika][signMessageSolCore] ika config', {
+      ikaPackage: cfg.packages?.ikaPackage?.slice(0, 20),
+      ikaDwallet2pcMpc: cfg.packages?.ikaDwallet2pcMpcPackage?.slice(0, 20),
+    });
+  } catch { /* solana adapter throws on ikaClient access */ }
+
   const dWallet = await adapter.getDWallet(dwalletId);
   if (dWallet.kind !== 'zero-trust') throw new Error('Expected zero-trust ED25519 dWallet');
   const stateKind = (dWallet.state as { $kind: string }).$kind;
+  console.warn('[chromatika][signMessageSolCore] dWallet loaded', {
+    kind: dWallet.kind,
+    state: stateKind,
+    curve: dWallet.curve,
+  });
   if (stateKind !== 'Active') throw new Error(`ED25519 dWallet must be Active to sign (current: ${stateKind})`);
   const encShareId = await ensureEncryptedShareId(s, curveKey, adapter, dwalletId);
+  console.warn('[chromatika][signMessageSolCore] encShareId resolved', { encShareId: encShareId?.slice(0, 20) });
 
+  // diagnostic: read the presign object ONCE (no polling) to see its current state
+  try {
+    const rawPresign = await adapter.ikaClient.getPresign(presignId);
+    const rawState = (rawPresign as { state?: { $kind?: string } }).state;
+    console.warn('[chromatika][signMessageSolCore] presign raw state BEFORE polling', {
+      presignId: presignId.slice(0, 20),
+      stateKind: rawState?.$kind ?? 'unknown',
+      curve: (rawPresign as { curve?: unknown }).curve,
+      fullState: JSON.stringify(rawState)?.slice(0, 300),
+    });
+  } catch (diagErr) {
+    console.warn('[chromatika][signMessageSolCore] presign diagnostic read FAILED', {
+      presignId: presignId.slice(0, 20),
+      error: diagErr instanceof Error ? diagErr.message : String(diagErr),
+    });
+  }
+
+  console.warn('[chromatika][signMessageSolCore] polling presign for Completed (45s timeout)...');
+  const t0Presign = Date.now();
   const presign = await adapter.getPresignInParticularState(presignId, 'Completed', {
-    timeout: 120_000,
+    timeout: 45_000,
   });
+  console.warn(`[chromatika][signMessageSolCore] presign reached Completed in ${Date.now() - t0Presign}ms`);
   const encShare = await adapter.getEncryptedUserSecretKeyShare(encShareId);
   const tx = new Transaction();
   const alloc = await allocateIkaCoinsForOperation(s, adapter, tx);

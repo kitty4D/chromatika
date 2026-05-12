@@ -1,6 +1,5 @@
 import { Link } from "react-router-dom";
-
-const GITHUB_REPO_HREF = "https://github.com/kitty4D/chromatika";
+import { SITE_CHROMATIKA_X_HREF, SITE_GITHUB_REPO_HREF } from "../constants/site-social";
 
 export function SiteFooter() {
   return (
@@ -63,7 +62,7 @@ export function SiteFooter() {
               <h2 className="site-footer-heading">code &amp; social</h2>
               <ul className="site-footer-links">
                 <li>
-                  <a href={GITHUB_REPO_HREF} target="_blank" rel="noopener noreferrer">
+                  <a href={SITE_GITHUB_REPO_HREF} target="_blank" rel="noopener noreferrer">
                     github / kitty4D/chromatika
                   </a>
                 </li>
@@ -73,7 +72,7 @@ export function SiteFooter() {
                   </a>
                 </li>
                 <li>
-                  <a href="https://x.com/chromatika_xyz" target="_blank" rel="noopener noreferrer">
+                  <a href={SITE_CHROMATIKA_X_HREF} target="_blank" rel="noopener noreferrer">
                     @chromatika_xyz
                   </a>
                 </li>

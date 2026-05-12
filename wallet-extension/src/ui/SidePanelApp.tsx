@@ -18,6 +18,7 @@ import { NeedIkaBaseVaultGate } from '@/ui/NeedIkaBaseVaultGate';
 import { ikaModeFromActiveVault } from '@/lib/derive-ika-mode-from-vault';
 import { shouldShowUnlockScreen, useWalletAppState } from '@/ui/use-wallet-app-state';
 import type { Tab, Balances, Networks } from '@/ui/types';
+import { RECORDING_STUB_DWALLET_CAPS } from '@/ui/wallet-recording-stub-caps';
 import './wallet.css';
 
 // ---------- root ----------
@@ -132,6 +133,20 @@ function SidePanelMain() {
   } as Balances;
 
   const devBalancesInitial = devSolanaIka ? DEV_BALANCES_SOLANA : DEV_BALANCES;
+
+  type DevPromptCurve = 'SECP256K1' | 'ED25519';
+  function parsePolicyPromptDemo(v: string | null): DevPromptCurve | undefined {
+    if (v === 'SECP256K1' || v === 'ED25519') return v;
+    return undefined;
+  }
+  const devPolicyPromptCurve =
+    devMode ? parsePolicyPromptDemo(params.get('policyPromptDemo')) : undefined;
+  const devPolicyPromptSimulateWrap = devMode && params.get('simulatePolicyWrap') === '1';
+
+  const recordingStubCaps =
+    devMode && params.get('walletRecordingStub') === '1'
+      ? RECORDING_STUB_DWALLET_CAPS
+      : undefined;
 
   const devSolLookupRpc =
     DEV_NETWORKS.solana.find((n) => n.id === DEV_NETWORKS.active.solNetworkId)?.rpcUrl ?? DEV_NETWORKS.solana[0]!.rpcUrl;
@@ -488,6 +503,9 @@ function SidePanelMain() {
         setUnlocked(false);
       }}
       onAddVaultForBase={(c) => setIkaGateMissingChain(c)}
+      devPolicyPromptCurve={devPolicyPromptCurve}
+      devPolicyPromptSimulateWrap={devPolicyPromptSimulateWrap}
+      recordingStubCaps={recordingStubCaps}
     />
   );
 }
@@ -523,6 +541,26 @@ function SidePanelDevGallery() {
     { label: 'side panel: dWallet tab', href: side({ dev, vaultExists: 1, unlocked: 1, tab: 'dwallet' }), pill: 'tab' },
     { label: 'side panel: assets tab', href: side({ dev, vaultExists: 1, unlocked: 1, tab: 'assets' }), pill: 'tab' },
     { label: 'side panel: activity tab', href: side({ dev, vaultExists: 1, unlocked: 1, tab: 'activity' }), pill: 'tab' },
+
+    { label: 'side panel: policy tab', href: side({ dev, vaultExists: 1, unlocked: 1, tab: 'policy' }), pill: 'tab' },
+    {
+      label: 'side panel: policy tab (frozen pre-opt demo)',
+      href: side({ dev, vaultExists: 1, unlocked: 1, tab: 'policy', policyPanelDemo: 1 }),
+      pill: 'policy',
+    },
+    {
+      label: 'side panel: post-create policy prompt (vault tab)',
+      href: side({
+        dev,
+        vaultExists: 1,
+        unlocked: 1,
+        tab: 'vault',
+        walletRecordingStub: 1,
+        policyPromptDemo: 'SECP256K1',
+        simulatePolicyWrap: 1,
+      }),
+      pill: 'policy',
+    },
 
     { label: 'side panel: settings main', href: side({ dev, vaultExists: 1, unlocked: 1, tab: 'settings', settingsTab: 'main' }), pill: 'settings' },
     { label: 'side panel: settings networks', href: side({ dev, vaultExists: 1, unlocked: 1, tab: 'settings', settingsTab: 'networks' }), pill: 'settings' },

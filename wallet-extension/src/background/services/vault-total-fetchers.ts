@@ -13,7 +13,7 @@
 // accept-share). when it's absent but dwalletId is present, we attempt chainAddressesForDwalletId
 // which hits the chain (requires an active session with ikaClient).
 
-import { JsonRpcProvider, formatEther } from 'ethers';
+import { JsonRpcProvider, Network, formatEther } from 'ethers';
 import { Connection, PublicKey } from '@solana/web3.js';
 import { getDwalletNetworkSettings, resolveSolanaRpcUrl } from '@/background/network/tier-network-settings';
 import { loadDwalletMeta } from '@/background/storage-meta';
@@ -168,15 +168,34 @@ export async function listAddressesForVaultFromMeta(
 // per-chain probes
 // ---------------------------------------------------------------------------
 
-async function probeEvm(addr: string, rpcUrl: string, chainKey: string, nativeSymbol: string): Promise<ChainBalanceProbe> {
+/** per-chain cooldown after a probe failure - avoids hammering dead RPCs every cycle. */
+const _evmProbeFailedUntil = new Map<string, number>();
+const EVM_PROBE_FAIL_COOLDOWN_MS = 10 * 60_000; // 10 min backoff on failure
+const EVM_PROBE_TIMEOUT_MS = 15_000;
+
+async function probeEvm(addr: string, rpcUrl: string, chainKey: string, nativeSymbol: string, chainId: number): Promise<ChainBalanceProbe> {
+  const cooldownEnd = _evmProbeFailedUntil.get(chainKey);
+  if (cooldownEnd && Date.now() < cooldownEnd) {
+    return { chainKey, usdMicros: 0n, ok: false, reason: 'cooldown-after-failure' };
+  }
   try {
-    const provider = new JsonRpcProvider(rpcUrl);
-    const wei = await provider.getBalance(addr);
+    // staticNetwork with explicit chain id kills the eth_chainId preflight round-trip
+    // and prevents ethers from retrying network detection on auth failures.
+    const provider = new JsonRpcProvider(rpcUrl, Network.from(chainId), { staticNetwork: true });
+    const wei = await Promise.race([
+      provider.getBalance(addr),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('evm probe timeout')), EVM_PROBE_TIMEOUT_MS),
+      ),
+    ]);
+    provider.destroy();
     const amount = Number(formatEther(wei));
     const price = await getPrice(nativeSymbol.toLowerCase());
+    _evmProbeFailedUntil.delete(chainKey);
     if (price <= 0) return { chainKey, usdMicros: 0n, ok: false, reason: 'no-price' };
     return { chainKey, usdMicros: toMicrosUsd(amount, price), ok: true };
   } catch (e) {
+    _evmProbeFailedUntil.set(chainKey, Date.now() + EVM_PROBE_FAIL_COOLDOWN_MS);
     return { chainKey, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
@@ -355,7 +374,7 @@ export async function probeAllChainsForAddresses(
   // --- EVM: fan out over all mainnet chains, cap at 4 parallel probes per dwallet ---
   if (addresses.evm) {
     const evmProbes: Promise<ChainBalanceProbe>[] = bundle.evmChains.map((net) =>
-      probeEvm(addresses.evm!, net.rpcUrl, net.id, net.symbol),
+      probeEvm(addresses.evm!, net.rpcUrl, net.id, net.symbol, net.chainId),
     );
     await runBatched(evmProbes, 4);
   }

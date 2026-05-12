@@ -2232,49 +2232,9 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
   color: var(--sp-muted);
 }
 
-.cv-dwalletBar--singleWrap {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.cv-dwalletBar-singleNav {
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-  padding: 0;
-  flex-shrink: 0;
-  min-width: 0;
-  display: inline-flex;
-  align-items: center;
-}
-
-.cv-dwalletBar--single {
-  width: 100%;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font: inherit;
-  cursor: pointer;
-  text-align: left;
-  padding: 4px 0;
-}
-
 /**
- * bordered trigger for the dWallet selector. signals the row is clickable to switch
- * dWallets (the prior flat layout left users hunting for the chevron). subordinate to
- * `.sp-vaultPickerBtn` above: softer border, no fill by default, hover lifts to the
- * full token. focus ring + filled hover matches the vault picker family.
+ * dWallet row: bordered trigger matches vault picker. one cap opens details (no chevron);
+ * several caps toggle the listbox. subordinate to `.sp-vaultPickerBtn` above.
  */
 .cv-dwalletBar-triggerBtn {
   width: 100%;

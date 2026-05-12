@@ -93,7 +93,7 @@ export const BUILTIN_EVM: EvmNetwork[] = [
     id: 'evm-137',
     name: 'Polygon',
     chainId: 137,
-    rpcUrl: 'https://polygon-rpc.com',
+    rpcUrl: 'https://rpc.ankr.com/polygon',
     symbol: 'POL',
     decimals: 18,
     explorerUrl: 'https://polygonscan.com',

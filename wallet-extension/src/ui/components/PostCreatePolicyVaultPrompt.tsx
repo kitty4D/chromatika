@@ -58,6 +58,7 @@ export function PostCreatePolicyVaultPrompt({
   onClose,
   onWrapped,
   onCustomize,
+  simulateWrapOnly = false,
 }: {
   /** Which curve dWallet was just created. Drives the curve-aware body copy and
    *  the wrap-tx curve / signatureAlgorithm fields. */
@@ -68,6 +69,8 @@ export function PostCreatePolicyVaultPrompt({
   onWrapped: () => void;
   /** Called when the user picks "Customize first" or "what does each setting mean?". */
   onCustomize: () => void;
+  /** dev recordings: skip chain + run the success animation/callback path only */
+  simulateWrapOnly?: boolean;
 }) {
   const [busy, setBusy] = useState<'wrap' | 'success' | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -106,20 +109,22 @@ export function PostCreatePolicyVaultPrompt({
     setBusy('wrap');
     setErr(null);
     try {
-      const dailyCapMicros = (BigInt(DEFAULT_OPTIN.dailyCapUsd) * 1_000_000n).toString();
-      const coolDownMs = (BigInt(DEFAULT_OPTIN.coolDownSec) * 1_000n).toString();
-      const unfreezeDelayMs = (BigInt(DEFAULT_OPTIN.unfreezeDelayDays) * 86_400_000n).toString();
-      const stageDelayMs = (BigInt(DEFAULT_OPTIN.stageDelayHours) * 3_600_000n).toString();
-      await trpc.optInToPolicyVault.mutate({
-        curve,
-        dailyCapMicros,
-        coolDownMs,
-        unfreezeDelayMs,
-        stageDelayMs,
-        rescueAddress: undefined,
-        initialIkaMist: DEFAULT_OPTIN.initialIkaMist,
-        initialSuiMist: DEFAULT_OPTIN.initialSuiMist,
-      });
+      if (!simulateWrapOnly) {
+        const dailyCapMicros = (BigInt(DEFAULT_OPTIN.dailyCapUsd) * 1_000_000n).toString();
+        const coolDownMs = (BigInt(DEFAULT_OPTIN.coolDownSec) * 1_000n).toString();
+        const unfreezeDelayMs = (BigInt(DEFAULT_OPTIN.unfreezeDelayDays) * 86_400_000n).toString();
+        const stageDelayMs = (BigInt(DEFAULT_OPTIN.stageDelayHours) * 3_600_000n).toString();
+        await trpc.optInToPolicyVault.mutate({
+          curve,
+          dailyCapMicros,
+          coolDownMs,
+          unfreezeDelayMs,
+          stageDelayMs,
+          rescueAddress: undefined,
+          initialIkaMist: DEFAULT_OPTIN.initialIkaMist,
+          initialSuiMist: DEFAULT_OPTIN.initialSuiMist,
+        });
+      }
       await persistDontAskIfChecked();
       // Success choreography: hold the checkmark for a beat so the user gets
       // visual closure on their decision before the modal dissolves. Reduced-

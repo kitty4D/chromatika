@@ -6,8 +6,13 @@
  */
 
 import { PolicyVaultPanel } from '@/ui/components/PolicyVaultPanel';
+import { POLICY_PANEL_PRE_OPT_IN_DEMO } from '@/ui/policy-vault/policy-panel-demo-state';
 
 export function PolicyVaultPage() {
+  const params = new URLSearchParams(location.search);
+  const policyPanelDemo =
+    params.get('dev') === '1' && params.get('policyPanelDemo') === '1';
+
   return (
     <div className="sp-page sp-page--policyVault">
       <div className="sp-pageHeader">
@@ -17,7 +22,7 @@ export function PolicyVaultPage() {
           shared Move object that enforces the rules even if the wallet UI is compromised.
         </p>
       </div>
-      <PolicyVaultPanel />
+      <PolicyVaultPanel freezeDemoState={policyPanelDemo ? POLICY_PANEL_PRE_OPT_IN_DEMO : undefined} />
     </div>
   );
 }

@@ -152,7 +152,7 @@ async function signBytesEvmCore(
   setSigningProgress('waiting-presign', presignId);
   const presign = await ikaBenchMeasure(ikaBench, 'ika.wait_presign_mpc_completed', presignId, () =>
     adapter.getPresignInParticularState(presignId, 'Completed', {
-      timeout: 120_000,
+      timeout: 45_000,
     }),
   );
   const encShare = await ikaBenchMeasure(ikaBench, 'ika.fetch_encrypted_user_share', encShareId, () =>

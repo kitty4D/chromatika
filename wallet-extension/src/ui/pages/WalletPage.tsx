@@ -18,6 +18,7 @@ import { feePayerExplorerHref } from '@/lib/explorer-href';
 import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
 import type { Balances, Networks } from '@/ui/types';
 import { FEATURES } from '@/config/features';
+import type { ListedDwalletCap } from '@/ui/wallet-recording-stub-caps';
 
 export function WalletPage({
   balances,
@@ -30,6 +31,7 @@ export function WalletPage({
   onOpenSend,
   onOpenPolicyVault,
   uiHelpHints,
+  recordingStubCaps,
 }: {
   balances: Balances | null;
   balanceError?: string | null;
@@ -45,12 +47,12 @@ export function WalletPage({
   onOpenPolicyVault?: () => void;
   /** when false, inline tips (HelpBubble) are hidden, see settings, screen help */
   uiHelpHints: boolean;
+  recordingStubCaps?: ListedDwalletCap[];
 }) {
   const [showSwap, setShowSwap] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
   const explorerPrefs = useExplorerPreferences();
   const [ownedCaps, setOwnedCaps] = useState<Awaited<ReturnType<typeof trpc.listOwnedDWalletCaps.query>>>([]);
-  const [capsLoaded, setCapsLoaded] = useState(false);
   const [metaSecp, setMetaSecp] = useState<string | null>(null);
   const [capsErr, setCapsErr] = useState<string | null>(null);
   const [completeBusy, setCompleteBusy] = useState<string | null>(null);
@@ -67,22 +69,25 @@ export function WalletPage({
       .catch(() => setMetaSecp(null));
   }, []);
 
-  async function refreshCaps() {
+  const refreshCaps = useCallback(async () => {
     setCapsErr(null);
+    if (recordingStubCaps !== undefined && recordingStubCaps.length > 0) {
+      setOwnedCaps(recordingStubCaps);
+      return;
+    }
     try {
       const rows = await trpc.listOwnedDWalletCaps.query();
       setOwnedCaps(rows);
-      setCapsLoaded(true);
     } catch (e) {
       setCapsErr(e instanceof Error ? e.message : String(e));
       setOwnedCaps([]);
     }
-  }
+  }, [recordingStubCaps]);
 
   useEffect(() => {
     if (!balances || balances.locked) return;
     void refreshCaps();
-  }, [balances]);
+  }, [balances, refreshCaps]);
 
   useEffect(() => {
     if (!balances || balances.locked) return;

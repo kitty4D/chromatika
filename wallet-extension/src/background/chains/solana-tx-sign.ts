@@ -20,6 +20,7 @@ export async function signSolanaTransactionWire(
   wire: Uint8Array,
   opts?: { ed25519DwalletId?: string },
 ): Promise<Uint8Array> {
+  console.warn('[chromatika][solana-tx-sign] begin', { wireLen: wire.length, edId: opts?.ed25519DwalletId });
   let vtx: VersionedTransaction;
   try {
     vtx = VersionedTransaction.deserialize(wire);
@@ -33,13 +34,19 @@ export async function signSolanaTransactionWire(
     ? await getDwalletEd25519PublicKeyForDwalletId(edId)
     : await getDwalletEd25519PublicKey();
   const ourPk = new PublicKey(pubkeyBytes);
+  console.warn('[chromatika][solana-tx-sign] pubkey resolved', { ourPk: ourPk.toBase58() });
 
   const signerKeys = vtx.message.staticAccountKeys.slice(0, vtx.message.header.numRequiredSignatures);
+  const signerAddrs = signerKeys.map((pk) => pk.toBase58());
+  console.warn('[chromatika][solana-tx-sign] required signers', { signerAddrs, numRequired: vtx.message.header.numRequiredSignatures });
   if (!signerKeys.some((pk) => pk.equals(ourPk))) {
     throw new Error('Chromatika wallet is not a required signer for this transaction');
   }
 
+  console.warn('[chromatika][solana-tx-sign] calling signMessageSol...', { messageBytesLen: messageBytes.length });
+  const t0 = Date.now();
   const { signature } = await signMessageSol(messageBytes, edId ? { ed25519DwalletId: edId } : undefined);
+  console.warn('[chromatika][solana-tx-sign] signMessageSol returned', { elapsedMs: Date.now() - t0, sigLen: signature.length });
   const sigBytes = hexSigToBytes(signature);
   if (!ed25519.verify(sigBytes, messageBytes, pubkeyBytes)) {
     throw new Error(
@@ -48,5 +55,6 @@ export async function signSolanaTransactionWire(
   }
 
   vtx.addSignature(ourPk, sigBytes);
+  console.warn('[chromatika][solana-tx-sign] signature verified and added, serializing');
   return vtx.serialize();
 }

@@ -108,7 +108,7 @@ async function signBitcoinTxSighashPreimageCore(
   const encShareId = await ensureEncryptedShareId(s, curveKey, adapter, dwalletId);
 
   const presign = await adapter.getPresignInParticularState(presignId, 'Completed', {
-    timeout: 120_000,
+    timeout: 45_000,
   });
   const encShare = await adapter.getEncryptedUserSecretKeyShare(encShareId);
   const tx = new Transaction();
@@ -196,7 +196,7 @@ async function signMessageBtcCore(messageHex: string, presignId: string): Promis
   const encShareId = await ensureEncryptedShareId(s, curveKey, adapter, dwalletId);
 
   const presign = await adapter.getPresignInParticularState(presignId, 'Completed', {
-    timeout: 120_000,
+    timeout: 45_000,
   });
   const encShare = await adapter.getEncryptedUserSecretKeyShare(encShareId);
   const tx = new Transaction();
