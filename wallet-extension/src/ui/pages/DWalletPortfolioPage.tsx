@@ -809,6 +809,7 @@ export function DWalletPortfolioPage({
                     <ExplorerValueRow
                       fullValue={capWithAddrs.chainAddresses.evm}
                       href={secpEvmHref}
+                      truncateMid={{ head: 10, tail: 8 }}
                       copyLabel="copy ethereum address"
                       linkClassName="cd-explorerMonoLink mono"
                     />
@@ -822,6 +823,7 @@ export function DWalletPortfolioPage({
                     <ExplorerValueRow
                       fullValue={capWithAddrs.chainAddresses.btcP2wpkh}
                       href={secpBtcWpkhHref}
+                      truncateMid={{ head: 10, tail: 8 }}
                       copyLabel="copy segwit address"
                       linkClassName="cd-explorerMonoLink mono"
                     />
@@ -835,6 +837,7 @@ export function DWalletPortfolioPage({
                     <ExplorerValueRow
                       fullValue={capWithAddrs.chainAddresses.btcP2tr}
                       href={secpBtcTrHref}
+                      truncateMid={{ head: 10, tail: 8 }}
                       copyLabel="copy taproot address"
                       linkClassName="cd-explorerMonoLink mono"
                     />
@@ -846,6 +849,7 @@ export function DWalletPortfolioPage({
                 <ExplorerValueRow
                   fullValue={displayAddr}
                   href={displayAddrExplorerHref}
+                  truncateMid={{ head: 10, tail: 8 }}
                   copyLabel="copy address"
                   linkClassName="cd-explorerMonoLink mono"
                 />

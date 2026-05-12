@@ -23,7 +23,6 @@ stored in `chrome.storage.session`:
 ## why `chrome.storage.session` and not `chrome.storage.local`
 
 `chrome.storage.session`:
-
 - cleared when the **chrome browser quits** (not just when the SW idles)
 - cleared on **manual lock**
 - cleared on **uninstall**
@@ -32,7 +31,6 @@ stored in `chrome.storage.session`:
 - not visible to content scripts
 
 `chrome.storage.local`:
-
 - persists across browser quits
 - can be read by extension code from any context
 - backed by disk (sqlite under the hood)
@@ -91,13 +89,13 @@ each user action (tRPC call, UI interaction routed through tRPC) **resets** the 
 
 ## what the cache holds, exactly
 
-| field               | what                                        | is it a secret                              |
-| ------------------- | ------------------------------------------- | ------------------------------------------- |
-| `vaultBlobIvB64`    | the AES-GCM IV for the vault blob           | no (random, public-equivalent)              |
-| `masterKeyBytesB64` | 32-byte master AES key                      | YES - root of trust during unlocked session |
-| `envelopeKindHint`  | which envelope was used to unlock (display) | no                                          |
-| `lockAtMs`          | when autolock fires                         | no                                          |
-| `createdAtMs`       | when this unlock happened                   | no                                          |
+| field | what | is it a secret |
+|-------|------|----------------|
+| `vaultBlobIvB64` | the AES-GCM IV for the vault blob | no (random, public-equivalent) |
+| `masterKeyBytesB64` | 32-byte master AES key | YES - root of trust during unlocked session |
+| `envelopeKindHint` | which envelope was used to unlock (display) | no |
+| `lockAtMs` | when autolock fires | no |
+| `createdAtMs` | when this unlock happened | no |
 
 `masterKeyBytesB64` is the only sensitive item. its lifetime is bounded by `chrome.storage.session`'s clear-on-quit + the autolock window.
 

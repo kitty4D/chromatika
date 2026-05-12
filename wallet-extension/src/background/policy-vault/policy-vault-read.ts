@@ -102,6 +102,11 @@ export function parsePolicyVaultFields(parsedFields: ParsedFields): PolicyVaultS
   const pendingCapAtMs = Number(readU64(f.pending_cap_at_ms));
   const pendingStageOff = readBool(f.pending_stage_off);
   const pendingStageOffAtMs = Number(readU64(f.pending_stage_off_at_ms));
+  // unwrap two-step (default to dormant when absent for backward-compat against older
+  // PolicyVault objects published before the unwrap fields were added; pre-release so
+  // those installs should clear storage anyway)
+  const unwrapRequested = readBool(f.unwrap_requested);
+  const unwrapAtMs = Number(readU64(f.unwrap_at_ms));
 
   return {
     panicked,
@@ -125,6 +130,8 @@ export function parsePolicyVaultFields(parsedFields: ParsedFields): PolicyVaultS
     pendingCapAtMs,
     pendingStageOff,
     pendingStageOffAtMs,
+    unwrapRequested,
+    unwrapAtMs,
   };
 }
 

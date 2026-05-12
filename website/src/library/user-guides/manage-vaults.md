@@ -64,3 +64,17 @@ each path mirrors the equivalent `createVault*` call; see the respective vault g
 - the password is shared across all vaults in the install - one app password protects the whole `chromatika_vault_v3` blob (which contains every vault record)
 - mnemonic reuse across base chains is not the same identity - the ika `UserShareEncryptionKeys` root seed is derived per base chain, so the dWallet identity differs even though the BIP39 words match
 - syncing `dwalletMeta` to chrome.storage manually (e.g. after experimentation): `syncVaultMeta`
+
+## multi-vault siblings from a single identity (passkey / seeker / waap / lazor / HD)
+
+beyond "different vaults using different identities," chromatika now also supports **multiple vaults backed by the SAME identity** at different bip44-style indices:
+
+- **passkey**: `passkeyEncryptionIndex` field; same passkey credential, different ika seeds per index → same Sui address, different cross-chain (EVM/BTC/Solana/Aptos) addresses
+- **hardware (Seeker / WC / Ledger)**: `ikaEncryptionIndex` field; same hardware identity, different dwallets
+- **waap**: `ikaEncryptionIndex` field; same waap login, different dwallets
+- **lazor**: `ikaEncryptionIndex` field; same lazor smart wallet, different dwallets
+- **HD seed phrase**: `accountIndex` field; standard BIP44 account derivation — different Sui / Solana / EVM addresses per index
+
+`addPasskeyVault` / `addHardwareVault` / `addWaapVault` / `addLazorVault` auto-detect the matching identity in your existing vault list and pick `max(existingIndices) + 1`. Re-pair / re-register the same identity → chromatika produces a sibling vault automatically.
+
+see [multi-vault-siblings.md](/library/user/multi-vault-siblings) for the full UX, including the post-unlock "find more accounts" panel that surfaces orphan dwallet caps + lets you bind them via inline sibling-add.

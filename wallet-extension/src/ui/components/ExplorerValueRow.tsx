@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { truncateAddress, truncateAddressTail } from '@/lib/dwallet-ui-labels';
+import '@/ui/wallet-chrome-extras.css';
 
 /**
  * truncated monospace value, optional explorer link, and copy-to-clipboard (always when copyLabel set).

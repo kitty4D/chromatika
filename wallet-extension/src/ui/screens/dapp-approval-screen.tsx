@@ -78,7 +78,7 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
       error={error}
     >
       <div className="wc-section" style={{ marginBottom: 12 }}>
-        <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+        <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
           origin
         </div>
         <div style={{ fontWeight: 700, wordBreak: 'break-all' }}>{meta.payload.origin}</div>
@@ -96,7 +96,7 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
       )}
       {meta.payload.kind === 'add_chain' && meta.payload.addChain && (
         <div className="wc-section" style={{ marginBottom: 12, fontSize: 13 }}>
-          <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             add EVM network (EIP-3085)
           </div>
           <div style={{ fontWeight: 700 }}>{meta.payload.addChain.chainName}</div>
@@ -118,7 +118,7 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
             </div>
           ) : null}
           {meta.payload.method === 'wallet_switchEthereumChain' ? (
-            <p style={{ fontSize: 11, color: 'rgba(234,240,255,0.55)', margin: '10px 0 0', lineHeight: 1.45 }}>
+            <p style={{ fontSize: 11, color: 'var(--faint)', margin: '10px 0 0', lineHeight: 1.45 }}>
               this site tried to switch to a chain that was not in your wallet yet. approving loads it from the public chainlist registry, saves it as a custom network, and switches.
             </p>
           ) : null}
@@ -126,7 +126,7 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
       )}
       {meta.payload.kind === 'switch_chain' && meta.payload.requestedChainId != null && (
         <div className="wc-section" style={{ marginBottom: 12, fontSize: 13 }}>
-          <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             switch EVM chain (EIP-3326)
           </div>
           <div style={{ fontSize: 12, opacity: 0.88 }}>
@@ -139,7 +139,7 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
       )}
       {meta.payload.kind === 'watch_token' && meta.payload.watchToken && (
         <div className="wc-section" style={{ marginBottom: 12, fontSize: 13 }}>
-          <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             add token to portfolio (EIP-747)
           </div>
           <div style={{ fontWeight: 700 }}>{meta.payload.watchToken.symbol}</div>
@@ -162,16 +162,16 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
       )}
       {meta.payload.kind === 'connect' && meta.connectOptions?.mode === 'evm' && (
         <div className="wc-section" style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             EVM dWallet (SECP256K1)
           </div>
           {meta.connectOptions.hasNoActiveSecp ? (
-            <p style={{ fontSize: 12, color: 'rgba(251,146,60,0.95)', margin: 0, lineHeight: 1.45 }}>
+            <p style={{ fontSize: 12, color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', margin: 0, lineHeight: 1.45 }}>
               no Active secp256k1 dWallet — complete zero-trust for one in the wallet ika panel, then retry.
             </p>
           ) : (
             <>
-              <p style={{ fontSize: 11, color: 'rgba(234,240,255,0.55)', margin: '0 0 8px', lineHeight: 1.45 }}>
+              <p style={{ fontSize: 11, color: 'var(--faint)', margin: '0 0 8px', lineHeight: 1.45 }}>
                 defaults to last-used for this site when set, otherwise vault active. you can pick another owned dWallet.
               </p>
               <select
@@ -193,7 +193,7 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
       )}
       {meta.payload.kind === 'connect' && meta.connectOptions?.mode === 'nonEvm' && (
         <div className="wc-section" style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: 0.5 }}>
             {meta.connectOptions.connectFamily === 'sui'
               ? 'Sui'
               : meta.connectOptions.connectFamily === 'solana'
@@ -202,12 +202,12 @@ export function DappApprovalScreen({ requestId }: { requestId: string }) {
             dApp (ED25519 dWallet)
           </div>
           {meta.connectOptions.hasNoActiveEd25519 ? (
-            <p style={{ fontSize: 12, color: 'rgba(251,146,60,0.95)', margin: 0, lineHeight: 1.45 }}>
+            <p style={{ fontSize: 12, color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', margin: 0, lineHeight: 1.45 }}>
               no Active ed25519 dWallet — complete zero-trust for one in the wallet ika panel, then retry.
             </p>
           ) : (
             <>
-              <p style={{ fontSize: 11, color: 'rgba(234,240,255,0.55)', margin: '0 0 8px', lineHeight: 1.45 }}>
+              <p style={{ fontSize: 11, color: 'var(--faint)', margin: '0 0 8px', lineHeight: 1.45 }}>
                 this site will see addresses and can request signatures for the chain family above. pick which ed25519 dWallet to expose.
               </p>
               <select

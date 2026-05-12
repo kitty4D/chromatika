@@ -18,10 +18,25 @@ export function SiteFooter() {
               <h2 className="site-footer-heading">guides</h2>
               <ul className="site-footer-links">
                 <li>
+                  <Link to="/tutorial">hands-on tutorial</Link>
+                </li>
+                <li>
+                  <Link to="/roadmap">roadmap</Link>
+                </li>
+                <li>
                   <Link to="/library/user/readme">user guides</Link>
                 </li>
                 <li>
                   <Link to="/library/tech/readme">tech guides</Link>
+                </li>
+                <li>
+                  <Link to="/features/chromashard">ChromaShard spec</Link>
+                </li>
+                <li>
+                  <Link to="/features/policy-vault">Policy Vault (trust)</Link>
+                </li>
+                <li>
+                  <Link to="/features/encrypt-ika">encrypt + ika map</Link>
                 </li>
               </ul>
             </div>

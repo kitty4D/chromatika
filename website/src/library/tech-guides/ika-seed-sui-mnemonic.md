@@ -50,7 +50,6 @@ vault `seedSource: 'mnemonic'`, base chain `'sui'`. this is the canonical "fresh
 - `record.ikaShareKeysB64`: the serialized USK bytes for both curves
 
 on subsequent unlocks, the wallet can either:
-
 - **re-derive** the USK from `record.mnemonic` → `Ed25519Keypair.deriveKeypair(...)` → `ikaRootSeedFromFeeKeypair(...)` (slow-ish, but reproducible)
 - **deserialize** from `record.ikaShareKeysB64` directly (faster, doesn't touch the mnemonic)
 
@@ -59,7 +58,6 @@ on subsequent unlocks, the wallet can either:
 ## fee-payer keypair coincidence
 
 the same Sui keypair derived for the ika seed (`m/44'/784'/0'/0'/0'`, account 0) is **also** the fee-payer keypair that signs:
-
 - `sendSuiNative` HD transfers
 - ika DKG / presign / sign PTBs (via `IkaTransaction` on Sui base)
 - any Sui-side gas funding
@@ -80,7 +78,6 @@ this is intentional - one keypair handles both "ika identity root" and "Sui gas 
 ```
 
 deterministic because:
-
 - BIP39 → BIP39 seed via PBKDF2 (deterministic)
 - BIP39 seed → SLIP10 derivation (deterministic)
 - SLIP10 → ed25519 keypair (deterministic)

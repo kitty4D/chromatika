@@ -43,7 +43,6 @@ requires `VITE_SOLANA_IKA_BASE=true` in the build (Solana ika base is **pre-alph
 ## why the canonical 64-byte secretKey
 
 Solana's `Keypair.secretKey` is **always** 64 bytes by convention - the ed25519 seed (32) concatenated with the public key (32). this is the same shape Phantom and `solana-keygen` JSON-export use:
-
 ```
 solana-keygen new -o keypair.json
 cat keypair.json
@@ -51,7 +50,6 @@ cat keypair.json
 ```
 
 chromatika uses this exact 64-byte form as the keccak preimage so:
-
 - importing a Phantom export produces the same secretKey64
 - importing the same mnemonic into Phantom and into chromatika produces the same secretKey64
 - → same ika seed across tools
@@ -66,12 +64,10 @@ chromatika uses this exact 64-byte form as the keccak preimage so:
 ## the fee-payer keypair (Solana base specific)
 
 on Solana base, the same mnemonic-derived Solana keypair is **also**:
-
 - the in-extension fee-payer for ika gRPC `approve_message` calls (`ikaGrpcFeePayerSolSecretKeyB64` is set to `btoa(String.fromCharCode(...feeKp.secretKey))`)
 - the canonical Solana wallet address for the dWallet Vault
 
 so a mnemonic-rooted Solana-base vault has one keypair doing three jobs:
-
 1. deriving the ika user-share encryption keys (via keccak256)
 2. paying ika gRPC fees (via direct ed25519 sign)
 3. signing native Solana transactions (via the dWallet flow if both curves are linked, or via `sendSolanaNative` if you opt into the HD direct path)
@@ -90,7 +86,6 @@ so a mnemonic-rooted Solana-base vault has one keypair doing three jobs:
 ```
 
 deterministic per:
-
 - BIP39 → seed (PBKDF2-HMAC-SHA512, deterministic)
 - SLIP10 ed25519 derive at `m/44'/501'/0'/0'` (deterministic)
 - `Keypair.fromSeed` → canonical 64-byte secretKey (deterministic, ed25519 RFC 8032)
@@ -100,7 +95,7 @@ deterministic per:
 
 - **same mnemonic on Sui base**: produces a totally different identity. Sui-base uses `[scheme_flag(1) || secret(32)]` (33 bytes) as preimage, Solana-base uses `[seed(32) || pubkey(32)]` (64 bytes). different preimage → different keccak → different seed → different dWallet
 - **importing a Phantom mnemonic that used a non-default derivation path**: chromatika hardcodes `m/44'/501'/0'/0'`. some old Phantom versions used different paths; if your Phantom address doesn't match what chromatika derives, the paths differ. there's no UI to override the path today
-- **Solana ika base on production**: per the Solana ika pre-alpha disclaimer, all Solana ika signatures come from a single mock signer until ika ships production MPC. **do not** sign mainnet value with a Solana-base vault
+- **Solana ika base on production**: per CLAUDE.md disclaimer, all Solana ika signatures come from a single mock signer until ika ships production MPC. **do not** sign mainnet value with a Solana-base vault
 
 ## library
 

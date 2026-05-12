@@ -1,0 +1,418 @@
+/**
+ * Chromatika signature motifs — owned design language utilities.
+ *
+ * Lifted directly from website/src/styles.css. Use these classes wherever
+ * the design plan calls out the matching motif:
+ *
+ *   .ch-bleed-band         — the 2px 4-stop top-border ribbon (THE motif).
+ *                            Applied as ::before on chrome surfaces.
+ *   .ch-bleed-band--bottom — same band rendered on the bottom edge instead.
+ *   .ch-glass-stack        — chrome surface formula (3-stop oklch + backdrop blur).
+ *                            Use on titlebar, approval popup chrome, modal/sheet chrome.
+ *   .ch-hit-card           — interactive row pattern (lift on hover, ika tint).
+ *                            Use on dWallet cards, vault list, network rows, NFT tiles.
+ *   .ch-wordmark-gradient  — sanctioned background-clip:text wordmark gradient.
+ *                            Use ONLY on chromatika wordmark + onboarding hero. Has @supports fallback.
+ *
+ * Discipline rules from the plan:
+ *   - Glass-stack: chrome surfaces only, never on body controls.
+ *   - Bleed-band: at most one per screen edge (titlebar bottom OR popup top, not both stacked).
+ *   - Hit-card: rows that are tappable. Static info rows use plain hairline borders instead.
+ *   - Wordmark gradient: wordmark + screen-title hero on onboarding-choose only.
+ */
+
+/* ----- bleed band (the chromatika ribbon) -----
+ * apply to a positioned parent that should show the ribbon along its top edge.
+ * for bottom-edge variant use .ch-bleed-band--bottom modifier.
+ */
+.ch-bleed-band {
+  position: relative;
+}
+
+.ch-bleed-band::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+  background: var(--ch-bleed-gradient);
+  opacity: 0.92;
+}
+
+.ch-bleed-band--bottom::before {
+  top: auto;
+  bottom: 0;
+}
+
+/* ----- glass stack (chrome surface formula from .header-glass-stack) -----
+ * sui-leaning hue (~285) by default; the 12% ika hint at bottom-right is the
+ * "warmth in cold nebula" signature.
+ */
+.ch-glass-stack {
+  position: relative;
+  background:
+    linear-gradient(
+      168deg,
+      color-mix(in oklch, oklch(0.18 0.05 285) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.04 295) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.06 25) 12%, transparent) 100%
+    ),
+    color-mix(in oklch, oklch(0.19 0.05 285) 56%, transparent);
+  /* perf (i-optimize P1 round 2): blur 18->12, saturate 170%->140%. matches the per-instance
+   * tuning already applied to titlebar / bottom-nav / .ch-bottomSheet. .ch-glass-stack is
+   * the base utility class, so this reduces cost wherever it's applied. */
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+}
+
+/* solana variant: shift hue to mint range */
+html[data-ika-chain='solana'] .ch-glass-stack {
+  background:
+    linear-gradient(
+      168deg,
+      color-mix(in oklch, oklch(0.16 0.04 175) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.035 170) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.05 25) 12%, transparent) 100%
+    ),
+    color-mix(in oklch, oklch(0.18 0.04 172) 56%, transparent);
+}
+
+/* light appearance: invert lightness, keep hues */
+html[data-appearance='light'] .ch-glass-stack {
+  background:
+    linear-gradient(
+      168deg,
+      color-mix(in oklch, oklch(0.96 0.025 285) 80%, transparent) 0%,
+      color-mix(in oklch, oklch(0.92 0.02 295) 65%, transparent) 50%,
+      color-mix(in oklch, oklch(0.94 0.04 25) 18%, transparent) 100%
+    ),
+    color-mix(in oklch, oklch(0.97 0.018 285) 62%, transparent);
+}
+
+html[data-appearance='light'][data-ika-chain='solana'] .ch-glass-stack {
+  background:
+    linear-gradient(
+      168deg,
+      color-mix(in oklch, oklch(0.96 0.022 175) 80%, transparent) 0%,
+      color-mix(in oklch, oklch(0.93 0.02 170) 65%, transparent) 50%,
+      color-mix(in oklch, oklch(0.94 0.04 25) 18%, transparent) 100%
+    ),
+    color-mix(in oklch, oklch(0.97 0.018 175) 62%, transparent);
+}
+
+/* ----- hit card (interactive row from .search-modal-hit) -----
+ * use as a class on tappable rows / cards. transitions + hover lift built in.
+ * for non-tappable info rows, prefer plain hairline-border instead.
+ */
+.ch-hit-card {
+  display: block;
+  border-radius: var(--theme-radius-surface, 18px);
+  border: 1px solid oklch(0.48 0.08 285 / 0.35);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklch, oklch(0.22 0.06 285) 55%, transparent) 0%,
+    color-mix(in oklch, oklch(0.14 0.04 292) 40%, transparent) 100%
+  );
+  box-shadow: 0 1px 0 oklch(0.4 0.07 275 / 0.08) inset;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    box-shadow 0.2s ease,
+    transform 0.16s var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    filter 0.18s ease;
+}
+
+.ch-hit-card:hover,
+.ch-hit-card:focus-visible {
+  border-color: color-mix(in oklch, var(--ika) 38%, oklch(0.55 0.1 280));
+  box-shadow:
+    0 1px 0 oklch(0.52 0.08 275 / 0.12) inset,
+    0 0 0 1px color-mix(in oklch, var(--ika) 20%, transparent),
+    0 8px 24px oklch(0.08 0.05 285 / 0.45);
+  transform: translateY(-1px);
+  filter: brightness(1.04);
+}
+
+.ch-hit-card:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--ika) 50%, oklch(0.72 0.12 250));
+  outline-offset: 2px;
+}
+
+/* solana variant: hue rotates toward mint, ika still warms the hover state */
+html[data-ika-chain='solana'] .ch-hit-card {
+  border-color: oklch(0.5 0.1 152 / 0.32);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklch, oklch(0.2 0.045 175) 55%, transparent) 0%,
+    color-mix(in oklch, oklch(0.13 0.035 172) 40%, transparent) 100%
+  );
+}
+
+html[data-ika-chain='solana'] .ch-hit-card:hover,
+html[data-ika-chain='solana'] .ch-hit-card:focus-visible {
+  border-color: color-mix(in oklch, var(--ika) 38%, oklch(0.55 0.12 152));
+  box-shadow:
+    0 1px 0 oklch(0.52 0.1 152 / 0.12) inset,
+    0 0 0 1px color-mix(in oklch, var(--ika) 20%, transparent),
+    0 8px 24px oklch(0.06 0.05 175 / 0.55);
+}
+
+/* light appearance: airy surface, same lift behavior */
+html[data-appearance='light'] .ch-hit-card {
+  border-color: oklch(0.55 0.06 260 / 0.35);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklch, oklch(0.96 0.02 285) 90%, transparent) 0%,
+    color-mix(in oklch, oklch(0.93 0.025 282) 80%, transparent) 100%
+  );
+  box-shadow: 0 1px 0 oklch(1 0 0 / 0.6) inset;
+}
+
+html[data-appearance='light'] .ch-hit-card:hover,
+html[data-appearance='light'] .ch-hit-card:focus-visible {
+  border-color: color-mix(in oklch, var(--ika) 38%, oklch(0.45 0.12 280));
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.7) inset,
+    0 0 0 1px color-mix(in oklch, var(--ika) 18%, transparent),
+    0 10px 28px oklch(0.45 0.05 280 / 0.18);
+}
+
+/* reduced motion: drop the lift animation, keep the color hover */
+@media (prefers-reduced-motion: reduce) {
+  .ch-hit-card,
+  .ch-hit-card:hover,
+  .ch-hit-card:focus-visible {
+    transition: border-color 0.18s ease, box-shadow 0.2s ease;
+    transform: none;
+  }
+}
+
+/* ----- wordmark gradient (sanctioned background-clip:text) -----
+ * apply to wordmark text spans and onboarding "welcome" hero only.
+ * NOT for body text. NOT for repeated headings.
+ */
+.ch-wordmark-gradient {
+  display: inline-block;
+  background-image: var(--ch-wordmark-gradient);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 18px oklch(0.55 0.14 285 / 0.35));
+}
+
+/* fallback for browsers that don't support background-clip:text */
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .ch-wordmark-gradient {
+    color: oklch(0.96 0.02 260);
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    filter: none;
+  }
+}
+
+/* light appearance: lower-saturation gradient still legible against light bg */
+html[data-appearance='light'] .ch-wordmark-gradient {
+  background-image: linear-gradient(
+    102deg,
+    oklch(0.32 0.06 270) 0%,
+    oklch(0.42 0.18 285) 44%,
+    oklch(0.5 0.2 22) 92%
+  );
+  filter: drop-shadow(0 0 12px oklch(0.65 0.12 285 / 0.18));
+}
+
+/* ----- primary CTA gradient utility (filled action buttons) ----- */
+.ch-cta-gradient {
+  background: var(--ch-cta-gradient);
+  border: 1px solid color-mix(in oklch, var(--accent-2) 45%, transparent);
+  color: oklch(0.97 0.015 270);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.18) inset,
+    0 6px 20px oklch(0.1 0.06 285 / 0.4);
+}
+
+.ch-cta-gradient:hover {
+  filter: brightness(1.06);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.22) inset,
+    0 0 0 1px color-mix(in oklch, var(--ika) 22%, transparent),
+    0 10px 28px oklch(0.1 0.06 285 / 0.5);
+}
+
+/* ----- bottom-sheet pattern (Archetype 5) -----
+ * shared chrome for any modal that should slide up from the bottom edge.
+ * pair: .ch-bottomSheet-backdrop (parent) + .ch-bottomSheet (the sheet).
+ * additional bits: .ch-bottomSheet-handle (drag affordance), .ch-bottomSheet-head,
+ * .ch-bottomSheet-title.
+ *
+ * use on: ReceiveAddressSheet, NoteEditModal, WrapPcTokenModal, UnwrapPcTokenModal,
+ * HiddenSendDisclaimerModal. NOT for centered confirmation dialogs that need to feel
+ * blocking (use a different pattern there).
+ */
+.ch-bottomSheet-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%,
+      color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 65%, transparent),
+      transparent 70%),
+    color-mix(in oklch, oklch(0.05 0.04 285) 78%, transparent);
+  backdrop-filter: blur(8px) saturate(1.4);
+  -webkit-backdrop-filter: blur(8px) saturate(1.4);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0;
+  box-sizing: border-box;
+  animation: ch-bottomSheet-backdrop-fade 0.22s var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+@keyframes ch-bottomSheet-backdrop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ch-bottomSheet {
+  position: relative;
+  width: 100%;
+  /* never wider than the surrounding viewport (popup is 420px, side-panel ~280-500px).
+   * the 480px cap stops it from filling huge browser windows in iframe-preview surface. */
+  max-width: min(480px, 100%);
+  box-sizing: border-box;
+  border-radius: 22px 22px 0 0;
+  padding: 22px 18px 22px;
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.18 0.05 285) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.04 295) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.06 25) 12%, transparent) 100%
+    ),
+    color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 95%, transparent);
+  /* perf (i-optimize P1): blur 20->12, saturate 165%->140%. modals open less often than
+   * always-visible chrome but still pay backdrop-filter cost when open. */
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 18%, oklch(0.55 0.1 275 / 0.45));
+  border-bottom: none;
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.06) inset,
+    0 -16px 56px oklch(0.05 0.06 285 / 0.55),
+    0 0 80px color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 6%, transparent);
+  isolation: isolate;
+  animation: ch-bottomSheet-pop 0.32s var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1));
+  color: var(--text, var(--sp-text));
+}
+
+/* signature 4-stop ribbon at the top edge */
+.ch-bottomSheet::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+  background: var(--ch-bleed-gradient, linear-gradient(90deg,
+    oklch(0.62 0.19 22),
+    oklch(0.58 0.13 285),
+    oklch(0.7 0.14 250),
+    oklch(0.62 0.19 22)
+  ));
+  opacity: 0.95;
+  border-radius: 22px 22px 0 0;
+}
+
+/* drag handle (touch affordance) */
+.ch-bottomSheet::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--faint, oklch(0.62 0.06 275)) 55%, transparent);
+  pointer-events: none;
+}
+
+@keyframes ch-bottomSheet-pop {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* solana base: shift glass hue toward mint */
+html[data-ika-chain='solana'] .ch-bottomSheet {
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.16 0.04 175) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.035 170) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.05 25) 12%, transparent) 100%
+    ),
+    color-mix(in oklch, var(--ink, oklch(0.16 0.035 175)) 95%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ch-bottomSheet-backdrop,
+  .ch-bottomSheet {
+    animation: none;
+  }
+}
+
+.ch-bottomSheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 6px 0 12px;
+  padding-top: 8px;
+}
+
+.ch-bottomSheet-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-md, 1.18rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  color: var(--text, var(--sp-text));
+  margin: 0;
+}
+
+.ch-bottomSheet-close {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border: 1px solid color-mix(in oklch, var(--border, oklch(0.55 0.08 260 / 0.35)) 80%, transparent);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--muted, var(--sp-muted));
+  cursor: pointer;
+  font-size: 20px;
+  line-height: 1;
+  transition: color 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+.ch-bottomSheet-close:hover {
+  color: var(--text, var(--sp-text));
+  background: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 12%, transparent);
+  border-color: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 28%, transparent);
+}
+.ch-bottomSheet-close:focus-visible {
+  outline: 2px solid var(--theme-focus-ring);
+  outline-offset: 2px;
+}

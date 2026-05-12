@@ -52,3 +52,19 @@ create, sign with, and recover a chromatika vault that uses a WebAuthn passkey (
 - the PRF secret is treated like the AES key bytes path: held in `chrome.storage.session` only, dropped on lock
 - platform-bound passkeys (e.g. Windows Hello) only work on the device they were registered on. cross-device sync requires a roaming or synced authenticator
 - recovery requires that the original passkey envelope was set up with a recovery branch (e.g. backup BIP39 words via [recovery-words.md](/library/user/recovery-words))
+
+## restore on a fresh install (just the passkey, no phrase)
+
+if you've onboarded a chromatika passkey vault before AND the same passkey is available on this device (via platform sync or a roaming/hardware authenticator), reinstalling chromatika and picking "create or restore with passkey" rebuilds the same vault automatically:
+
+1. the PRF salt is no longer per-vault random — it's a chromatika-wide constant (`keccak256("chromatika.passkey.prf-salt.v1")`), so reinstall doesn't lose it
+2. same passkey credential + same constant salt = same PRF output = same ika seed via `ikaRootSeedFromPasskeyPRF`
+3. on persist, `kickDiscoveryForVault` runs and finds existing dwallet caps owned by the recovered Sui address — your cross-chain accounts reappear after unlock
+
+a fresh install with a previously-onboarded passkey produces a vault byte-for-byte identical to the original at the ika layer. only the local chromatika password / encrypted blob is fresh.
+
+## multiple vaults from the same passkey
+
+new in this slice: one passkey credential can back several distinct chromatika vaults via the `passkeyEncryptionIndex` field on the record. think of it as bip44 accounts on top of a passkey instead of a seed phrase. when you add a sibling vault using the same passkey, chromatika auto-picks `max(existingIndices) + 1` so the second vault gets a different ika seed → different dwallets → different EVM / BTC / Solana / Aptos addresses. same Sui address (since the passkey pubkey is fixed).
+
+see [multi-vault-siblings.md](/library/user/multi-vault-siblings) for the cross-method UX (passkey / seeker / waap / lazor).

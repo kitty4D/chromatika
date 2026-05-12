@@ -37,7 +37,7 @@ async function getChunkStatus(connection, identifierHex, programId): Promise<Chu
     return { accountExists: false, statusByte: null, fheType: null };
   }
   if (accountInfo.data.length < 100) {
-    return { accountExists: true, statusByte: null, fheType: null }; // unexpected layout
+    return { accountExists: true, statusByte: null, fheType: null };   // unexpected layout
   }
   return {
     accountExists: true,
@@ -53,22 +53,22 @@ just one Solana `getAccountInfo` call per chunk. accounts that don't exist → `
 
 ```ts
 async function getDwalletEncryptedLabelOnChainStatus({ curve }): Promise<{
-  status: "verified" | "pending" | "missing" | "no-label";
+  status: 'verified' | 'pending' | 'missing' | 'no-label',
   chunks: Array<{
-    ciphertextIdentifierHex: string;
-    accountExists: boolean;
-    statusByte: number | null;
-    fheType: number | null;
-  }>;
+    ciphertextIdentifierHex: string,
+    accountExists: boolean,
+    statusByte: number | null,
+    fheType: number | null,
+  }>,
 }> {
   const meta = readDwalletMeta(activeVaultId, curve);
-  if (!meta?.encryptedLabel) return { status: "no-label", chunks: [] };
+  if (!meta?.encryptedLabel) return { status: 'no-label', chunks: [] };
 
   const connection = new Connection(SOLANA_RPC_URL);
   const programId = new PublicKey(meta.encryptedLabel.programId);
 
   const chunks = await Promise.all(
-    meta.encryptedLabel.ciphertextIdentifierHexes.map((idHex) =>
+    meta.encryptedLabel.ciphertextIdentifierHexes.map(idHex =>
       getChunkStatus(connection, idHex, programId)
     )
   );
@@ -77,15 +77,14 @@ async function getDwalletEncryptedLabelOnChainStatus({ curve }): Promise<{
   // - any chunk missing → overall 'missing'
   // - any chunk pending → overall 'pending'
   // - all chunks verified → overall 'verified'
-  if (chunks.some((c) => !c.accountExists)) return { status: "missing", chunks };
-  if (chunks.some((c) => c.statusByte === 0)) return { status: "pending", chunks };
-  if (chunks.every((c) => c.statusByte === 1)) return { status: "verified", chunks };
-  return { status: "pending", chunks }; // catch-all
+  if (chunks.some(c => !c.accountExists)) return { status: 'missing', chunks };
+  if (chunks.some(c => c.statusByte === 0)) return { status: 'pending', chunks };
+  if (chunks.every(c => c.statusByte === 1)) return { status: 'verified', chunks };
+  return { status: 'pending', chunks };   // catch-all
 }
 ```
 
 aggregation rules:
-
 - **any** chunk missing → label is `missing` overall (devnet wipe scenario)
 - **any** chunk pending → label is `encrypting` overall (executor still committing)
 - **all** chunks verified → label is `verified` ✓
@@ -117,7 +116,6 @@ silent error handling: if the RPC call fails (network blip, RPC down), keep show
 ## why 4 seconds
 
 executor commit latency is typically <1 second on devnet but can spike to several seconds under load. polling every 4 seconds:
-
 - catches the `pending → verified` transition within ~4 seconds of completion (acceptable UX)
 - doesn't hammer the RPC (one call per chunk per 4 seconds × N chunks × M dWallets)
 - gives the executor breathing room before the next poll
@@ -139,8 +137,7 @@ faster polling (1 second) would be more responsive but uses more RPC budget. slo
 
 ## the devnet wipe scenario
 
-solana ika devnet gets **wiped periodically** (per the Solana ika pre-alpha disclaimer: "the Solana program and all on-chain data will be wiped periodically"). after a wipe:
-
+solana ika devnet gets **wiped periodically** (per CLAUDE.md disclaimer: "the Solana program and all on-chain data will be wiped periodically"). after a wipe:
 - chromatika's local `record.dwalletMeta.encryptedLabel.ciphertextIdentifierHexes` still points at on-chain accounts
 - those accounts no longer exist (they were wiped)
 - polling returns `accountExists: false` for each chunk
@@ -154,7 +151,6 @@ automated rebuild on first reveal failure (regenerate ciphertext from cached pla
 ## the no-label case
 
 if the user has never encrypted a label for this dWallet:
-
 - `record.dwalletMeta.encryptedLabel` is undefined
 - `status: 'no-label'`, `chunks: []`
 - UI shows no pill (just the encrypt button)

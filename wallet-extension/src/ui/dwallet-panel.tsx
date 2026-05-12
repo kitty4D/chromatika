@@ -29,7 +29,7 @@ function LabeledExplorerAddr({
 }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-      <span style={{ color: 'rgba(234,240,255,0.55)', flexShrink: 0, fontSize: 10 }}>{label}</span>
+      <span style={{ color: 'var(--faint)', flexShrink: 0, fontSize: 10 }}>{label}</span>
       <ExplorerValueRow
         fullValue={fullValue}
         href={href}
@@ -69,7 +69,15 @@ type OwnedCapRow = Awaited<ReturnType<typeof trpc.listOwnedDWalletCaps.query>>[n
 type DwalletAddressBook = Awaited<ReturnType<typeof trpc.dwalletAddressBook.query>>;
 const BUILD_STAMP = __CHROMATIKA_BUILD_STAMP__;
 
-export function DWalletPanel({ enabled }: { enabled: boolean }) {
+export function DWalletPanel({
+  enabled,
+  onDwalletCreated,
+}: {
+  enabled: boolean;
+  /** Called after a successful `createDWallet` mutation. Parent can hook this to surface
+   *  the post-creation Policy Vault prompt via the `usePostCreatePolicyPrompt` hook. */
+  onDwalletCreated?: (curve: 'SECP256K1' | 'ED25519') => void;
+}) {
   const { broadcast } = useSharedBus();
   const { mode: ikaBaseMode } = useIkaBaseMode();
   const explorerPrefs = useExplorerPreferences();
@@ -145,6 +153,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
         const r = await trpc.createDWallet.mutate({ curve });
         setMsg(`dkg: ${r.phase}${r.dwalletId ? ` id ${r.dwalletId.slice(0, 10)}…` : ''}`);
         await refreshOwnedCaps();
+        onDwalletCreated?.(curve);
       } else {
         const curveForComplete = completeOpts?.curve ?? curve;
         const r = await trpc.completeDWalletZeroTrust.mutate({
@@ -248,9 +257,9 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
             margin: '0 0 12px',
             padding: '10px 12px',
             borderRadius: 12,
-            background: 'rgba(99, 102, 241, 0.12)',
+            background: 'color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 22%, transparent)',
             border: '1px solid rgba(129, 140, 248, 0.35)',
-            color: 'rgba(234,240,255,0.88)',
+            color: 'var(--text)',
           }}
         >
           ika Solana pre-alpha: DKG finishes in one gRPC step - skip the complete zero-trust buttons below (that second tx
@@ -289,7 +298,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
         <p
           style={{
             fontSize: 12,
-            color: 'rgba(124, 240, 196, 0.95)',
+            color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))',
             marginTop: 10,
             lineHeight: 1.45,
           }}
@@ -298,22 +307,22 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
         </p>
       )}
       {msg && (
-        <p style={{ fontSize: 12, color: 'rgba(234,240,255,0.88)', marginTop: busy ? 6 : 10, lineHeight: 1.4 }}>{msg}</p>
+        <p style={{ fontSize: 12, color: 'var(--text)', marginTop: busy ? 6 : 10, lineHeight: 1.4 }}>{msg}</p>
       )}
-      <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ marginTop: 12, padding: 10, borderRadius: 10, background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 45%, transparent)', border: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginBottom: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(234,240,255,0.9)' }}>owned dWalletCaps (active vault)</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text)' }}>owned dWalletCaps (active vault)</div>
           <button type="button" className={btn} disabled={!enabled || busy || capsBusy} onClick={refreshOwnedCaps}>
             {capsBusy ? 'refreshing…' : 'refresh'}
           </button>
         </div>
         {!ownedCaps.length && (
-          <p style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', margin: 0 }}>
+          <p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>
             no dWalletCaps found for this vault address yet.
           </p>
         )}
         {capsError && (
-          <p style={{ fontSize: 11, color: 'rgba(251,146,60,0.95)', marginTop: 8, marginBottom: 0, wordBreak: 'break-word' }}>
+          <p style={{ fontSize: 11, color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', marginTop: 8, marginBottom: 0, wordBreak: 'break-word' }}>
             cap refresh error: {capsError}
           </p>
         )}
@@ -324,18 +333,18 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
               marginTop: 8,
               padding: '8px 10px',
               borderRadius: 8,
-              background: 'rgba(0,0,0,0.2)',
+              background: 'color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 55%, transparent)',
               border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
-            <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.92)', marginBottom: 4 }}>
+            <div style={{ fontSize: 11, color: 'var(--text)', marginBottom: 4 }}>
               {row.needsZeroTrustCompletion ? 'needs zero-trust completion' : 'zero-trust complete or not required'}
             </div>
-            <div style={{ fontSize: 10, color: 'rgba(234,240,255,0.62)', wordBreak: 'break-all' }}>
+            <div style={{ fontSize: 10, color: 'var(--muted)', wordBreak: 'break-all' }}>
               curve: {row.curve} - status: {row.status}
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-              <span style={{ fontSize: 10, color: 'rgba(234,240,255,0.55)' }}>cap</span>
+              <span style={{ fontSize: 10, color: 'var(--faint)' }}>cap</span>
               <ExplorerValueRow
                 fullValue={row.capObjectId}
                 href={capObjectExplorerHref(explorerPrefs, networks, row.capObjectId)}
@@ -346,7 +355,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
             </div>
             {row.capObjectId.startsWith('solana:') ? (
               <div style={{ marginTop: 4 }}>
-                <div style={{ fontSize: 10, color: 'rgba(234,240,255,0.55)', marginBottom: 4 }}>
+                <div style={{ fontSize: 10, color: 'var(--faint)', marginBottom: 4 }}>
                   dWallet program account (Solana PDA)
                 </div>
                 <ExplorerValueRow
@@ -359,7 +368,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
                 <div
                   style={{
                     fontSize: 9,
-                    color: 'rgba(234,240,255,0.48)',
+                    color: 'var(--faint)',
                     marginTop: 4,
                     lineHeight: 1.4,
                     wordBreak: 'break-word',
@@ -371,7 +380,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
               </div>
             ) : (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 4 }}>
-                <span style={{ fontSize: 10, color: 'rgba(234,240,255,0.55)' }}>dwallet</span>
+                <span style={{ fontSize: 10, color: 'var(--faint)' }}>dwallet</span>
                 <ExplorerValueRow
                   fullValue={row.dwalletId}
                   href={dwalletObjectExplorerHref(explorerPrefs, networks, row.dwalletId)}
@@ -401,8 +410,8 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
               </div>
             ) : null}
             {row.curve === 'SECP256K1' ? (
-              <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(234,240,255,0.72)', wordBreak: 'break-all' }}>
-                <div style={{ color: 'rgba(234,240,255,0.55)', marginBottom: 4 }}>this cap (on-chain Active output)</div>
+              <div style={{ marginTop: 6, fontSize: 10, color: 'var(--muted)', wordBreak: 'break-all' }}>
+                <div style={{ color: 'var(--faint)', marginBottom: 4 }}>this cap (on-chain Active output)</div>
                 {row.chainAddresses ? (
                   <>
                     {row.chainAddresses.evm ? (
@@ -431,7 +440,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
                     ) : null}
                   </>
                 ) : (
-                  <div style={{ color: 'rgba(234,240,255,0.5)' }}>
+                  <div style={{ color: 'var(--faint)' }}>
                     {row.status === 'Active'
                       ? row.capObjectId.startsWith('solana:')
                         ? 'rail addresses not decoded from account data yet (RPC or layout). we do not substitute the PDA for a rail address.'
@@ -441,8 +450,8 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
                 )}
               </div>
             ) : row.curve === 'ED25519' ? (
-              <div style={{ marginTop: 6, fontSize: 10, color: 'rgba(234,240,255,0.72)', wordBreak: 'break-all' }}>
-                <div style={{ color: 'rgba(234,240,255,0.55)', marginBottom: 4 }}>this cap (on-chain Active output)</div>
+              <div style={{ marginTop: 6, fontSize: 10, color: 'var(--muted)', wordBreak: 'break-all' }}>
+                <div style={{ color: 'var(--faint)', marginBottom: 4 }}>this cap (on-chain Active output)</div>
                 {row.chainAddresses ? (
                   <>
                     {row.chainAddresses.sui ? (
@@ -471,7 +480,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
                     ) : null}
                   </>
                 ) : (
-                  <div style={{ color: 'rgba(234,240,255,0.5)' }}>
+                  <div style={{ color: 'var(--faint)' }}>
                     {row.status === 'Active'
                       ? row.capObjectId.startsWith('solana:')
                         ? 'rail addresses not decoded from account data yet (RPC or layout). we do not substitute the PDA for a rail address.'
@@ -485,15 +494,15 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
         ))}
       </div>
       {addressBook && (
-        <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)' }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: 'rgba(234,240,255,0.9)', marginBottom: 8 }}>
+        <div style={{ marginTop: 10, padding: 10, borderRadius: 10, background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 45%, transparent)', border: '1px solid rgba(255,255,255,0.08)' }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--text)', marginBottom: 8 }}>
             curve address book (meta-selected dWallet for signing)
           </div>
-          <p style={{ fontSize: 10, color: 'rgba(234,240,255,0.52)', margin: '0 0 8px', lineHeight: 1.4 }}>
+          <p style={{ fontSize: 10, color: 'var(--faint)', margin: '0 0 8px', lineHeight: 1.4 }}>
             multiple caps on the same curve show per-cap addresses above. this block follows vault meta (which dWallet
             the wallet uses for dapps / sends).
           </p>
-          <div style={{ fontSize: 10, color: 'rgba(234,240,255,0.72)' }}>
+          <div style={{ fontSize: 10, color: 'var(--muted)' }}>
             <div style={{ marginBottom: 6 }}>
               <div>SECP256K1 - status: {addressBook.SECP256K1.status ?? 'not created'}</div>
               <div>supports: {addressBook.SECP256K1.supports.join(', ')}</div>
@@ -556,10 +565,10 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
 
       {showTransferDwallet && (
       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 8, color: 'rgba(234,240,255,0.85)' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 8, color: 'var(--text)' }}>
           transfer dWallet (sender)
         </div>
-        <p style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', lineHeight: 1.45, margin: '0 0 8px' }}>
+        <p style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.45, margin: '0 0 8px' }}>
           recipient must have registered their ika encryption key on this network. you will lose the local dWallet row
           after transfer — they complete acceptance in their wallet.
         </p>
@@ -581,12 +590,12 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
           </button>
         </div>
         {lastDigest && (
-          <p style={{ fontSize: 11, wordBreak: 'break-all', marginTop: 8, color: 'rgba(124,240,196,0.9)' }}>
+          <p style={{ fontSize: 11, wordBreak: 'break-all', marginTop: 8, color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))' }}>
             tx digest: {lastDigest}
           </p>
         )}
         {senderKeyAddr && (
-          <p style={{ fontSize: 10, wordBreak: 'break-all', marginTop: 4, color: 'rgba(234,240,255,0.55)' }}>
+          <p style={{ fontSize: 10, wordBreak: 'break-all', marginTop: 4, color: 'var(--faint)' }}>
             encryption key address: {senderKeyAddr}
           </p>
         )}
@@ -595,10 +604,10 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
 
       {showTransferDwallet && (
       <div style={{ marginTop: 16, paddingTop: 14, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
-        <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 8, color: 'rgba(234,240,255,0.85)' }}>
+        <div style={{ fontSize: 11, fontWeight: 800, marginBottom: 8, color: 'var(--text)' }}>
           accept transferred dWallet (recipient)
         </div>
-        <p style={{ fontSize: 11, color: 'rgba(234,240,255,0.62)', lineHeight: 1.45, margin: '0 0 8px' }}>
+        <p style={{ fontSize: 11, color: 'var(--muted)', lineHeight: 1.45, margin: '0 0 8px' }}>
           verify the sender&apos;s Sui address out-of-band before accepting. paste the transfer tx digest to pull share
           id hints from events (still confirm with sender).
         </p>
@@ -625,7 +634,7 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
               margin: '0 0 10px',
               padding: 8,
               borderRadius: 8,
-              background: 'rgba(0,0,0,0.25)',
+              background: 'color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 65%, transparent)',
               border: '1px solid rgba(255,255,255,0.08)',
             }}
           >
@@ -688,10 +697,10 @@ export function DWalletPanel({ enabled }: { enabled: boolean }) {
       )}
 
       {!enabled && (
-        <p style={{ fontSize: 12, color: 'rgba(245,158,11,0.95)', marginTop: 10 }}>fund SUI + IKA on the fee address first.</p>
+        <p style={{ fontSize: 12, color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', marginTop: 10 }}>fund SUI + IKA on the fee address first.</p>
       )}
       {phaseB && (
-        <p style={{ fontSize: 11, color: 'rgba(234,240,255,0.70)', marginTop: 10, lineHeight: 1.4 }}>
+        <p style={{ fontSize: 11, color: 'var(--muted)', marginTop: 10, lineHeight: 1.4 }}>
           phase B auto top-up: {phaseB.enabled ? 'flag on (stub)' : 'off'} — {phaseB.summary}
         </p>
       )}

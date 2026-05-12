@@ -231,20 +231,30 @@ export async function autoPanicPolicyTargetsForAlert(alert: SignedAlertV1): Prom
   const targets = alert.panicTargets;
   if (!Array.isArray(targets) || targets.length === 0) return;
   // lazy-load to avoid circular module init (alerts boot before policy-vault module is touched).
-  const { getPolicyVaultLink } = await import('@/background/policy-vault/policy-vault-storage');
+  const { listPolicyVaultLinks } = await import('@/background/policy-vault/policy-vault-storage');
   const { panicPolicyVault } = await import('@/background/policy-vault/policy-vault-actions');
   const { getSession } = await import('@/background/session');
   const s = getSession();
   if (!s?.activeVaultId) return;
-  const link = await getPolicyVaultLink(s.activeVaultId);
-  if (!link) return;
+  const links = await listPolicyVaultLinks(s.activeVaultId);
+  if (links.length === 0) return;
   const targetSet = new Set(targets.map((t) => t.toLowerCase()));
-  if (!targetSet.has(link.vaultObjectId.toLowerCase())) return;
-  try {
-    await panicPolicyVault();
-    console.warn('[chromatika alerts] auto-panic triggered for vault', link.vaultObjectId, 'by alert', alert.id);
-  } catch (e) {
-    console.warn('[chromatika alerts] auto-panic FAILED:', e);
+  // panic every wrapped dwallet whose on-chain vaultObjectId matches the alert's targets.
+  for (const link of links) {
+    if (!targetSet.has(link.vaultObjectId.toLowerCase())) continue;
+    try {
+      await panicPolicyVault(link.dwalletId);
+      console.warn(
+        '[chromatika alerts] auto-panic triggered for vault',
+        link.vaultObjectId,
+        '(dwallet',
+        link.dwalletId,
+        ') by alert',
+        alert.id,
+      );
+    } catch (e) {
+      console.warn('[chromatika alerts] auto-panic FAILED for', link.vaultObjectId, ':', e);
+    }
   }
 }
 

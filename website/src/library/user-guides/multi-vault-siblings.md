@@ -5,7 +5,6 @@ chromatika now supports **multiple distinct vaults backed by a single identity**
 ## what does "sibling vault" mean here?
 
 a **sibling vault** is a chromatika vault record that:
-
 - shares the same identity field as another vault (same `passkeyCredentialId` / `hardwareAccountId` / `waapSuiAddress` / `lazorSmartWalletPubkeyB58` / mnemonic + accountIndex)
 - has its own `ikaEncryptionIndex` (or `passkeyEncryptionIndex` on passkey records / `accountIndex` on HD records)
 - produces its own `UserShareEncryptionKeys` → its own dwallet → its own EVM / BTC / Solana / Aptos addresses
@@ -76,7 +75,6 @@ each HD sibling has DIFFERENT Sui / Solana / EVM addresses (account index change
 the "find more accounts" panel surfaces orphan caps (dwallets on chain at your identity that no local vault references). most often these come from re-installing chromatika without using the same authenticator OR from having previously created sibling vaults that didn't get carried forward.
 
 to bind an orphan:
-
 1. note the orphan count in the panel header (e.g. "· 1 orphan")
 2. click "add sibling vault →" — chromatika auto-picks `max(existingIndices) + 1`
 3. complete the auth dance

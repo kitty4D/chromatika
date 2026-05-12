@@ -7,7 +7,6 @@ ika dWallets are 2-Party Computation MPC threshold wallets. the secret signing k
 ika implements a 2-party version of threshold ECDSA (for SECP256K1) and threshold EdDSA (for ED25519). the math comes from a body of MPC research; the exact references and security proofs live in the ika protocol papers / docs (see [ika cryptography.mdx](https://github.com/dwallet-labs/ika/blob/main/docs/content/docs/sdk/cryptography.mdx) for the canonical write-up).
 
 key properties:
-
 - **2 parties**: chromatika holds one share (the "user share"), ika network holds the other (the "network share")
 - **threshold = 2 of 2**: both parties must cooperate to produce a signature. neither alone can sign
 - **non-interactive use**: presign material is precomputed; the actual signing round is fast and online
@@ -22,7 +21,6 @@ both curves (SECP256K1 + ED25519) get a USK from the same root seed - so one ika
 ## what's stored on-chain (Sui base)
 
 each dWallet has on-chain state on Sui (when ika is anchored to Sui base):
-
 - a `DWallet` object with the dWallet id, the current public key, owner cap, state machine state
 - presign objects (precomputed signature material, one per future signature)
 - encrypted user share objects (the user's share, encrypted to their encryption key, used for share transfer)
@@ -30,7 +28,6 @@ each dWallet has on-chain state on Sui (when ika is anchored to Sui base):
 ## what's stored on-chain (Solana base, pre-alpha)
 
 Solana ika base is pre-alpha. the dWallet state lives in Solana program accounts:
-
 - a dWallet account (analog to the Sui object)
 - attestation bytes (`dwalletAttestationBytesB64` persisted in chromatika's `record.dwalletMeta`)
 - presign accounts
@@ -55,17 +52,17 @@ it's similar to threshold-ECDSA in custody applications (Fireblocks, Coinbase Cu
 
 ## ika curve / signature-algorithm constants
 
-| name                                       | u8 (curve) / sigalgo | use                            |
-| ------------------------------------------ | -------------------- | ------------------------------ |
-| Curve.SECP256K1 = 0                        | curve 0              | EVM, BTC                       |
-| Curve.SECP256R1 = 1                        | curve 1              | (not used by chromatika today) |
-| Curve.ED25519 = 2                          | curve 2              | Sui, Solana, Aptos             |
-| Curve.RISTRETTO = 3                        | curve 3              | (not used by chromatika today) |
-| SignatureAlgorithm.ECDSASecp256k1 = 0      | algo 0               | EVM, generic ECDSA             |
-| SignatureAlgorithm.Taproot = 1             | algo 1               | BTC P2TR                       |
-| SignatureAlgorithm.ECDSASecp256r1 = 2      | algo 2               | (not used by chromatika today) |
-| SignatureAlgorithm.EdDSA = 3               | algo 3               | Sui, Solana, Aptos             |
-| SignatureAlgorithm.SchnorrkelSubstrate = 4 | algo 4               | (not used by chromatika today) |
+| name | u8 (curve) / sigalgo | use |
+|------|----------------------|-----|
+| Curve.SECP256K1 = 0 | curve 0 | EVM, BTC |
+| Curve.SECP256R1 = 1 | curve 1 | (not used by chromatika today) |
+| Curve.ED25519 = 2 | curve 2 | Sui, Solana, Aptos |
+| Curve.RISTRETTO = 3 | curve 3 | (not used by chromatika today) |
+| SignatureAlgorithm.ECDSASecp256k1 = 0 | algo 0 | EVM, generic ECDSA |
+| SignatureAlgorithm.Taproot = 1 | algo 1 | BTC P2TR |
+| SignatureAlgorithm.ECDSASecp256r1 = 2 | algo 2 | (not used by chromatika today) |
+| SignatureAlgorithm.EdDSA = 3 | algo 3 | Sui, Solana, Aptos |
+| SignatureAlgorithm.SchnorrkelSubstrate = 4 | algo 4 | (not used by chromatika today) |
 
 `fromCurveToNumber` is **not** exported from `@ika.xyz/sdk` main entry (it's internal to `hash-signature-validation.js`). hardcode the constants above; don't try to import the helper.
 

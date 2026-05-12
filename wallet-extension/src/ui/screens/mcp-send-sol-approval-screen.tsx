@@ -105,7 +105,7 @@ export function McpSendSolApprovalScreen({ requestId }: { requestId: string }) {
         onApprove={() => {}}
         onReject={() => window.close()}
       >
-        <div style={mutedStyle}>loading…</div>
+        <div style={mutedStyle}>loading send request…</div>
       </ApprovalShell>
     );
   }

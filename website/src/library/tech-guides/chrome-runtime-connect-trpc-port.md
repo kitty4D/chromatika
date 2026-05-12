@@ -5,7 +5,6 @@ chromatika's UI (popup, side panel, full-page surfaces) talks to the background 
 ## why a port (not `chrome.runtime.sendMessage`)
 
 `chrome.runtime.sendMessage` is one-shot - send a message, get a response. fine for read-only requests. but tRPC supports streaming, batching, request cancellation, and long-running operations. a long-lived port is the right primitive:
-
 - one connection setup per UI session
 - bidirectional messages (background can push events, e.g. `'lock'` notifications)
 - in-order delivery
@@ -15,7 +14,7 @@ chromatika's UI (popup, side panel, full-page surfaces) talks to the background 
 
 ```ts
 // UI side (popup/side-panel)
-const port = chrome.runtime.connect({ name: "chromatika-trpc" });
+const port = chrome.runtime.connect({ name: 'chromatika-trpc' });
 const trpcClient = createTRPCClient({
   links: [chromeRuntimePortLink({ port })],
 });
@@ -27,15 +26,15 @@ const trpcClient = createTRPCClient({
 // 4. resolve / reject the promise
 
 // background side
-chrome.runtime.onConnect.addListener((port) => {
-  if (port.name !== "chromatika-trpc") return;
+chrome.runtime.onConnect.addListener(port => {
+  if (port.name !== 'chromatika-trpc') return;
   port.onMessage.addListener(async (msg) => {
-    if (msg.type !== "trpc-req") return;
+    if (msg.type !== 'trpc-req') return;
     try {
       const result = await trpcRouter[msg.method](msg.params);
-      port.postMessage({ type: "trpc-resp", id: msg.id, result });
+      port.postMessage({ type: 'trpc-resp', id: msg.id, result });
     } catch (e) {
-      port.postMessage({ type: "trpc-resp", id: msg.id, error: serializeError(e) });
+      port.postMessage({ type: 'trpc-resp', id: msg.id, error: serializeError(e) });
     }
   });
   port.onDisconnect.addListener(() => {
@@ -47,7 +46,6 @@ chrome.runtime.onConnect.addListener((port) => {
 ## the 12-second timeout
 
 per `src/lib/trpc.ts`, every tRPC procedure has a **12-second port response timeout**. if the background doesn't respond in 12 seconds, the UI rejects the procedure with a timeout error. this defends against:
-
 - cold service worker that silently fails to reach handler dispatch
 - background hung on an unrelated operation
 - network operations (e.g. RPC calls) that take too long
@@ -61,7 +59,6 @@ for cases where a port isn't available (e.g. content-script context that isn't U
 ## the cold-SW handshake
 
 chrome MV3 service workers go to sleep after ~30s idle. when a UI page (e.g. popup) opens after the SW slept:
-
 1. UI calls `chrome.runtime.connect` - this implicitly **wakes** the SW
 2. SW spins up, registers `chrome.runtime.onConnect` handlers
 3. there's a brief race: the UI's first port message could land before the SW's listener registers
@@ -85,7 +82,6 @@ on the receiving side, superjson reads `meta.references` and restores types. tra
 ## per-tab isolation
 
 each UI page (popup, side panel, settings page) gets its **own port**. the background tracks ports for:
-
 - broadcasting events (e.g. lock state changed → notify all UI ports)
 - per-port subscriptions (e.g. `signingProgress` polling)
 - cleanup on disconnect

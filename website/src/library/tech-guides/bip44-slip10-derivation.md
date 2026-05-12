@@ -4,21 +4,20 @@ after BIP39 produces a 64-byte seed (see [bip39-mnemonic.md](/library/tech/bip39
 
 ## paths chromatika uses
 
-| chain                   | curve     | path                  | source                       |
-| ----------------------- | --------- | --------------------- | ---------------------------- |
-| EVM (Ethereum, L2s)     | secp256k1 | `m/44'/60'/0'/0/0`    | BIP44 (SLIP-44 coin 60)      |
-| Bitcoin (P2WPKH segwit) | secp256k1 | `m/84'/0'/0'/0/0`     | BIP84 (segwit native)        |
-| Bitcoin (P2TR taproot)  | secp256k1 | `m/86'/0'/0'/0/0`     | BIP86 (taproot)              |
-| Sui                     | ed25519   | `m/44'/784'/0'/0'/0'` | SLIP-44 coin 784             |
-| Solana                  | ed25519   | `m/44'/501'/0'/0'`    | SLIP-44 coin 501 (4-segment) |
-| Aptos                   | ed25519   | `m/44'/637'/0'/0'/0'` | SLIP-44 coin 637             |
+| chain | curve | path | source |
+|-------|-------|------|--------|
+| EVM (Ethereum, L2s) | secp256k1 | `m/44'/60'/0'/0/0` | BIP44 (SLIP-44 coin 60) |
+| Bitcoin (P2WPKH segwit) | secp256k1 | `m/84'/0'/0'/0/0` | BIP84 (segwit native) |
+| Bitcoin (P2TR taproot) | secp256k1 | `m/86'/0'/0'/0/0` | BIP86 (taproot) |
+| Sui | ed25519 | `m/44'/784'/0'/0'/0'` | SLIP-44 coin 784 |
+| Solana | ed25519 | `m/44'/501'/0'/0'` | SLIP-44 coin 501 (4-segment) |
+| Aptos | ed25519 | `m/44'/637'/0'/0'/0'` | SLIP-44 coin 637 |
 
 the trailing `'` denotes a hardened derivation step (per BIP32: hardened indices use the parent secret key, not the parent public key, in the HMAC input).
 
 ## BIP32 (secp256k1) for EVM and BTC
 
 BIP32 master key derivation:
-
 ```
 master_seed = BIP39_seed (64 bytes)
 master_node = HMAC-SHA512(key="Bitcoin seed", data=master_seed)
@@ -27,7 +26,6 @@ master_chain_code = master_node[32..64]
 ```
 
 then per derivation step:
-
 ```
 hardened (i >= 0x80000000):
   data = 0x00 || parent_secret_key || ser32(i)

@@ -16,13 +16,13 @@ the encrypted blob that holds **every chromatika vault** on this install. lives 
   "kdfMeta": {
     "kind": "argon2id",
     "tCost": 3,
-    "mCostKiB": 65536, // 64 MiB
+    "mCostKiB": 65536,   // 64 MiB
     "parallelism": 4,
     "saltB64": "<16 random bytes b64>",
-    "outputLength": 32, // 32-byte AES-256 key
+    "outputLength": 32   // 32-byte AES-256 key
   },
-  "ivB64": "<12 random bytes b64>", // AES-GCM IV
-  "ciphertextB64": "<sealed bytes>",
+  "ivB64": "<12 random bytes b64>",   // AES-GCM IV
+  "ciphertextB64": "<sealed bytes>"
 }
 ```
 
@@ -34,14 +34,10 @@ the `ciphertextB64` is `AES-256-GCM(plaintext, key, iv)` where `key = argon2id(p
 {
   "v": 3,
   "vaults": [
-    {
-      /* VaultRecord */
-    },
-    {
-      /* VaultRecord */
-    },
+    { /* VaultRecord */ },
+    { /* VaultRecord */ }
   ],
-  "activeVaultId": "<vault-id-string>",
+  "activeVaultId": "<vault-id-string>"
 }
 ```
 
@@ -151,8 +147,7 @@ the in-blob `dwalletMeta` is the **authoritative copy**; the overlay is a cache.
 
 ## key naming convention
 
-`chromatika_<domain>_v<N>` (or `chromatika_<domain>_v<N>_<suffix>` for per-instance scoping). the integer suffix bumps on schema change. complete list of storage keys:
-
+`chromatika_<domain>_v<N>` (or `chromatika_<domain>_v<N>_<suffix>` for per-instance scoping). the integer suffix bumps on schema change. complete list per CLAUDE.md:
 - `chromatika_vault_v3` - the encrypted blob (this doc)
 - `chromatika_dwallet_meta_v2_<vaultId>` - per-vault dWallet overlay
 - `chromatika_presign_pools_v3_<vaultId>` - per-vault presign pools
@@ -171,7 +166,6 @@ the in-blob `dwalletMeta` is the **authoritative copy**; the overlay is a cache.
 ## what to do when the schema breaks
 
 pre-release means **don't migrate**. when chromatika changes the v3 record shape (e.g. adding new credential fields, changing dWallet meta layout):
-
 1. bump the version suffix → `chromatika_vault_v4`
 2. on parse, if version != current, reject with a clear "clear extension storage and re-onboard" message
 3. document the breaking change in commit message + STATUS.md

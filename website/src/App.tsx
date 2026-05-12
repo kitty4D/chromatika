@@ -34,6 +34,15 @@ const PrivacyPolicy = lazy(() =>
 const TermsOfService = lazy(() =>
   import("./components/LegalPages").then((m) => ({ default: m.TermsOfService }))
 );
+const RoadmapPage = lazy(() =>
+  import("./components/RoadmapPage").then((m) => ({ default: m.RoadmapPage }))
+);
+const TutorialPage = lazy(() =>
+  import("./components/TutorialPage").then((m) => ({ default: m.TutorialPage }))
+);
+const FeatureDocPage = lazy(() =>
+  import("./components/FeatureDocPage").then((m) => ({ default: m.FeatureDocPage }))
+);
 
 function RouteFallback() {
   return (
@@ -77,10 +86,22 @@ function PrimaryNavLinks({ path, onNavigate }: { path: string; onNavigate?: () =
   const techGuidesActive = path.startsWith("/library/tech");
   const isKbSurface =
     path === "/knowledge-base" || path.startsWith("/article/") || path.startsWith("/category/");
+  const isRoadmap = path === "/roadmap";
+  const isTutorial = path === "/tutorial";
   return (
     <>
       <Link to="/" className={path === "/" ? "nav-link active" : "nav-link"} onClick={onNavigate}>
         home
+      </Link>
+      <Link
+        to="/tutorial"
+        className={isTutorial ? "nav-link active" : "nav-link"}
+        onClick={onNavigate}
+      >
+        tutorial
+      </Link>
+      <Link to="/roadmap" className={isRoadmap ? "nav-link active" : "nav-link"} onClick={onNavigate}>
+        roadmap
       </Link>
       <Link
         to="/library/user/readme"
@@ -191,6 +212,14 @@ function Home() {
                     </Link>
                   </section>
                 </section>
+                <div className="home-extra-learn" aria-label="tutorial and roadmap">
+                  <Link to="/tutorial" className="home-extra-learn-link tutorial-glow-link">
+                    hands-on tutorial →
+                  </Link>
+                  <Link to="/roadmap" className="home-extra-learn-link roadmap-glow-link">
+                    roadmap →
+                  </Link>
+                </div>
               </div>
             </div>
             <div className="home-drift-viewport-right" aria-hidden="true" />
@@ -306,7 +335,10 @@ function SiteChrome({ children }: { children: ReactNode }) {
   const isLegal = path.startsWith("/legal/");
   const isKbSurface =
     path === "/knowledge-base" || path.startsWith("/article/") || path.startsWith("/category/");
-  const isDocs = isKbSurface || isLibrary || isLegal;
+  const isRoadmap = path === "/roadmap";
+  const isTutorial = path === "/tutorial";
+  const isFeatures = path.startsWith("/features/");
+  const isDocs = isKbSurface || isLibrary || isLegal || isRoadmap || isTutorial || isFeatures;
 
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -385,7 +417,7 @@ function SiteChrome({ children }: { children: ReactNode }) {
       </header>
       <main
         id="main"
-        className={isKbSurface || isLibrary || isLegal ? "site-main site-main--guide" : "site-main"}
+        className={isKbSurface || isLibrary || isLegal || isRoadmap || isTutorial || isFeatures ? "site-main site-main--guide" : "site-main"}
       >
         {children}
       </main>
@@ -478,6 +510,36 @@ function AppRoutes() {
           <SiteChrome>
             <Suspense fallback={<RouteFallback />}>
               <LibraryTechDocPage />
+            </Suspense>
+          </SiteChrome>
+        }
+      />
+      <Route
+        path="/roadmap"
+        element={
+          <SiteChrome>
+            <Suspense fallback={<RouteFallback />}>
+              <RoadmapPage />
+            </Suspense>
+          </SiteChrome>
+        }
+      />
+      <Route
+        path="/tutorial"
+        element={
+          <SiteChrome>
+            <Suspense fallback={<RouteFallback />}>
+              <TutorialPage />
+            </Suspense>
+          </SiteChrome>
+        }
+      />
+      <Route
+        path="/features/:slug"
+        element={
+          <SiteChrome>
+            <Suspense fallback={<RouteFallback />}>
+              <FeatureDocPage />
             </Suspense>
           </SiteChrome>
         }

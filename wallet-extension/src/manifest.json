@@ -50,7 +50,8 @@
     "declarativeNetRequest",
     "downloads",
     "nativeMessaging",
-    "notifications"
+    "notifications",
+    "offscreen"
   ],
   "host_permissions": ["http://*/*", "https://*/*"],
   "icons": {

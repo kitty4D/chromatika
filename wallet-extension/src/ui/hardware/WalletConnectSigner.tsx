@@ -184,7 +184,7 @@ export function WalletConnectSigner({ requestId }: { requestId: string }) {
     return (
       <div className="wc-approvalSheet">
         {status.kind === 'error' ? (
-          <p style={{ color: 'rgba(255,99,132,0.95)' }}>{status.msg}</p>
+          <p style={{ color: 'var(--theme-banner-error-fg, oklch(0.78 0.14 25))' }}>{status.msg}</p>
         ) : (
           <p>loading request…</p>
         )}
@@ -199,7 +199,7 @@ export function WalletConnectSigner({ requestId }: { requestId: string }) {
     <div className="wc-approvalSheet">
       <div style={{ fontWeight: 800, marginBottom: 16 }}>WalletConnect sign request</div>
 
-      <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>chain</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>chain</div>
       <div style={{ marginBottom: 12, fontWeight: 600 }}>
         SOLANA (WalletConnect v2)
         {meta.solanaCluster && (
@@ -212,12 +212,12 @@ export function WalletConnectSigner({ requestId }: { requestId: string }) {
               borderRadius: 999,
               background:
                 meta.solanaCluster === 'mainnet'
-                  ? 'rgba(16,185,129,0.2)'
-                  : 'rgba(245,158,11,0.2)',
+                  ? 'color-mix(in oklch, oklch(0.7 0.18 152) 30%, transparent)'
+                  : 'color-mix(in oklch, oklch(0.76 0.18 80) 30%, transparent)',
               color:
                 meta.solanaCluster === 'mainnet'
-                  ? 'rgba(16,185,129,1)'
-                  : 'rgba(245,158,11,1)',
+                  ? 'oklch(0.7 0.18 152)'
+                  : 'oklch(0.76 0.18 80)',
               textTransform: 'uppercase',
               letterSpacing: '0.05em',
             }}
@@ -227,21 +227,21 @@ export function WalletConnectSigner({ requestId }: { requestId: string }) {
         )}
       </div>
 
-      <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>account</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>account</div>
       <div style={{ marginBottom: 12, fontWeight: 600, fontSize: 11, fontFamily: 'monospace', wordBreak: 'break-all' }}>
         {meta.wcAccountAddress}
       </div>
 
-      <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>type</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>type</div>
       <div style={{ marginBottom: 16, fontWeight: 600 }}>{meta.kind}</div>
 
-      <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>payload</div>
+      <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>payload</div>
       <div
         style={{
           fontFamily: 'monospace',
           fontSize: 11,
           wordBreak: 'break-all',
-          background: 'rgba(0,0,0,0.25)',
+          background: 'color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 65%, transparent)',
           padding: 10,
           borderRadius: 10,
           marginBottom: 18,
@@ -254,9 +254,9 @@ export function WalletConnectSigner({ requestId }: { requestId: string }) {
 
       {status.kind === 'error' && (
         <div style={{ marginBottom: 14 }}>
-          <p style={{ color: 'rgba(255,99,132,0.95)', fontSize: 13, marginBottom: 6 }}>{status.msg}</p>
+          <p style={{ color: 'var(--theme-banner-error-fg, oklch(0.78 0.14 25))', fontSize: 13, marginBottom: 6 }}>{status.msg}</p>
           {status.needsRepair && (
-            <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 12, lineHeight: 1.5 }}>
+            <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 12, lineHeight: 1.5 }}>
               your wallet has revoked the WalletConnect session for Chromatika. open the wallet,
               clear Chromatika from connected dapps if needed, then return to the extension and
               run "WalletConnect" pairing again from the hardware step.
@@ -265,15 +265,15 @@ export function WalletConnectSigner({ requestId }: { requestId: string }) {
         </div>
       )}
       {status.kind === 'waiting_phone' && (
-        <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 13, marginBottom: 14 }}>{status.msg}</p>
+        <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 13, marginBottom: 14 }}>{status.msg}</p>
       )}
       {status.kind === 'connecting' && (
-        <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 13, marginBottom: 14 }}>
+        <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 13, marginBottom: 14 }}>
           opening relay session…
         </p>
       )}
       {status.kind === 'done' && (
-        <p style={{ color: 'rgba(16,185,129,0.95)', fontSize: 13, marginBottom: 14 }}>signed! closing…</p>
+        <p style={{ color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))', fontSize: 13, marginBottom: 14 }}>signed! closing…</p>
       )}
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

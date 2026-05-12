@@ -76,6 +76,51 @@ const PRESIGN_ALARM = 'chromatika-presign-refill';
 const PRESIGN_LOW_WATER = 3; // replenish when a pool has fewer than this many IDs
 const PRESIGN_REFILL_COUNT = 5;
 
+// --- ChromaLab dWallet leaderboard ---
+// two cadences:
+//   - INDEX walks DWalletCap objects on Sui to discover new dwallet ids (cheap).
+//   - PORTFOLIO re-probes the rolling top-N + oldest-stale to keep USD totals fresh.
+// both are gated on the user having opted into the leaderboard via prefs; the
+// handler reads prefs each fire so toggling is immediate without re-registering.
+
+const LEADERBOARD_INDEX_ALARM = 'chromatika-leaderboard-index';
+const LEADERBOARD_PORTFOLIO_ALARM = 'chromatika-leaderboard-portfolio';
+const LEADERBOARD_INDEX_INTERVAL_MIN = 30;
+const LEADERBOARD_PORTFOLIO_INTERVAL_MIN = 15;
+
+async function isLeaderboardEnabled(): Promise<boolean> {
+  try {
+    const { STORAGE_KEYS } = await import('@/background/storage/keys');
+    const raw = await new Promise<unknown>((resolve) =>
+      chrome.storage.local.get([STORAGE_KEYS.LEADERBOARD_PREFS_V1], (r) => resolve(r[STORAGE_KEYS.LEADERBOARD_PREFS_V1])),
+    );
+    if (raw && typeof raw === 'object' && (raw as { enabled?: unknown }).enabled === true) return true;
+  } catch {
+    /* default off */
+  }
+  return false;
+}
+
+async function maybeRunLeaderboardIndexTick(): Promise<void> {
+  try {
+    if (!(await isLeaderboardEnabled())) return;
+    const { runIndexOnlyTick } = await import('@/background/services/dwallet-leaderboard-orchestrator');
+    await runIndexOnlyTick();
+  } catch (e) {
+    console.warn('[leaderboard-index] alarm tick failed, will retry next cycle:', e);
+  }
+}
+
+async function maybeRunLeaderboardPortfolioTick(): Promise<void> {
+  try {
+    if (!(await isLeaderboardEnabled())) return;
+    const { runLeaderboardTick } = await import('@/background/services/dwallet-leaderboard-orchestrator');
+    await runLeaderboardTick();
+  } catch (e) {
+    console.warn('[leaderboard-portfolio] alarm tick failed, will retry next cycle:', e);
+  }
+}
+
 async function maybeRefillPresignPools(): Promise<void> {
   try {
     const { isUnlocked, getSession } = await import('@/background/session');
@@ -110,6 +155,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
   if (alarm.name === PHISHING_REFRESH_ALARM) {
     void refreshPhishingRulesFromRemote();
   }
+  if (alarm.name === LEADERBOARD_INDEX_ALARM) {
+    void maybeRunLeaderboardIndexTick();
+  }
+  if (alarm.name === LEADERBOARD_PORTFOLIO_ALARM) {
+    void maybeRunLeaderboardPortfolioTick();
+  }
   if (alarm.name === 'chromatika-alerts-poll') {
     void (async () => {
       const { runAlertsPoll } = await import('@/background/alerts/alerts-poller');
@@ -120,6 +171,12 @@ chrome.alarms.onAlarm.addListener((alarm) => {
     void (async () => {
       const { handleAlertRuleExpiryAlarm } = await import('@/background/alerts/alerts-actions');
       await handleAlertRuleExpiryAlarm(alarm.name);
+    })();
+  }
+  if (alarm.name === 'chromatika-media-cache-idle') {
+    void (async () => {
+      const { maybeCloseIdleOffscreenDoc } = await import('@/background/media-cache-bridge');
+      await maybeCloseIdleOffscreenDoc();
     })();
   }
 });
@@ -199,6 +256,9 @@ chrome.runtime.onInstalled.addListener(() => {
   registerDefaultSidePanel();
   chrome.alarms.create(PRESIGN_ALARM, { periodInMinutes: 5 });
   chrome.alarms.create(PHISHING_REFRESH_ALARM, { periodInMinutes: 1440 });
+  chrome.alarms.create('chromatika-media-cache-idle', { periodInMinutes: 1 });
+  chrome.alarms.create(LEADERBOARD_INDEX_ALARM, { periodInMinutes: LEADERBOARD_INDEX_INTERVAL_MIN });
+  chrome.alarms.create(LEADERBOARD_PORTFOLIO_ALARM, { periodInMinutes: LEADERBOARD_PORTFOLIO_INTERVAL_MIN });
   void maybeReconnectMcpHost();
   void bootstrapAlertsSurface();
   void bootstrapPcTokenSurface();
@@ -213,6 +273,15 @@ chrome.runtime.onStartup.addListener(() => {
   });
   chrome.alarms.get(PHISHING_REFRESH_ALARM, (existing) => {
     if (!existing) chrome.alarms.create(PHISHING_REFRESH_ALARM, { periodInMinutes: 1440 });
+  });
+  chrome.alarms.get('chromatika-media-cache-idle', (existing) => {
+    if (!existing) chrome.alarms.create('chromatika-media-cache-idle', { periodInMinutes: 1 });
+  });
+  chrome.alarms.get(LEADERBOARD_INDEX_ALARM, (existing) => {
+    if (!existing) chrome.alarms.create(LEADERBOARD_INDEX_ALARM, { periodInMinutes: LEADERBOARD_INDEX_INTERVAL_MIN });
+  });
+  chrome.alarms.get(LEADERBOARD_PORTFOLIO_ALARM, (existing) => {
+    if (!existing) chrome.alarms.create(LEADERBOARD_PORTFOLIO_ALARM, { periodInMinutes: LEADERBOARD_PORTFOLIO_INTERVAL_MIN });
   });
   void maybeReconnectMcpHost();
   void bootstrapAlertsSurface();
@@ -436,6 +505,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // legacy path: dapp requests now use runtime.connect ports to avoid async sendMessage channel closures
     replyOnce(sendResponse, { ok: false, error: 'dapp-request sendMessage path disabled - use port bridge' }, { current: false });
     return;
+  }
+  if (message?.type === 'media-cache:ensure-ready') {
+    const responded = { current: false };
+    void (async () => {
+      try {
+        const { ensureMediaCacheOffscreenDoc } = await import('@/background/media-cache-bridge');
+        await ensureMediaCacheOffscreenDoc();
+        replyOnce(sendResponse, { ok: true }, responded);
+      } catch (e) {
+        replyOnce(sendResponse, { ok: false, error: e instanceof Error ? e.message : String(e) }, responded);
+      }
+    })();
+    return true;
+  }
+  if (message?.type === 'media-cache:activity-ping') {
+    void (async () => {
+      const { notifyMediaCacheActivity } = await import('@/background/media-cache-bridge');
+      notifyMediaCacheActivity();
+    })();
+    return false;
   }
 });
 

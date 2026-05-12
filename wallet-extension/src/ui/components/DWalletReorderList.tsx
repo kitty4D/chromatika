@@ -56,7 +56,6 @@ function ReorderableRow({
   networks,
   isActiveMeta,
   displayLabel,
-  customDisplayName,
   onNamesChanged,
   onViewPortfolio,
   vaultHomeGasById,
@@ -80,7 +79,6 @@ function ReorderableRow({
   networks: Networks | null;
   isActiveMeta?: boolean;
   displayLabel: string;
-  customDisplayName: string;
   onNamesChanged: () => void;
   onViewPortfolio: (dwalletId: string) => void;
   vaultHomeGasById: Record<string, DwalletHomeGasRow[]>;
@@ -168,7 +166,6 @@ function ReorderableRow({
           networks={networks}
           isActiveMeta={isActiveMeta}
           displayLabel={displayLabel}
-          customDisplayName={customDisplayName}
           dragControls={controls}
           onNamesChanged={onNamesChanged}
           onViewPortfolio={onViewPortfolio}
@@ -191,7 +188,6 @@ export function DWalletReorderList({
   setCardOrderIds,
   networks,
   metaSecp,
-  dwalletNameMap,
   labelForCap,
   vaultHomeGasById,
   vaultHomeGasLoading,
@@ -205,7 +201,6 @@ export function DWalletReorderList({
   setCardOrderIds: (ids: string[]) => void;
   networks: Networks | null;
   metaSecp: string | null;
-  dwalletNameMap: Record<string, string>;
   labelForCap: (cap: Cap) => string;
   vaultHomeGasById: Record<string, DwalletHomeGasRow[]>;
   vaultHomeGasLoading: boolean;
@@ -274,7 +269,6 @@ export function DWalletReorderList({
             networks={networks}
             isActiveMeta={cap.dwalletId === metaSecp}
             displayLabel={labelForCap(cap)}
-            customDisplayName={dwalletNameMap[cap.dwalletId]?.trim() ?? ''}
             onNamesChanged={onNamesChanged}
             onViewPortfolio={onViewPortfolio}
             vaultHomeGasById={vaultHomeGasById}

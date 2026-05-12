@@ -1,5 +1,5 @@
 /**
- * per-vault audit log of every Policy Vault decision the user makes via chromatika.
+ * per-(vault, dwallet) audit log of every Policy Vault decision the user makes via chromatika.
  *
  * the Move side already emits authoritative on-chain events (`DailyCapChanged`,
  * `PanicTriggered`, `PolicySigned`, etc.). this is the **client-side mirror** that:
@@ -10,8 +10,9 @@
  *   3. provides a fast-render history without round-tripping the GraphQL events index every
  *      time the user opens the panel
  *
- * storage: `chromatika_policy_audit_v1_<vaultId>` -> `AuditEntry[]`. capped at 200 entries
- * per vault, FIFO rotation. cleared on `clearLocalPolicyVaultLink`.
+ * storage: `chromatika_policy_audit_v1_<vaultId>_<dwalletId>` -> `AuditEntry[]`. capped at 200
+ * entries per (vault, dwallet), FIFO rotation. cleared on `clearLocalPolicyVaultLink` for the
+ * matching dwallet.
  *
  * entries are append-only from chromatika's perspective. the user can `clearPolicyAuditLog`
  * to wipe local state (the on-chain events remain queryable forever via Sui explorers).
@@ -19,10 +20,10 @@
 
 import { VAULT_SCOPED_KEYS } from '@/background/storage';
 
-const MAX_ENTRIES_PER_VAULT = 200;
+const MAX_ENTRIES_PER_DWALLET = 200;
 
-function storageKey(vaultId: string): string {
-  return VAULT_SCOPED_KEYS.policyAudit(vaultId);
+function storageKey(vaultId: string, dwalletId: string): string {
+  return VAULT_SCOPED_KEYS.policyAudit(vaultId, dwalletId);
 }
 
 /**
@@ -32,6 +33,8 @@ function storageKey(vaultId: string): string {
  */
 export interface PolicyAuditEntry {
   vaultId: string;
+  /** dWallet the entry belongs to (matches the wrapping PolicyVaultLink). */
+  dwalletId: string;
   timestampMs: number;
   kind:
     | 'opt-in'
@@ -56,7 +59,11 @@ export interface PolicyAuditEntry {
     | 'pending-cap-committed'
     | 'pending-stage-off-staged'
     | 'pending-stage-off-committed'
-    | 'set-stage-delay';
+    | 'set-stage-delay'
+    // unwrap two-step
+    | 'unwrap-requested'
+    | 'unwrap-cancelled'
+    | 'vault-unwrapped';
   /** Sui tx digest when applicable. */
   digest?: string;
   /** before-value for setters (e.g. previous cap as micro-USD string). */
@@ -67,8 +74,8 @@ export interface PolicyAuditEntry {
   detail?: string;
 }
 
-async function read(vaultId: string): Promise<PolicyAuditEntry[]> {
-  const key = storageKey(vaultId);
+async function read(vaultId: string, dwalletId: string): Promise<PolicyAuditEntry[]> {
+  const key = storageKey(vaultId, dwalletId);
   return new Promise((resolve) => {
     chrome.storage.local.get([key], (r) => {
       const v = r[key];
@@ -78,8 +85,12 @@ async function read(vaultId: string): Promise<PolicyAuditEntry[]> {
   });
 }
 
-async function write(vaultId: string, entries: PolicyAuditEntry[]): Promise<void> {
-  const key = storageKey(vaultId);
+async function write(
+  vaultId: string,
+  dwalletId: string,
+  entries: PolicyAuditEntry[],
+): Promise<void> {
+  const key = storageKey(vaultId, dwalletId);
   return new Promise((resolve, reject) => {
     chrome.storage.local.set({ [key]: entries }, () => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
@@ -88,40 +99,42 @@ async function write(vaultId: string, entries: PolicyAuditEntry[]): Promise<void
   });
 }
 
-/** append a new entry; auto-rotates FIFO at MAX_ENTRIES_PER_VAULT. */
+/** append a new entry; auto-rotates FIFO at MAX_ENTRIES_PER_DWALLET. */
 export async function appendPolicyAuditEntry(
   entry: Omit<PolicyAuditEntry, 'timestampMs'> & { timestampMs?: number },
 ): Promise<void> {
   const finalized: PolicyAuditEntry = {
     timestampMs: entry.timestampMs ?? Date.now(),
     vaultId: entry.vaultId,
+    dwalletId: entry.dwalletId,
     kind: entry.kind,
     digest: entry.digest,
     prev: entry.prev,
     next: entry.next,
     detail: entry.detail,
   };
-  const existing = await read(entry.vaultId);
+  const existing = await read(entry.vaultId, entry.dwalletId);
   existing.push(finalized);
-  while (existing.length > MAX_ENTRIES_PER_VAULT) existing.shift();
-  await write(entry.vaultId, existing);
+  while (existing.length > MAX_ENTRIES_PER_DWALLET) existing.shift();
+  await write(entry.vaultId, entry.dwalletId, existing);
 }
 
-/** read entries (oldest-first). caller can reverse for newest-first display. */
+/** read entries (oldest-first) for a specific dWallet. caller can reverse for newest-first. */
 export async function listPolicyAuditEntries(
   vaultId: string,
+  dwalletId: string,
   limit?: number,
 ): Promise<PolicyAuditEntry[]> {
-  const all = await read(vaultId);
+  const all = await read(vaultId, dwalletId);
   if (typeof limit === 'number' && limit > 0 && all.length > limit) {
     return all.slice(all.length - limit);
   }
   return all;
 }
 
-/** wipe local audit state for a vault. on-chain events remain queryable. */
-export async function clearPolicyAuditEntries(vaultId: string): Promise<void> {
-  const key = storageKey(vaultId);
+/** wipe local audit state for a specific dWallet. on-chain events remain queryable. */
+export async function clearPolicyAuditEntries(vaultId: string, dwalletId: string): Promise<void> {
+  const key = storageKey(vaultId, dwalletId);
   return new Promise((resolve, reject) => {
     chrome.storage.local.remove([key], () => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
@@ -130,5 +143,20 @@ export async function clearPolicyAuditEntries(vaultId: string): Promise<void> {
   });
 }
 
+/** Wipe audit state for every dWallet in a vault. Used by `removeVault`. */
+export async function clearAllPolicyAuditForVault(vaultId: string): Promise<void> {
+  const prefix = VAULT_SCOPED_KEYS.policyAuditPrefix(vaultId);
+  return new Promise((resolve) => {
+    chrome.storage.local.get(null, (r) => {
+      const keys = Object.keys(r).filter((k) => k.startsWith(prefix));
+      if (keys.length === 0) {
+        resolve();
+        return;
+      }
+      chrome.storage.local.remove(keys, () => resolve());
+    });
+  });
+}
+
 /** convenience for tests that need to seed entries. */
-export const __test__ = { MAX_ENTRIES_PER_VAULT };
+export const __test__ = { MAX_ENTRIES_PER_DWALLET };

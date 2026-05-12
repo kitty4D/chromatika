@@ -25,9 +25,12 @@ export const NETWORKS = {
   ],
   sui: [
     { id: 'sui-mainnet', name: 'Sui Mainnet', graphqlUrl: 'https://sui-mainnet.mystenlabs.com/graphql' },
+    { id: 'sui-testnet', name: 'Sui Testnet', graphqlUrl: 'https://sui-testnet.mystenlabs.com/graphql' },
+    { id: 'sui-devnet', name: 'Sui Devnet', graphqlUrl: 'https://sui-devnet.mystenlabs.com/graphql' },
   ],
   solana: [
     { id: 'sol-mainnet', name: 'Solana Mainnet', rpcUrl: 'https://api.mainnet-beta.solana.com' },
+    { id: 'sol-devnet', name: 'Solana Devnet', rpcUrl: 'https://api.devnet.solana.com' },
   ],
   bitcoin: [
     { id: 'btc-mainnet', name: 'Bitcoin Mainnet', esploraUrl: 'https://blockstream.info/api' },

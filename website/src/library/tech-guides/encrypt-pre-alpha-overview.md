@@ -5,7 +5,6 @@ chromatika integrates `@encrypt.xyz/pre-alpha-solana-client@0.1.0` to provide en
 ## what Encrypt is
 
 Encrypt.xyz is a Solana-native FHE (fully homomorphic encryption) executor. clients upload "encrypted inputs" via gRPC `CreateInput`; the network materializes them as on-chain accounts; computations on those ciphertexts can run via Encrypt program instructions; reading a ciphertext requires a signed `ReadCiphertext` request. chromatika uses two tiny corners of this surface:
-
 1. **encrypted dWallet labels**: encode a UTF-8 label as 1-4 EUint128 chunks, write via CreateInput, surface the on-chain status. reveal via signed ReadCiphertext (signature comes from the dWallet's ed25519 path).
 2. **encryption lab demos**: bare CreateInput (single + batched up to 16 EUint64s) and ReadCiphertext for SDK exploration.
 
@@ -34,7 +33,6 @@ stored identifier
 ## the Solana ika base requirement
 
 every encrypt procedure asserts Solana ika base via `assertEncryptSolanaIkaBase()`:
-
 - Sui-base vaults throw at the API boundary
 - `VITE_SOLANA_IKA_BASE=true` must be set at build time
 - session must be unlocked + on a Solana-base vault
@@ -44,11 +42,11 @@ every encrypt procedure asserts Solana ika base via `assertEncryptSolanaIkaBase(
 ## constants
 
 ```js
-GRPC_URL = "https://pre-alpha-dev-1.encrypt.ika-network.net:443";
-ENCRYPT_SOLANA_PROGRAM_ID = "<base58 program id>"; // see encrypt-constants.ts
-LABEL_MAX_UTF8_BYTES = 64; // 4 × 16-byte chunks
-FHE_TYPE_EUINT64 = 4;
-FHE_TYPE_EUINT128 = 5; // labels use this
+GRPC_URL = "https://pre-alpha-dev-1.encrypt.ika-network.net:443"
+ENCRYPT_SOLANA_PROGRAM_ID = "<base58 program id>"   // see encrypt-constants.ts
+LABEL_MAX_UTF8_BYTES = 64                            // 4 × 16-byte chunks
+FHE_TYPE_EUINT64 = 4
+FHE_TYPE_EUINT128 = 5                                // labels use this
 ```
 
 ## the published-SDK-bug situation
@@ -64,12 +62,12 @@ per-curve dWallet meta overlay (`chromatika_dwallet_meta_v2_<vaultId>`) gets an 
 ```jsonc
 {
   "encryptedLabel": {
-    "ciphertextIdentifierHexes": ["abc...", "def..."], // 1-4 hex identifiers
-    "fheType": 5, // EUINT128
+    "ciphertextIdentifierHexes": ["abc...", "def..."],   // 1-4 hex identifiers
+    "fheType": 5,                                         // EUINT128
     "createdAtMs": 1700000000000,
     "programId": "<base58 program id>",
-    "utf8Len": 8, // e.g. for "myLabel\0" trim
-  },
+    "utf8Len": 8                                          // e.g. for "myLabel\0" trim
+  }
 }
 ```
 
@@ -77,19 +75,19 @@ we store the **identifiers** plus the **utf8 length** locally. the actual cipher
 
 ## file map
 
-| file                          | purpose                                                                                                                                     |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| `encrypt-lab-service.ts`      | core encrypt / reveal / status logic, label chunking, mockEncryptScalarBytes helpers, network key resolution, on-chain status polling       |
-| `encrypt-constants.ts`        | `GRPC_URL`, `RPC_URL`, program id, docs URLs                                                                                                |
-| `encrypt-read-msg.ts`         | `encodeReadCiphertextMessage` BCS layout                                                                                                    |
-| `encrypt-protobuf-wire.ts`    | CreateInput / ReadCiphertext protobuf wire codec (no `.proto` files; hand-rolled with `@bufbuild/protobuf` `BinaryWriter` / `BinaryReader`) |
-| `encrypt-grpc-web-fetch.ts`   | gRPC-web unary transport wrapper (fetch + `@protobuf-ts/grpcweb-transport`)                                                                 |
-| `encrypt-guard.ts`            | `assertEncryptSolanaIkaBase`, `isEncryptAllowedForSession`                                                                                  |
-| `DwalletEncryptedLabel.tsx`   | React component: encrypt / reveal / clear UI, 4s on-chain status polling                                                                    |
-| `encrypt.ts` (router)         | tRPC procedures bridging UI to encrypt-lab-service                                                                                          |
-| `encrypt-executor-poll.ts`    | generic polling helper (available, not directly used for labels)                                                                            |
-| `encrypt-spl-deposit-stub.ts` | future SPL Enc deposit (returns `not_wired`)                                                                                                |
-| `encrypt-pc-phase-stub.ts`    | future PC-Token / PC-Swap phases (returns `not_wired`)                                                                                      |
+| file | purpose |
+|------|---------|
+| `encrypt-lab-service.ts` | core encrypt / reveal / status logic, label chunking, mockEncryptScalarBytes helpers, network key resolution, on-chain status polling |
+| `encrypt-constants.ts` | `GRPC_URL`, `RPC_URL`, program id, docs URLs |
+| `encrypt-read-msg.ts` | `encodeReadCiphertextMessage` BCS layout |
+| `encrypt-protobuf-wire.ts` | CreateInput / ReadCiphertext protobuf wire codec (no `.proto` files; hand-rolled with `@bufbuild/protobuf` `BinaryWriter` / `BinaryReader`) |
+| `encrypt-grpc-web-fetch.ts` | gRPC-web unary transport wrapper (fetch + `@protobuf-ts/grpcweb-transport`) |
+| `encrypt-guard.ts` | `assertEncryptSolanaIkaBase`, `isEncryptAllowedForSession` |
+| `DwalletEncryptedLabel.tsx` | React component: encrypt / reveal / clear UI, 4s on-chain status polling |
+| `encrypt.ts` (router) | tRPC procedures bridging UI to encrypt-lab-service |
+| `encrypt-executor-poll.ts` | generic polling helper (available, not directly used for labels) |
+| `encrypt-spl-deposit-stub.ts` | future SPL Enc deposit (returns `not_wired`) |
+| `encrypt-pc-phase-stub.ts` | future PC-Token / PC-Swap phases (returns `not_wired`) |
 
 ## related deep-dives
 

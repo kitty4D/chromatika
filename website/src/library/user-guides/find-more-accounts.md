@@ -35,7 +35,6 @@ three things, depending on the active vault kind:
 4. results show balance + activity per chain, plus the **dwallet inventory** subsection if any caps exist on chain
 
 the dwallet inventory subsection has an amber border + "X orphans" badge when caps > matched-siblings. each cap row shows:
-
 - `{dwalletId-shortened} · {curve} · {status}` — basic chain data
 - one of:
   - `· {sibling label} (idx N)` — cap is bound to a known local vault

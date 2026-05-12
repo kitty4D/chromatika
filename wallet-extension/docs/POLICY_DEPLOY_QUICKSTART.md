@@ -1,4 +1,10 @@
-# Policy Vault deploy quickstart
+# Policy Vault deploy quickstart (chromatika team only)
+
+> **internal team doc.** End users never deploy their own Policy Vault package. The team publishes the audited production cut with the UpgradeCap burned in the same transaction (Sui) or the upgrade authority set to `--final` (Solana), and ships the resulting identifiers via the built-in registry at [`src/background/policy-vault/policy-vault-builtin.ts`](../src/background/policy-vault/policy-vault-builtin.ts). The user-facing trust story lives at [`local/wallet-special/policy-vault-deployment.md`](../../local/wallet-special/policy-vault-deployment.md).
+>
+> Sui mainnet is already shipped: package id `0x8cd25cd3ae7966b61eeae97d77b7e029b29b37307b533b505c6a76b63e22d727` (published 2026-05-11). End users on Sui mainnet get the package automatically. Use this doc when you (the team) need to:
+> - Run an **iteration deploy** (no `:final` flag) to test bug fixes against a mutable package while the UpgradeCap stays on the deployer keypair. Common for testnet / devnet work.
+> - Run the **audited production deploy** (`:final` flag) once the bytecode is audit-clean. This consumes the UpgradeCap atomically (Sui) or sets upgrade authority to None (Solana). After `:final`, the package is immutable forever; bugfixes require a fresh package + chromatika-side migration via the unwrap two-step.
 
 > one-page setup for running `pnpm run deploy:sui-policy:*` and `pnpm run deploy:solana-policy:*`. covers the prereq CLIs, wallet setup, funding, and the actual deploy commands. linked from [`POLICY_VAULT.md`](POLICY_VAULT.md) and [`POLICY_VAULT_SOLANA.md`](POLICY_VAULT_SOLANA.md).
 
@@ -12,13 +18,17 @@ cd wallet-extension
 # Sui (production-ready):
 pnpm run build:sui-policy                  # sui move build
 pnpm run test:sui-policy                   # sui move test
-pnpm run deploy:sui-policy:testnet         # publish to Sui testnet
-# -> copy the printed packageId, paste into chromatika Settings -> Security
+pnpm run deploy:sui-policy:testnet         # iteration deploy (UpgradeCap retained for bugfixes)
+pnpm run deploy:sui-policy:testnet:final   # AUDITED PRODUCTION CUT: burns the UpgradeCap atomically
+# -> for iteration deploys, paste the id into Settings via the "chromatika team only" details block.
+# -> for `:final` deploys, paste the id, bytecode hash, audit refs into policy-vault-builtin.ts
+#    and ship a chromatika release.
 
 # Solana (PRE-ALPHA, devnet only - mock signing, never real funds):
 pnpm run build:solana-policy               # anchor build
-pnpm run deploy:solana-policy:devnet       # builds + syncs declare_id! + deploys
-# -> copy the printed program id, paste into chromatika Settings -> Security
+pnpm run deploy:solana-policy:devnet       # iteration deploy (upgrade authority retained)
+pnpm run deploy:solana-policy:devnet:final # AUDITED PRODUCTION CUT: sets upgrade authority to None
+# -> same registry-paste-and-release flow as Sui for :final deploys.
 ```
 
 If both CLIs are already installed and your wallets are funded, that's it. Otherwise read the per-CLI sections below.
@@ -73,11 +83,15 @@ You need ~0.5 SUI for the publish (default `--gas-budget 200000000` = 0.2 SUI pl
 ```bash
 cd wallet-extension
 
-pnpm run deploy:sui-policy:testnet          # most common
-# or
-pnpm run deploy:sui-policy:mainnet          # production
-pnpm run deploy:sui-policy:devnet
+pnpm run deploy:sui-policy:testnet          # iteration deploy (most common during dev)
+pnpm run deploy:sui-policy:mainnet          # iteration on mainnet (rarely needed)
+pnpm run deploy:sui-policy:devnet           # iteration on devnet
 pnpm run deploy:sui-policy                  # uses whichever env is active
+
+# ── AUDITED PRODUCTION CUT (consumes UpgradeCap; package becomes immutable forever) ──
+pnpm run deploy:sui-policy:testnet:final
+pnpm run deploy:sui-policy:mainnet:final    # the real production deploy
+pnpm run deploy:sui-policy:devnet:final
 ```
 
 Expected output ends with:
@@ -90,7 +104,7 @@ Expected output ends with:
 
   next steps:
     1. open chromatika side panel
-    2. Settings -> Security -> "On-chain spend caps + panic button"
+    2. Policy Vault tab (bottom nav)
     3. paste the packageId above into the input, click save
     4. opt in your dWallet via the panel
 -----------------------------------------------------------
@@ -184,7 +198,7 @@ Expected output ends with:
 
   next steps:
     1. open chromatika side panel
-    2. Settings -> Security -> "On-chain spend caps + panic button"
+    2. Policy Vault tab (bottom nav)
     3. paste the program id into the Solana program id field
     4. opt in your Solana-base dWallet (pre-alpha; CPI body is a stub
        until ika Solana Alpha-1)
@@ -216,7 +230,7 @@ pnpm run test:solana-policy
 
 Both deploys end by pointing you at the same UI surface:
 
-**chromatika side panel -> Settings -> Security -> "On-chain spend caps + panic button"**
+**chromatika side panel -> Policy Vault tab (bottom nav)**
 
 That panel has separate input fields for the Sui packageId and the Solana program id (when present). Pasting either flips the storage shape (`PolicyPackageConfig` in [`policy-vault-storage.ts`](../src/background/policy-vault/policy-vault-storage.ts)) and unlocks the per-vault opt-in flow on dWallets matching that base chain.
 

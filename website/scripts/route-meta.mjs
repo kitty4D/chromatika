@@ -14,7 +14,7 @@
  *   - src/data/kb.ts: KB categories + articles (regex-parsed; mirrors readSlugList / readCategoryIds)
  *   - src/library/{user,tech}-guides/*.md: title from first H1, description from first paragraph
  *   - hardcoded blocks below for static routes: /, /knowledge-base, /library, /library/user,
- *     /library/tech, /legal/privacy, /legal/terms (mirror what each component passes to useDocHead)
+ *     /library/tech, /legal/privacy, /legal/terms, /roadmap, /tutorial, /features/* (mirror useDocHead)
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -207,6 +207,51 @@ const STATIC_ROUTE_META = new Map([
       description:
         "Terms of use for the Chromatika public knowledge base and the wallet extension.",
       canonicalPath: "/legal/terms",
+    },
+  ],
+  [
+    "/roadmap",
+    {
+      title: "roadmap",
+      description:
+        "Where Chromatika is headed next: recovery, on-chain guardrails, Seeker-native surfaces, encrypt depth, agents, and UX - honest status badges, no dated promises.",
+      canonicalPath: "/roadmap",
+    },
+  ],
+  [
+    "/tutorial",
+    {
+      title: "hands-on tutorial",
+      description:
+        "Visual getting-started tour: install from source, vault, home, dWallets, sends, assets, staking, x402, Policy Vault, MCP agents, and Chroma lab.",
+      canonicalPath: "/tutorial",
+    },
+  ],
+  [
+    "/features/chromashard",
+    {
+      title: "ChromaShard",
+      description:
+        "Portable threshold-encrypted recovery: one publishable string plus a quorum of identity factors, coordinator-free.",
+      canonicalPath: "/features/chromashard",
+    },
+  ],
+  [
+    "/features/policy-vault",
+    {
+      title: "Policy Vault: trust & deploy",
+      description:
+        "Spend caps, panic, rescue, immutable Move deploy story, unwrap delay - and how to verify bytecode and upgrade caps yourself.",
+      canonicalPath: "/features/policy-vault",
+    },
+  ],
+  [
+    "/features/encrypt-ika",
+    {
+      title: "Encrypt.xyz + ika feature map",
+      description:
+        "Cross-cutting map of which Chromatika features touch encrypt pre-alpha, ika MPC, both, or neither.",
+      canonicalPath: "/features/encrypt-ika",
     },
   ],
 ]);

@@ -7,7 +7,6 @@ spec: [WebAuthn Level 3 (working draft) §10.1.4](https://www.w3.org/TR/webauthn
 ## why we use it
 
 without PRF, a passkey can prove "you have this credential" (authentication) but can't produce stable secret material (encryption). chromatika needs encryption to:
-
 - derive the AES key for the passkey-PRF unlock envelope (see [passkey-prf-envelope.md](/library/tech/passkey-prf-envelope))
 - derive the ika `UserShareEncryptionKeys` root seed for Sui-base passkey vaults (see [ika-seed-sui-passkey.md](/library/tech/ika-seed-sui-passkey))
 
@@ -16,7 +15,6 @@ both want a deterministic 32-byte input. PRF provides exactly that.
 ## the eval input
 
 the relying party supplies a **salt** in the PRF request:
-
 ```ts
 extensions: {
   prf: {
@@ -29,7 +27,6 @@ extensions: {
 ```
 
 the authenticator computes:
-
 ```
 prf_output = HMAC-SHA256(per_credential_secret, salt)
 ```
@@ -44,23 +41,23 @@ determinism: same `(credential, salt)` always produces the same `prf_output`. ac
 const credential = await navigator.credentials.create({
   publicKey: {
     challenge: random32,
-    rp: { id: rpId, name: "Chromatika" },
+    rp: { id: rpId, name: 'Chromatika' },
     user: { id, name, displayName },
     pubKeyCredParams: [
-      { alg: -7, type: "public-key" }, // ES256 (secp256r1)
-      { alg: -257, type: "public-key" }, // RS256 (RSA, fallback for Windows Hello)
+      { alg: -7, type: 'public-key' },                // ES256 (secp256r1)
+      { alg: -257, type: 'public-key' },              // RS256 (RSA, fallback for Windows Hello)
     ],
     extensions: {
       prf: {
-        eval: { first: prfSaltBytes }, // optional eval at register time
-      },
-    },
-  },
+        eval: { first: prfSaltBytes }                 // optional eval at register time
+      }
+    }
+  }
 });
 
 const prfResult = credential.getClientExtensionResults().prf;
 if (prfResult?.results?.first) {
-  const prfSecret = prfResult.results.first; // 32 bytes
+  const prfSecret = prfResult.results.first;          // 32 bytes
   // success - we have the PRF output
 } else if (prfResult?.enabled) {
   // PRF supported but not eval-d at register; do an immediate get() to extract
@@ -68,15 +65,15 @@ if (prfResult?.results?.first) {
     publicKey: {
       challenge: random32,
       rpId,
-      allowCredentials: [{ id: credential.rawId, type: "public-key" }],
-      extensions: { prf: { eval: { first: prfSaltBytes } } },
-    },
+      allowCredentials: [{ id: credential.rawId, type: 'public-key' }],
+      extensions: { prf: { eval: { first: prfSaltBytes } } }
+    }
   });
   const prfSecret = assertion.getClientExtensionResults().prf.results.first;
 } else {
   // authenticator does not support PRF / hmac-secret
   // chromatika rejects: cannot create a PRF-backed vault on this authenticator
-  throw new Error("authenticator does not support PRF extension");
+  throw new Error('authenticator does not support PRF extension');
 }
 ```
 
@@ -89,9 +86,9 @@ const assertion = await navigator.credentials.get({
   publicKey: {
     challenge: random32,
     rpId,
-    allowCredentials: [{ id: credentialIdBytes, type: "public-key" }],
-    extensions: { prf: { eval: { first: prfSaltBytes } } },
-  },
+    allowCredentials: [{ id: credentialIdBytes, type: 'public-key' }],
+    extensions: { prf: { eval: { first: prfSaltBytes } } }
+  }
 });
 const prfSecret = assertion.getClientExtensionResults().prf.results.first;
 // 32 bytes
@@ -102,7 +99,6 @@ every unlock-time assertion supplies the same `prfSaltBytes` (persisted in the e
 ## chromatika's PasskeyProviderWithPrf wrapper
 
 chromatika has a custom wrapper (`wallet-extension/src/ui/passkey/passkey-provider-with-prf.ts`) around `navigator.credentials` that:
-
 - mirrors `@mysten/sui`'s `PasskeyProvider` interface (so existing Sui passkey code can use it)
 - injects the PRF extension request
 - handles the register-vs-assertion PRF availability split
@@ -113,7 +109,6 @@ this wrapper keeps the PRF integration localized; the rest of chromatika just se
 ## authenticator support
 
 PRF / `hmac-secret` is supported by:
-
 - **YubiKey** firmware 5.2.3+
 - **SoloKey 2** (most firmware versions)
 - **Touch ID** on macOS Sonoma+ (with iCloud Passwords)
@@ -121,7 +116,6 @@ PRF / `hmac-secret` is supported by:
 - **Android passkey** (Google Password Manager)
 
 NOT supported by:
-
 - older YubiKeys (firmware <5.2.3)
 - some non-FIDO2 hardware tokens
 - platform authenticators on older OS versions
@@ -135,14 +129,12 @@ chromatika tests for PRF availability at registration. if not supported, surface
 ## the credential public-key info
 
 after registration, chromatika persists:
-
 - `credentialIdB64Url`: webauthn `credential.rawId` in base64url (RFC 4648 §5)
 - `publicKeyCompressedB64`: 33-byte secp256r1 compressed pubkey from the attestation object
 - `rpId`: relying-party id (chrome-extension origin)
 - `prfSaltB64`: per-vault salt
 
 the public key isn't strictly needed for unlock (PRF is independent of the keypair), but it's used:
-
 - for SIP-9 Sui address derivation: `blake2b_256(0x06 || pk_compressed)` produces a Sui address that can be displayed alongside the passkey
 - for verifiable signatures (passkey can also sign, separately from the PRF flow)
 

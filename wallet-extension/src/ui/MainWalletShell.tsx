@@ -17,6 +17,7 @@ import { VaultContextHeader } from '@/ui/components/VaultContextHeader';
 import { DWalletContextBar } from '@/ui/components/DWalletContextBar';
 import { AlertBanner } from '@/ui/components/AlertBanner';
 import { OperationProgressBanner } from '@/ui/components/OperationProgressBanner';
+import { TeamFundingOfferBanner } from '@/ui/components/TeamFundingOfferBanner';
 import { WalletPage } from '@/ui/pages/WalletPage';
 import type { SettingsTab } from '@/ui/pages/SettingsPage';
 import type { Tab, Balances, Networks } from '@/ui/types';
@@ -80,6 +81,11 @@ export type MainWalletShellProps = {
   settingsInitialTab?: SettingsTab;
   /** fired when balance summary flips to locked while the shell is mounted (defense in depth) */
   onSessionLockDetected?: () => void;
+  /**
+   * VaultPicker CTA: clicking "create a dWallet vault on <chain>" delegates upstream so the
+   * existing `NeedIkaBaseVaultGate` flow renders with `vaultBaseChainOverride` preselected.
+   */
+  onAddVaultForBase?: (baseChain: 'sui' | 'solana') => void;
 };
 
 export function MainWalletShell({
@@ -106,6 +112,7 @@ export function MainWalletShell({
   onDwalletBarSwitched,
   settingsInitialTab,
   onSessionLockDetected,
+  onAddVaultForBase,
 }: MainWalletShellProps) {
   const titleBarMeasureRef = useRef<HTMLDivElement>(null);
   const [titleBarH, setTitleBarH] = useState(48);
@@ -201,6 +208,7 @@ export function MainWalletShell({
         activeVaultId={activeVaultId}
         onVaultSwitched={onVaultSwitched}
         nameHints={vaultNameHints}
+        onAddVault={onAddVaultForBase}
       />
       <DWalletContextBar
         balances={balances}
@@ -227,6 +235,7 @@ export function MainWalletShell({
           }
         }}
       />
+      <TeamFundingOfferBanner />
       <main className="sp-content">
         <div className="sp-contentTrackShell">
           <div className="sp-contentTrack ch-scrollbar">
@@ -249,6 +258,11 @@ export function MainWalletShell({
                     advanced={advanced}
                     onBack={() => setWalletOverlay(null)}
                     onRefresh={refresh}
+                    onOpenPolicyVault={() => {
+                      // Close the dWallet-management overlay then route to the Policy Vault tab.
+                      setWalletOverlay(null);
+                      setTab('policy');
+                    }}
                   />
                 </Suspense>
               ) : (
@@ -307,6 +321,7 @@ export function MainWalletShell({
                       onViewPortfolio={(id) => void activateDwalletThenRefresh(id)}
                       onOpenDWalletMgmt={() => setWalletOverlay('dwalletMgmt')}
                       onOpenSend={() => openSendOverlay()}
+                      onOpenPolicyVault={() => setTab('policy')}
                       uiHelpHints={uiHelpHints}
                     />
                   )}

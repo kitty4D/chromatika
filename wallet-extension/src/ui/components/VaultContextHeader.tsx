@@ -7,6 +7,7 @@ import type { Balances, Networks } from '@/ui/types';
 import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
 import { evmAddressExplorerUrl, feePayerExplorerHref } from '@/lib/explorer-href';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
+import { VaultTotalLine } from '@/ui/components/VaultTotalLine';
 
 type DappCtx = Awaited<ReturnType<typeof trpc.vaultHeaderDappContext.query>>;
 
@@ -17,6 +18,7 @@ export function VaultContextHeader({
   activeVaultId,
   onVaultSwitched,
   nameHints,
+  onAddVault,
 }: {
   balances: Balances | null;
   networks: Networks | null;
@@ -24,6 +26,8 @@ export function VaultContextHeader({
   activeVaultId: string | null;
   onVaultSwitched: () => void;
   nameHints?: Map<string, VaultNameHint>;
+  /** click handler for the vault picker's "create a dWallet vault on <chain>" CTA. */
+  onAddVault?: (baseChain: 'sui' | 'solana') => void;
 }) {
   const explorerPrefs = useExplorerPreferences();
   const [dapp, setDapp] = useState<DappCtx | null>(null);
@@ -75,6 +79,7 @@ export function VaultContextHeader({
             activeVaultId={activeVaultId}
             onSwitched={onVaultSwitched}
             nameHints={nameHints}
+            onAddVault={onAddVault}
           />
         ) : (
           <div className="cv-contextVaultName cv-contextVaultName--withAvatar">
@@ -119,6 +124,9 @@ export function VaultContextHeader({
     return (
       <div className="cv-contextHeader cv-contextHeader--withDapp">
         {vaultRow}
+        <div className="cv-vaultTotalRow">
+          <VaultTotalLine vaultId={activeVaultId} />
+        </div>
         <div className="cv-contextDivider" role="presentation" />
         <div className="cv-contextDapp">
           <div className="cv-contextDappHead">
@@ -146,5 +154,12 @@ export function VaultContextHeader({
     );
   }
 
-  return <div className="cv-contextHeader cv-contextHeader--disconnected">{vaultRow}</div>;
+  return (
+    <div className="cv-contextHeader cv-contextHeader--disconnected">
+      {vaultRow}
+      <div className="cv-vaultTotalRow">
+        <VaultTotalLine vaultId={activeVaultId} />
+      </div>
+    </div>
+  );
 }

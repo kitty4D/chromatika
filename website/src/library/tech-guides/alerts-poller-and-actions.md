@@ -7,10 +7,10 @@ the alerts subsystem polls the feed every 5 minutes via `chrome.alarms`, verifie
 ```ts
 const ALERTS_POLL_PERIOD_MIN = 5;
 
-chrome.alarms.create("chromatika-alerts-poll", { periodInMinutes: 5 });
+chrome.alarms.create('chromatika-alerts-poll', { periodInMinutes: 5 });
 
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "chromatika-alerts-poll") {
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name === 'chromatika-alerts-poll') {
     void runAlertsPoll();
   }
 });
@@ -23,14 +23,10 @@ manual trigger via tRPC `triggerAlertPoll` for the settings page refresh button.
 ## `runAlertsPoll()`
 
 ```ts
-async function runAlertsPoll(): Promise<{
-  newAlerts: number;
-  drops: number;
-  error: string | null;
-}> {
+async function runAlertsPoll(): Promise<{ newAlerts: number, drops: number, error: string | null }> {
   const state = await getAlertsState();
   if (state.settings.optedOut) {
-    return { newAlerts: 0, drops: 0, error: "opted out" };
+    return { newAlerts: 0, drops: 0, error: 'opted out' };
   }
 
   let result;
@@ -93,14 +89,14 @@ per-alert verification means **one bad alert doesn't poison the batch**. the res
 ```ts
 async function mergeNewAlerts(verified: SignedAlertV1[]): Promise<SignedAlertV1[]> {
   const state = await getAlertsState();
-  const known = new Set(state.knownAlerts.map((a) => a.id));
+  const known = new Set(state.knownAlerts.map(a => a.id));
 
-  const newAlerts = verified.filter((a) => !known.has(a.id));
+  const newAlerts = verified.filter(a => !known.has(a.id));
   if (newAlerts.length === 0) return [];
 
   const updated = [...state.knownAlerts, ...newAlerts]
     .sort((a, b) => b.timestampMs - a.timestampMs)
-    .slice(0, 200); // FIFO cap
+    .slice(0, 200);   // FIFO cap
 
   await chrome.storage.local.set({
     chromatika_alerts_v1: { ...state, knownAlerts: updated },
@@ -122,12 +118,12 @@ async function runNewAlertActions(alert: SignedAlertV1, muted: boolean): Promise
   // (no explicit call needed - banner re-fetches on its own 30s interval)
 
   // 2. chrome notifications: critical + warning, unless muted
-  if ((alert.severity === "critical" || alert.severity === "warning") && !muted) {
+  if ((alert.severity === 'critical' || alert.severity === 'warning') && !muted) {
     await fireChromeNotificationForAlert(alert);
   }
 
   // 3. dNR redirect rules: critical with affected domains only
-  if (alert.severity === "critical" && alert.affectedDomains.length > 0) {
+  if (alert.severity === 'critical' && alert.affectedDomains.length > 0) {
     await appendCriticalAlertDnrRules(alert);
   }
 }
@@ -143,10 +139,10 @@ async function runNewAlertActions(alert: SignedAlertV1, muted: boolean): Promise
 async function fireChromeNotificationForAlert(alert: SignedAlertV1): Promise<void> {
   const notificationId = `chromatika-alert-${alert.id}`;
   await chrome.notifications.create(notificationId, {
-    type: "basic",
-    iconUrl: chrome.runtime.getURL("icons/alert-icon-128.png"),
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('icons/alert-icon-128.png'),
     title: `[${alert.severity.toUpperCase()}] ${alert.titleShort}`,
-    message: `${alert.bodyLong.slice(0, 200)}${alert.bodyLong.length > 200 ? "…" : ""}`,
+    message: `${alert.bodyLong.slice(0, 200)}${alert.bodyLong.length > 200 ? '…' : ''}`,
     priority: 2,
     requireInteraction: true,
   });
@@ -159,9 +155,9 @@ notification id format: `chromatika-alert-<alert.id>`. lets the global click han
 
 ```ts
 chrome.notifications.onClicked.addListener((notificationId) => {
-  if (!notificationId.startsWith("chromatika-alert-")) return;
-  const alertId = notificationId.slice("chromatika-alert-".length);
-  void openSidePanelForAlert(alertId); // opens side panel with ?alertId=<id>
+  if (!notificationId.startsWith('chromatika-alert-')) return;
+  const alertId = notificationId.slice('chromatika-alert-'.length);
+  void openSidePanelForAlert(alertId);   // opens side panel with ?alertId=<id>
   chrome.notifications.clear(notificationId);
 });
 ```
@@ -172,11 +168,11 @@ side panel reads `?alertId=` from its URL and auto-expands the matching alert in
 
 ```ts
 const ALERT_DNR_RULE_ID_BASE = 10_000;
-const ALERT_DNR_RULE_ID_RANGE = 10_000; // 10000-19999
+const ALERT_DNR_RULE_ID_RANGE = 10_000;       // 10000-19999
 
 async function appendCriticalAlertDnrRules(alert: SignedAlertV1): Promise<void> {
   const newRules: chrome.declarativeNetRequest.Rule[] = [];
-  const newAlarms: { name: string; ruleId: number }[] = [];
+  const newAlarms: { name: string, ruleId: number }[] = [];
 
   for (const domain of alert.affectedDomains) {
     const stableHash = sha256(`${alert.id}::${domain}`);
@@ -186,18 +182,17 @@ async function appendCriticalAlertDnrRules(alert: SignedAlertV1): Promise<void> 
       id: ruleId,
       priority: 2,
       action: {
-        type: "redirect",
+        type: 'redirect',
         redirect: {
-          regexSubstitution:
-            chrome.runtime.getURL("phishing-warning.html") +
-            `?blocked=${encodeURIComponent(domain)}` +
-            `&alertId=${encodeURIComponent(alert.id)}` +
-            `&source=chromatika-safety-alert`,
+          regexSubstitution: chrome.runtime.getURL('phishing-warning.html')
+            + `?blocked=${encodeURIComponent(domain)}`
+            + `&alertId=${encodeURIComponent(alert.id)}`
+            + `&source=chromatika-safety-alert`,
         },
       },
       condition: {
         urlFilter: `||${domain}^`,
-        resourceTypes: ["main_frame"],
+        resourceTypes: ['main_frame'],
       },
     });
 
@@ -212,7 +207,7 @@ async function appendCriticalAlertDnrRules(alert: SignedAlertV1): Promise<void> 
   });
 
   // persist alarm → ruleId mapping for cleanup
-  const applied = await chrome.storage.local.get("chromatika_alerts_applied_rules_v1");
+  const applied = await chrome.storage.local.get('chromatika_alerts_applied_rules_v1');
   applied.alarmToRuleId = applied.alarmToRuleId ?? {};
   for (const { name, ruleId } of newAlarms) {
     applied.alarmToRuleId[name] = ruleId;
@@ -222,7 +217,6 @@ async function appendCriticalAlertDnrRules(alert: SignedAlertV1): Promise<void> 
 ```
 
 key invariants:
-
 - **rule id range**: 10000-19999 - non-overlapping with `eth-phishing-detect` (1-4900). 10000 alerts × N domains is a hard ceiling
 - **stable hashing**: `sha256(alertId || '::' || domain)` mod range gives the rule id. same alert + same domain always maps to the same id. no need for a global counter
 - **priority 2**: higher than eth-phishing-detect's priority 1, so chromatika alerts win on collision
@@ -233,9 +227,9 @@ key invariants:
 
 ```ts
 async function handleAlertRuleExpiryAlarm(alarmName: string): Promise<void> {
-  const applied = await chrome.storage.local.get("chromatika_alerts_applied_rules_v1");
+  const applied = await chrome.storage.local.get('chromatika_alerts_applied_rules_v1');
   const ruleId = applied.alarmToRuleId?.[alarmName];
-  if (!ruleId) return; // already cleaned up
+  if (!ruleId) return;   // already cleaned up
 
   await chrome.declarativeNetRequest.updateDynamicRules({
     addRules: [],
@@ -250,10 +244,9 @@ async function handleAlertRuleExpiryAlarm(alarmName: string): Promise<void> {
 removes one rule + cleans up the index. doesn't clean up the corresponding alarm (chrome.alarms self-cleans after firing for non-recurring alarms).
 
 global dispatcher in `index.ts`:
-
 ```ts
-chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name.startsWith("chromatika-alert-rule-")) {
+chrome.alarms.onAlarm.addListener(alarm => {
+  if (alarm.name.startsWith('chromatika-alert-rule-')) {
     void handleAlertRuleExpiryAlarm(alarm.name);
   }
 });
@@ -262,7 +255,6 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 ## the per-rule TTL design rationale
 
 alternative approaches:
-
 - **single sweeper alarm**: one alarm fires periodically, scans all alerts, removes expired ones. simple but coarse - up to N minutes of stale rules
 - **per-alert alarm**: one alarm per alert. but an alert can have many domains; multi-domain rule cleanup needs care
 - **per-rule alarm** (chosen): one alarm per (alert, domain) pair. precise expiry; clean cleanup logic
@@ -272,7 +264,6 @@ con: many alarms if many alerts × many domains. chrome.alarms isn't strictly li
 ## opt-out cleanup
 
 opting out doesn't immediately clear all dNR rules - they cleanup on their per-rule TTL alarms, which still fire even if the poller stops. so:
-
 - new poll → skipped (opt-out check)
 - existing dNR rules → continue blocking until TTL
 - alert history → readable

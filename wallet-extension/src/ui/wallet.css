@@ -1,4 +1,43 @@
 @import './theme.css';
+@import './signature-motifs.css';
+@import './elevation.css';
+@import './motion.css';
+
+/* ----- container query foundation (CC-L4 from plan) -----
+ * each screen-tab root becomes a query container named `ch-screen`. components inside
+ * can use @container ch-screen (min-width: ...) to adapt between popup (~420px) and
+ * side-panel (~280-500px+) width without viewport queries.
+ *
+ * existing fixed-width layouts work unchanged; this only adds capability. components
+ * that opt in are listed below — keep this list short and intentional, not sprinkled.
+ */
+.sp-contentTrack,
+.sp-page,
+.wc-popupBody {
+  container-type: inline-size;
+  container-name: ch-screen;
+}
+
+/* example uses (low-key adaptations — heavier rebreak-points would require JSX changes):
+ * - activity rows get extra horizontal breathing
+ * - settings menu rows get a touch more padding when there's room
+ *
+ * threshold set at 400px so popup (420px content track minus a few px) and side-panel
+ * (typically 280-500px content track) both benefit. below 400px only the narrowest
+ * side-panel widths see the tighter spacing.
+ */
+@container ch-screen (min-width: 400px) {
+  .sp-activityRow {
+    gap: 18px;
+    padding: 14px 0;
+  }
+  .sp-menuRow {
+    padding: 14px 16px;
+  }
+  .ap-tabRow {
+    gap: 10px;
+  }
+}
 
 /* --- extension shell: no document-level scrollbars; scroll only inside designated tracks --- */
 .ch-ext,
@@ -349,8 +388,12 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  font-size: 16px;
-  font-weight: 800;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-md, 1.18rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
+  line-height: 1.2;
 }
 
 .wc-title img {
@@ -365,14 +408,20 @@
   background: var(--theme-wc-btn-bg);
   color: var(--theme-page-text);
   border-radius: var(--theme-radius-control);
-  padding: 10px 12px;
-  font-size: 12px;
+  padding: 12px 16px;
+  min-height: 44px;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-sm, 0.95rem);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  text-transform: lowercase;
   cursor: pointer;
   transition:
-    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.22s var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1)),
     background 0.18s ease,
     border-color 0.18s ease,
-    box-shadow 0.22s ease;
+    box-shadow 0.22s ease,
+    filter 0.18s ease;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -402,9 +451,21 @@
 }
 
 .wc-btnPrimary {
-  background: var(--theme-wc-btn-primary-bg);
-  border-color: var(--theme-wc-btn-primary-border);
-  color: #fff;
+  /* CTA gradient: violet → sky (lifted from website .header-bar-wordmark + plan CC-B5) */
+  background: var(--ch-cta-gradient, var(--theme-wc-btn-primary-bg));
+  border-color: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 45%, transparent);
+  color: oklch(0.97 0.015 270);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.18) inset,
+    0 6px 20px oklch(0.1 0.06 285 / 0.4);
+}
+
+.wc-btnPrimary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.22) inset,
+    0 0 0 1px color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 22%, transparent),
+    0 10px 28px oklch(0.1 0.06 285 / 0.5);
 }
 
 .wc-input,
@@ -724,6 +785,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: -0.005em;
+  text-transform: lowercase;
 }
 
 .sp-vaultPickerChev {
@@ -801,6 +867,78 @@
 .sp-vaultPickerMetaIcon {
   flex-shrink: 0;
   opacity: 0.9;
+}
+
+/**
+ * grouped vault list: vaults are clustered by ika base chain, active chain first. an empty
+ * other-chain group renders a single dashed CTA row that opens the add-vault flow with
+ * `vaultBaseChainOverride` preselected. dashed border (not the banned >1px side stripe) reads
+ * as "creation slot" rather than an existing vault row.
+ */
+.sp-vaultPickerGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 2px 0;
+}
+
+.sp-vaultPickerGroupLabel {
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: color-mix(in oklch, var(--theme-page-text) 55%, transparent);
+  padding: 4px 10px 2px;
+  user-select: none;
+}
+
+.sp-vaultPickerDivider {
+  height: 1px;
+  margin: 4px 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 0;
+}
+
+.sp-vaultPickerCta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 8px 4px;
+  padding: 8px 10px;
+  border: 1px dashed color-mix(in oklch, var(--theme-chain-border) 60%, transparent);
+  border-radius: 6px;
+  font-size: 12px;
+  color: color-mix(in oklch, var(--theme-page-text) 80%, transparent);
+  cursor: pointer;
+  background: transparent;
+  text-align: left;
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.sp-vaultPickerCta:hover,
+.sp-vaultPickerCta:focus-visible {
+  border-color: var(--theme-chain-border);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--theme-page-text);
+  outline: none;
+}
+
+.sp-vaultPickerCta > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+
+.sp-vaultPickerCtaArrow {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.sp-vaultPickerEmpty {
+  margin: 2px 8px 4px;
+  padding: 8px 10px;
+  font-size: 11px;
+  opacity: 0.6;
+  font-style: italic;
 }
 
 .sp-vaultAvatar {
@@ -1067,10 +1205,12 @@ html[data-appearance='light'][data-ika-chain='solana'] .sp-content:has(.sp-page-
 
 .sp-pageTitle {
   font-family: var(--theme-font-display);
-  font-size: 18px;
-  font-weight: 800;
-  margin-bottom: 14px;
-  letter-spacing: -0.3px;
+  font-size: var(--text-lg, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  text-transform: lowercase;
+  line-height: 1.15;
+  margin-bottom: 18px;
 }
 
 /* solana: monospace for on-chain strings */
@@ -1189,8 +1329,10 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   flex-shrink: 0;
   background: rgba(11, 18, 32, 0.9);
   background: color-mix(in srgb, var(--sp-bg) 86%, transparent);
-  backdrop-filter: blur(14px) saturate(1.1);
-  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  /* perf (i-optimize P1): blur 14->8, saturate hint dropped. always-visible chrome. */
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  contain: layout paint;
 }
 
 .sp-bottomNavShell .sp-bottomNav {
@@ -1217,7 +1359,10 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   outline-offset: 2px;
   border-radius: var(--theme-radius-sm);
 }
-.sp-navBtnActive { color: var(--sp-primary) !important; }
+.sp-navBtnActive { color: var(--accent, var(--sp-primary)) !important; }
+.sp-navBtnActive .sp-navLabel {
+  filter: drop-shadow(0 0 8px color-mix(in oklch, var(--accent, oklch(0.78 0.14 245)) 45%, transparent));
+}
 .sp-navIcon {
   display: flex;
   align-items: center;
@@ -1228,24 +1373,36 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   width: 20px;
   height: 20px;
 }
-.sp-navLabel { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.28px; }
+.sp-navLabel {
+  font-family: var(--theme-font-display);
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
 .sp-navLabel--dwallet {
-  text-transform: none;
-  letter-spacing: 0.2px;
+  text-transform: lowercase;
+  letter-spacing: 0.02em;
   font-weight: 800;
 }
+/* active-tab indicator: signature 4-stop ribbon at the bottom of the active tab,
+ * echoing the titlebar ribbon for cross-screen visual cohesion (CC-B5 from plan) */
 .sp-navIndicator {
   position: absolute;
-  bottom: 5px;
-  left: 0;
-  right: 0;
-  margin-left: auto;
-  margin-right: auto;
-  width: 22px;
-  height: 3px;
+  bottom: 4px;
+  left: 12px;
+  right: 12px;
+  height: 2px;
   border-radius: 999px;
-  background: linear-gradient(90deg, var(--sp-primary), color-mix(in srgb, var(--sp-primary) 70%, white));
+  background: var(--ch-bleed-gradient, linear-gradient(90deg,
+    oklch(0.62 0.19 22),
+    oklch(0.58 0.13 285),
+    oklch(0.7 0.14 250),
+    oklch(0.62 0.19 22)
+  ));
   pointer-events: none;
+  opacity: 0.92;
+  box-shadow: 0 0 12px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 35%, transparent);
 }
 
 /* sections */
@@ -1256,62 +1413,70 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 }
 .sp-section:last-child { border-bottom: none; }
 .sp-sectionTitle {
-  font-size: 11px;
-  font-weight: 700;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-2xs, 0.6875rem);
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.6px;
-  color: var(--sp-muted);
+  letter-spacing: 0.12em;
+  color: var(--muted, var(--sp-muted));
   margin-bottom: 8px;
 }
 
 /* settings menu rows */
+/* settings rows (Archetype 4): flat row, no per-row card, hairline divider between siblings.
+ * Bricolage display titles, Figtree muted descriptions, accent-tinted icon chips. */
 .sp-menuList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px 0 6px;
+  gap: 0;
+  padding: 4px 0 6px;
 }
 .sp-menuGroupLabel {
-  font-size: 10.5px;
-  font-weight: 700;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-2xs, 0.6875rem);
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.7px;
-  color: var(--sp-muted);
-  padding: 14px 4px 4px;
+  letter-spacing: 0.12em;
+  color: var(--muted, var(--sp-muted));
+  padding: 18px 4px 8px;
 }
 .sp-menuRow {
   display: flex;
   align-items: center;
-  gap: 12px;
+  gap: 14px;
   width: 100%;
+  min-height: 56px;
   padding: 12px 12px;
-  border-radius: var(--theme-radius-sm);
-  border: 1px solid var(--sp-border);
-  background: var(--sp-surface);
-  color: var(--sp-text);
+  border-radius: 0;
+  border: none;
+  border-bottom: 1px solid color-mix(in oklch, var(--border, var(--sp-border)) 70%, transparent);
+  background: transparent;
+  color: var(--text, var(--sp-text));
   cursor: pointer;
   text-align: left;
   font: inherit;
-  transition: background 0.12s, border-color 0.12s;
+  transition: background 0.18s ease, border-color 0.18s ease;
+  /* perf (i-optimize P2): layout isolation for menu row hover */
+  contain: layout style;
 }
+.sp-menuList .sp-menuRow:last-child { border-bottom: none; }
 .sp-menuRow:hover {
-  background: var(--theme-sp-btn-ghost-hover);
-  border-color: var(--theme-chain-border-soft);
+  background: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 5%, transparent);
 }
 .sp-menuRow:focus-visible {
   outline: 2px solid var(--theme-focus-ring);
   outline-offset: 2px;
 }
 .sp-menuRowIcon {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 8px;
-  background: rgba(124, 92, 252, 0.15);
-  color: rgba(190, 175, 255, 0.95);
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 18%, transparent);
+  color: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 80%, oklch(0.97 0.015 270));
 }
 .sp-menuRowBody {
   display: flex;
@@ -1321,14 +1486,17 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   flex: 1;
 }
 .sp-menuRowTitle {
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--sp-text);
-  line-height: 1.2;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-sm, 0.95rem);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  text-transform: lowercase;
+  color: var(--text, var(--sp-text));
+  line-height: 1.25;
 }
 .sp-menuRowDesc {
-  font-size: 11.5px;
-  color: var(--sp-muted);
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--muted, var(--sp-muted));
   line-height: 1.35;
 }
 .sp-menuRowChev {
@@ -1471,65 +1639,220 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   outline-offset: 2px;
   border-color: var(--theme-focus-ring);
 }
-.sp-inputAmount { flex: 1; }
-.sp-amountRow { display: flex; align-items: center; gap: 8px; }
-.sp-amountUnit { font-weight: 700; font-size: 13px; color: var(--sp-muted); flex-shrink: 0; }
+/* hero amount input (CC-B2 from plan): the input IS the hero — Bricolage display, large,
+ * tabular-nums, no border, transparent bg. The currency unit on the right is muted display. */
+.sp-inputAmount {
+  flex: 1;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-xl, 2.25rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.05;
+  padding: 8px 0;
+  border: none;
+  background: transparent;
+  color: var(--text, var(--sp-text));
+}
+.sp-inputAmount:focus-visible {
+  outline: none;
+  border-color: transparent;
+}
+.sp-inputAmount::placeholder {
+  color: color-mix(in oklch, var(--muted, var(--sp-muted)) 60%, transparent);
+}
+.sp-amountRow {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  border-bottom: 1px solid var(--border, var(--theme-chrome-border-soft));
+  padding-bottom: 4px;
+}
+.sp-amountRow:focus-within {
+  border-bottom-color: var(--accent, var(--theme-focus-ring));
+}
+.sp-amountUnit {
+  font-family: var(--theme-font-display);
+  font-weight: 700;
+  font-size: var(--text-md, 1.18rem);
+  color: var(--muted, var(--sp-muted));
+  flex-shrink: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
 
-/* buttons */
+/* buttons (Archetype 6 + plan CC-B5: Bricolage display labels, ghost / CTA-gradient pair) */
 .sp-btn {
-  padding: 8px 16px;
-  border-radius: var(--theme-radius-sm);
+  padding: 12px 18px;
+  min-height: 44px;
+  border-radius: var(--theme-radius-control, var(--theme-radius-sm));
   border: 1px solid var(--theme-chain-border-soft);
   background: var(--sp-surface);
   color: var(--sp-text);
   cursor: pointer;
-  font-size: 13px;
-  font-weight: 600;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-sm, 0.95rem);
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  text-transform: lowercase;
   white-space: nowrap;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.22s var(--ch-ease, ease),
+    filter 0.18s ease,
+    transform 0.16s var(--ch-ease, ease);
 }
-.sp-btn:hover:not(:disabled) { background: var(--theme-sp-btn-ghost-hover); }
+.sp-btn:hover:not(:disabled) {
+  background: var(--theme-sp-btn-ghost-hover);
+  border-color: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 32%, var(--theme-chain-border-soft));
+}
 .sp-btn:focus-visible {
   outline: 2px solid var(--theme-focus-ring);
   outline-offset: 2px;
 }
 .sp-btn:disabled { opacity: 0.5; cursor: default; }
-.sp-btnPrimary { background: var(--sp-primary); border-color: var(--sp-primary); color: #fff; }
-.sp-btnPrimary:hover:not(:disabled) { filter: brightness(1.12); }
+
+.sp-btnPrimary {
+  background: var(--ch-cta-gradient, var(--sp-primary));
+  border-color: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 45%, transparent);
+  color: oklch(0.97 0.015 270);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.18) inset,
+    0 6px 20px oklch(0.1 0.06 285 / 0.35);
+}
+.sp-btnPrimary:hover:not(:disabled) {
+  filter: brightness(1.06);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.22) inset,
+    0 0 0 1px color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 22%, transparent),
+    0 10px 28px oklch(0.1 0.06 285 / 0.45);
+}
 .sp-btnPrimary:focus-visible {
   outline: 2px solid var(--theme-focus-ring);
   outline-offset: 2px;
 }
-.sp-btnDanger { background: rgba(239,68,68,0.15); border-color: rgba(239,68,68,0.35); color: rgba(255,120,120,0.95); cursor: pointer; padding: 5px 10px; border-radius: 8px; font-size: 11px; }
+
+/* size + style modifiers for inline / list-item buttons (e.g. activity row note buttons) */
+.sp-btn--ghost {
+  background: transparent;
+  border-color: color-mix(in oklch, var(--border, var(--theme-chain-border-soft)) 80%, transparent);
+}
+.sp-btn--ghost:hover:not(:disabled) {
+  background: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 8%, transparent);
+  border-color: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 28%, var(--border, var(--theme-chain-border-soft)));
+}
+
+.sp-btn--xs {
+  min-height: 28px;
+  padding: 4px 10px;
+  font-size: var(--text-2xs, 0.6875rem);
+  letter-spacing: 0.04em;
+  border-radius: var(--theme-radius-pill, 999px);
+  gap: 4px;
+}
+.sp-btnDanger {
+  background: var(--theme-banner-error-bg, rgba(239, 68, 68, 0.15));
+  border: 1px solid color-mix(in oklch, oklch(0.6 0.22 25) 35%, transparent);
+  color: var(--theme-banner-error-fg, rgba(255, 120, 120, 0.95));
+  cursor: pointer;
+  padding: 5px 10px;
+  border-radius: 8px;
+  font-family: var(--theme-font-display);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: lowercase;
+  transition: background 0.18s var(--ch-ease, ease), border-color 0.18s var(--ch-ease, ease);
+}
+.sp-btnDanger:hover:not(:disabled) {
+  background: color-mix(in oklch, oklch(0.6 0.22 25) 22%, transparent);
+  border-color: color-mix(in oklch, oklch(0.6 0.22 25) 55%, transparent);
+}
+html[data-appearance='light'] .sp-btnDanger {
+  background: color-mix(in oklch, oklch(0.55 0.22 25) 12%, transparent);
+  color: oklch(0.42 0.22 25);
+  border-color: color-mix(in oklch, oklch(0.55 0.22 25) 30%, transparent);
+}
 .sp-btnFull { width: 100%; }
 .sp-row { display: flex; align-items: center; gap: 10px; }
 
 /* chips */
-.sp-chipRow { display: flex; gap: 6px; flex-wrap: wrap; }
-.sp-chip {
-  padding: 4px 12px;
-  border-radius: var(--theme-radius-pill);
-  border: 1px solid var(--sp-border);
-  background: var(--sp-surface);
-  color: var(--sp-muted);
-  cursor: pointer;
-  font-size: 12px;
-  font-weight: 600;
+/* chip row pattern: SendPage chain selector, ActivityPage filters, Asset rail tabs.
+ * pills only, no card wrapping. active chip uses theme-chip-active tokens (chain-aware). */
+.sp-chipRow {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: center;
 }
-.sp-chip:hover { color: var(--sp-text); }
+
+.sp-chip {
+  padding: 8px 14px;
+  min-height: 32px;
+  border-radius: var(--theme-radius-pill);
+  border: 1px solid color-mix(in oklch, var(--border, var(--sp-border)) 80%, transparent);
+  background: color-mix(in oklch, var(--surface, var(--sp-surface)) 50%, transparent);
+  color: var(--muted, var(--sp-muted));
+  cursor: pointer;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: 700;
+  letter-spacing: 0.005em;
+  text-transform: lowercase;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.2s ease;
+}
+
+.sp-chip:hover {
+  color: var(--text, var(--sp-text));
+  border-color: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 28%, var(--border, var(--sp-border)));
+  background: color-mix(in oklch, var(--surface-2, var(--sp-surface)) 60%, transparent);
+}
+
 .sp-chip:focus-visible {
   outline: 2px solid var(--theme-focus-ring);
   outline-offset: 2px;
 }
+
 .sp-chipActive {
   background: var(--theme-chip-active-bg);
-  border-color: var(--theme-chip-active-border);
+  border-color: color-mix(in oklch, var(--accent, var(--theme-chip-active-border)) 55%, transparent);
   color: var(--theme-chip-active-text);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.06) inset,
+    0 0 0 1px color-mix(in oklch, var(--accent, oklch(0.78 0.14 245)) 18%, transparent),
+    0 4px 12px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 22%, transparent);
+}
+
+.sp-chipActive:hover {
+  filter: brightness(1.05);
 }
 
 /* feedback */
 .sp-error { color: rgba(255,99,132,0.95); font-size: 12px; margin: 6px 0; line-height: 1.4; }
 .sp-info { color: rgba(245,158,11,0.95); font-size: 12px; margin: 6px 0; }
 .sp-muted { color: var(--sp-muted); }
+
+/* pre-alpha disclaimer pill (was inline-styled in 5+ sites with copy-pasted CSS — consolidated). */
+.sp-prealphaPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-2xs, 0.6875rem);
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+  padding: 4px 8px;
+  border-radius: var(--theme-radius-pill, 999px);
+  background: var(--theme-banner-warn-bg, rgba(251, 191, 36, 0.18));
+  color: var(--theme-banner-warn-fg, #fcd34d);
+  border: 1px solid color-mix(in oklch, oklch(0.78 0.18 80) 25%, transparent);
+}
 
 /* empty state */
 .sp-empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 40px 20px; text-align: center; gap: 8px; }
@@ -1647,13 +1970,17 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   width: 100%;
 }
 .sp-unlockSlogan {
-  font-size: 13px;
-  line-height: 1.4;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-md, 1.18rem);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
   text-align: center;
-  color: var(--sp-muted, currentColor);
-  opacity: 0.85;
-  max-width: 260px;
+  color: var(--text, var(--sp-text, currentColor));
+  opacity: 0.92;
+  max-width: 320px;
   margin: 0;
+  text-transform: lowercase;
 }
 .sp-unlockFieldWrap {
   flex: 1 1 auto;
@@ -1722,7 +2049,14 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   border-radius: var(--theme-radius-surface);
   object-fit: contain;
 }
-.sp-unlockTitle { font-size: 22px; font-weight: 900; letter-spacing: -0.5px; }
+.sp-unlockTitle {
+  font-family: var(--theme-font-display);
+  font-size: var(--text-lg, 1.5rem);
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.15;
+  text-transform: lowercase;
+}
 
 /**
  * unlock micro-interactions: animated conic border on the password field, and a snappy
@@ -1788,8 +2122,8 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 
 .sp-unlockPrimary {
   transition:
-    transform 540ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    box-shadow 540ms cubic-bezier(0.34, 1.56, 0.64, 1),
+    transform 320ms var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1)),
+    box-shadow 320ms var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1)),
     filter 220ms ease;
   transform-origin: center center;
   will-change: transform;
@@ -1833,11 +2167,14 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 .sp-txHash { font-family: monospace; font-size: 11px; color: rgba(234,240,255,0.65); word-break: break-all; }
 
 /* --- dapps page --- */
+/* page header: title on top + description below it (was a row layout that
+ * squeezed the Bricolage 24px title into a narrow column when description was long). */
 .sp-pageHeader {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 16px;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  margin-bottom: 18px;
 }
 .sp-backBtn {
   background: none;
@@ -1892,24 +2229,88 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 .sp-heroUsd { font-size: 18px; font-weight: 700; color: rgba(234,240,255,0.65); margin-top: 2px; }
 
 /* --- activity feed --- */
+/* activity row pattern (Archetype 1 from plan): flat row, hairline divider, no card.
+ * 56px+ tall with deliberate spacing; primary line in body weight, secondary muted.
+ * mono digests use JetBrains Mono via --theme-font-mono.
+ *
+ * perf (i-optimize P2): content-visibility: auto defers paint+layout for offscreen
+ * rows in long activity feeds; contain-intrinsic-size reserves the slot so the
+ * scrollbar doesn't jump. contain: layout style isolates each row's reflow. */
 .sp-activityRow {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--sp-border);
+  gap: 14px;
+  min-height: 56px;
+  padding: 12px 0;
+  border-bottom: 1px solid color-mix(in oklch, var(--border, var(--sp-border)) 75%, transparent);
+  transition: background 0.18s ease;
+  content-visibility: auto;
+  contain-intrinsic-size: 80px;
+  contain: layout style;
 }
 .sp-activityRow:last-child { border-bottom: none; }
-.sp-activityIcon { font-size: 16px; width: 24px; text-align: center; flex-shrink: 0; color: var(--sp-accent); }
-.sp-activityInfo { flex: 1; min-width: 0; }
-.sp-activityLabel { font-size: 13px; font-weight: 600; color: var(--sp-text); }
-.sp-activityMeta { font-size: 11px; color: var(--sp-muted); margin-top: 2px; }
-.sp-activityDigest { font-family: monospace; }
+.sp-activityRow:hover {
+  background: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 4%, transparent);
+}
+
+.sp-activityIcon {
+  font-size: 18px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--accent, var(--sp-accent));
+  background: color-mix(in oklch, var(--surface, var(--sp-surface)) 60%, transparent);
+  border-radius: 999px;
+  font-weight: 600;
+}
+
+.sp-activityInfo {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sp-activityLabel {
+  font-family: var(--theme-font-body);
+  font-size: var(--text-sm, 0.95rem);
+  font-weight: 600;
+  color: var(--text, var(--sp-text));
+  line-height: 1.3;
+}
+
+.sp-activityMeta {
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--muted, var(--sp-muted));
+  line-height: 1.35;
+}
+
+.sp-activityDigest {
+  font-family: var(--theme-font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-variant-numeric: tabular-nums;
+}
+
 .sp-activityDigestRow { min-width: 0; }
-.sp-activityDigestRow .ch-explorerValueRow { font-size: 11px; }
-.sp-activityStatus { font-size: 13px; font-weight: 700; flex-shrink: 0; }
-.sp-activityStatus--success { color: rgba(52,211,153,0.9); }
-.sp-activityStatus--failure { color: rgba(255,99,99,0.9); }
+.sp-activityDigestRow .ch-explorerValueRow {
+  font-size: var(--text-xs, 0.8125rem);
+  font-family: var(--theme-font-mono, 'JetBrains Mono', ui-monospace, monospace);
+}
+
+.sp-activityStatus {
+  font-size: var(--text-sm, 0.95rem);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.sp-activityStatus--success {
+  color: oklch(0.78 0.16 152);
+}
+.sp-activityStatus--failure {
+  color: oklch(0.7 0.2 25);
+}
 
 /* --- kiosk ui --- */
 .sp-kioskList { display: flex; flex-direction: column; gap: 8px; }
@@ -2018,12 +2419,8 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 
 .sp-swapActions { display: flex; gap: 8px; margin-top: 4px; }
 .sp-swapActions .sp-btn { flex: 1; }
-
-.sp-btnPrimary {
-  background: rgba(124,58,237,0.3) !important; border-color: rgba(124,58,237,0.5) !important;
-  color: #e0d4ff !important;
-}
-.sp-btnPrimary:hover { background: rgba(124,58,237,0.45) !important; }
+/* removed stale duplicate `.sp-btnPrimary !important` block that overrode the global
+ * CTA gradient. global .sp-btnPrimary (defined above) already uses --ch-cta-gradient. */
 
 .sp-swapDigest {
   font-size: 11px; color: var(--sp-muted); font-family: monospace;
@@ -2039,33 +2436,38 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 }
 
 .sp-paySummaryCell {
-  background: rgba(15, 23, 42, 0.55);
-  border: 1px solid rgba(99, 102, 241, 0.22);
+  background: color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 70%, transparent);
+  border: 1px solid color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 22%, transparent);
   border-radius: 8px;
   padding: 8px 10px;
   min-width: 0;
 }
 
 .sp-paySummaryLabel {
-  font-size: 10px;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-2xs, 0.6875rem);
+  font-weight: 800;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: rgba(234, 240, 255, 0.5);
+  letter-spacing: 0.12em;
+  color: var(--faint, rgba(234, 240, 255, 0.5));
   margin-bottom: 2px;
 }
 
 .sp-paySummaryValue {
-  font-family: ui-monospace, monospace;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
   font-size: 14px;
   font-weight: 600;
-  color: rgba(234, 240, 255, 0.95);
+  color: var(--text, rgba(234, 240, 255, 0.95));
+  font-variant-numeric: tabular-nums;
 }
 
 .sp-payHostHeader {
-  font-size: 11px;
-  letter-spacing: 0.04em;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-2xs, 0.6875rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: rgba(234, 240, 255, 0.7);
+  color: var(--muted, rgba(234, 240, 255, 0.7));
   margin-top: 12px;
   margin-bottom: 4px;
 }
@@ -2077,18 +2479,18 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 }
 
 .sp-payTable th {
-  font-weight: 500;
-  color: rgba(234, 240, 255, 0.5);
+  font-weight: 700;
+  color: var(--faint, rgba(234, 240, 255, 0.5));
   text-transform: uppercase;
   letter-spacing: 0.04em;
   font-size: 10px;
   padding: 4px 6px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.18);
+  border-bottom: 1px solid color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 22%, transparent);
 }
 
 .sp-payTable td {
   padding: 6px;
-  border-bottom: 1px solid rgba(99, 102, 241, 0.1);
+  border-bottom: 1px solid color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 12%, transparent);
   vertical-align: middle;
 }
 
@@ -2260,4 +2662,263 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
 .wc-approvalSheet [role='button']:focus-visible {
   outline: 2px solid var(--theme-focus-ring);
   outline-offset: 2px;
+}
+
+/* ----- PostCreatePolicyVaultPrompt: i-bolder treatment for the trailing
+ *       "don't ask again" checkbox + advanced-settings link.
+ *
+ * These two controls sit AFTER the wrap CTA. They shouldn't compete with the
+ * primary gradient button, but a plain native checkbox + underlined text link
+ * reads as default-browser. i-bolder: paint the deliberate choice (toggle
+ * persistent dismissal; open advanced docs) with chromatika's gradient + ease.
+ */
+.postpv-toggleRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px -6px 4px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 10px;
+  transition: background 220ms var(--ch-ease);
+  user-select: none;
+}
+.postpv-toggleRow:hover:not(.postpv-toggleRow--busy) {
+  background: rgba(255, 255, 255, 0.025);
+}
+.postpv-toggleRow--busy {
+  cursor: wait;
+  opacity: 0.55;
+}
+.postpv-toggleRow-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+  pointer-events: none;
+}
+.postpv-check {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 5px;
+  border: 1.5px solid var(--theme-chain-border-soft, rgba(255, 255, 255, 0.16));
+  background: rgba(255, 255, 255, 0.02);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 220ms var(--ch-ease),
+    border-color 220ms var(--ch-ease),
+    box-shadow 220ms var(--ch-ease),
+    transform 220ms var(--ch-ease);
+}
+.postpv-toggleRow:hover:not(.postpv-toggleRow--busy) .postpv-check {
+  border-color: var(--theme-chain-border, rgba(74, 162, 255, 0.55));
+  box-shadow: 0 0 0 4px rgba(74, 162, 255, 0.07);
+}
+.postpv-check--on {
+  background-image: var(--ch-cta-gradient);
+  background-color: transparent;
+  border-color: transparent;
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 4px 14px -4px rgba(140, 110, 220, 0.55);
+}
+.postpv-toggleRow:hover:not(.postpv-toggleRow--busy) .postpv-check--on {
+  transform: translateY(-0.5px);
+  box-shadow:
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    0 6px 18px -4px rgba(140, 110, 220, 0.7);
+}
+.postpv-check-svg {
+  opacity: 0;
+  transform: scale(0.6);
+  transition:
+    opacity 200ms var(--ch-ease),
+    transform 200ms var(--ch-ease);
+  color: #fff;
+}
+.postpv-check--on .postpv-check-svg {
+  opacity: 1;
+  transform: scale(1);
+}
+.postpv-toggleRow-label {
+  flex: 1;
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.005em;
+  color: rgba(234, 240, 255, 0.78);
+  transition: color 180ms var(--ch-ease);
+}
+.postpv-toggleRow:hover:not(.postpv-toggleRow--busy) .postpv-toggleRow-label {
+  color: rgba(234, 240, 255, 0.95);
+}
+.postpv-toggleRow-input:focus-visible + .postpv-check {
+  outline: 2px solid var(--theme-focus-ring, rgba(167, 139, 250, 0.65));
+  outline-offset: 3px;
+}
+
+.postpv-advancedLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 10px;
+  padding: 7px 13px;
+  background: transparent;
+  border: 1px solid var(--theme-chain-border-soft, rgba(255, 255, 255, 0.14));
+  border-radius: var(--theme-radius-pill, 999px);
+  color: rgba(186, 200, 230, 0.9);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  text-transform: lowercase;
+  cursor: pointer;
+  transition:
+    background 220ms var(--ch-ease),
+    border-color 220ms var(--ch-ease),
+    color 220ms var(--ch-ease),
+    transform 200ms var(--ch-ease);
+}
+.postpv-advancedLink:hover:not(:disabled) {
+  background: rgba(120, 145, 220, 0.07);
+  border-color: var(--theme-chain-border, rgba(74, 162, 255, 0.55));
+  color: rgba(220, 230, 250, 1);
+  transform: translateY(-0.5px);
+}
+.postpv-advancedLink:active:not(:disabled) {
+  transform: translateY(0);
+}
+.postpv-advancedLink:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.postpv-advancedLink-arrow {
+  display: inline-block;
+  transition: transform 220ms var(--ch-ease);
+  opacity: 0.85;
+}
+.postpv-advancedLink:hover:not(:disabled) .postpv-advancedLink-arrow {
+  transform: translateX(3px);
+  opacity: 1;
+}
+.postpv-advancedLink-icon {
+  display: inline-block;
+  margin-right: 1px;
+  opacity: 0.75;
+}
+.postpv-advancedLink:hover:not(:disabled) .postpv-advancedLink-icon {
+  opacity: 1;
+}
+
+/* ----- PostCreatePolicyVaultPrompt: delight choreography (i-delight).
+ *
+ * Four moments, each under ~600ms, all gated behind prefers-reduced-motion so
+ * accessibility-respect users get an instant render. Together they signal "this
+ * is a moment" without delaying interaction: the sheet is hit-target-ready
+ * before the choreography finishes.
+ */
+@media (prefers-reduced-motion: no-preference) {
+  /* 1. Sheet entrance: rise + fade. Subtle scale so the chromatika gradient
+   *    ribbon at the top edge reads as "deploying" rather than "appearing". */
+  .postpv-sheet {
+    animation: postpv-sheet-enter 420ms var(--ch-ease) both;
+    transform-origin: bottom center;
+  }
+  @keyframes postpv-sheet-enter {
+    from {
+      transform: translateY(14px) scale(0.985);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0) scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* 2. Title shield "sets into place" - one-time overshoot scale. Lands the
+   *    eye on the icon as the sheet finishes its rise, signaling the
+   *    just-completed dWallet without celebratory confetti. */
+  .postpv-title-icon {
+    animation: postpv-icon-set 540ms var(--ch-ease) 100ms both;
+    display: inline-flex;
+    transform-origin: center;
+  }
+  @keyframes postpv-icon-set {
+    0% {
+      transform: scale(0.55) rotate(-6deg);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.12) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* 3. Defaults card stagger - "calibration" feel. Each row uses its index
+   *    via the --row-i custom property to compute delay. Cap at 6 rows. */
+  .postpv-defaultRow {
+    animation: postpv-row-in 320ms var(--ch-ease) both;
+    animation-delay: calc(var(--row-i, 0) * 45ms + 240ms);
+  }
+  @keyframes postpv-row-in {
+    from {
+      transform: translateY(4px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  /* 4. Wrap success: checkmark bloom on the primary CTA before the modal
+   *    closes. Used to hold the success state for ~400ms so the user gets
+   *    visual closure on their decision. */
+  .postpv-wrapBtn--success {
+    background-image: linear-gradient(
+      135deg,
+      oklch(0.68 0.16 152),
+      oklch(0.75 0.14 168)
+    ) !important;
+    animation: postpv-wrap-success 240ms var(--ch-ease) both;
+  }
+  .postpv-wrapBtn--success .postpv-wrapBtn-checkmark {
+    animation: postpv-checkmark-pop 360ms var(--ch-ease) both;
+  }
+  @keyframes postpv-wrap-success {
+    from {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.018);
+    }
+    to {
+      transform: scale(1);
+    }
+  }
+  @keyframes postpv-checkmark-pop {
+    0% {
+      transform: scale(0.4) rotate(-10deg);
+      opacity: 0;
+    }
+    65% {
+      transform: scale(1.18) rotate(0deg);
+      opacity: 1;
+    }
+    100% {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
 }

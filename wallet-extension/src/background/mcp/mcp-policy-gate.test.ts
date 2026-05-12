@@ -11,10 +11,19 @@ let mockLink: unknown | null = null;
 let mockSnapshot: unknown | null = null;
 let mockReadThrows = false;
 
+const TEST_DWALLET_SECP = '0x' + 'c'.repeat(64);
+
 vi.mock('@/background/session', () => ({
   getSession: () => ({
     activeVaultId: 'vault-test',
     suiClient: { core: { getObjects: () => Promise.resolve({ objects: [] }) } } as unknown,
+    // With per-(vault, dwallet) wraps, the gate picks the SECP256K1 dwallet's
+    // PolicyVaultLink by default. Mock dwalletMeta so the curve -> dwalletId
+    // lookup resolves; the mocked `getPolicyVaultLink` ignores the arg and
+    // returns `mockLink` directly, so tests stay focused on gate logic.
+    dwalletMeta: {
+      SECP256K1: { dwalletId: TEST_DWALLET_SECP, networkSlug: 'sui-mainnet' },
+    },
   }),
 }));
 

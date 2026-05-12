@@ -13,7 +13,6 @@ node scripts/publish-alert.mjs --gen-key
 ```
 
 output:
-
 ```
 generated keypair
   pub (b64): +Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=
@@ -30,26 +29,24 @@ next steps:
 ```
 
 implementation:
-
 ```js
-const priv = ed.utils.randomPrivateKey(); // 64 bytes (32-byte seed + derived 32-byte priv state)
+const priv = ed.utils.randomPrivateKey();   // 64 bytes (32-byte seed + derived 32-byte priv state)
 const pub = await ed.getPublicKeyAsync(priv);
-console.log("  pub (b64):", base64Encode(pub));
-console.log("  priv (b64):", base64Encode(priv));
+console.log('  pub (b64):', base64Encode(pub));
+console.log('  priv (b64):', base64Encode(priv));
 ```
 
 privkey is **64 bytes** (noble/ed25519 v3 returns the full canonical RFC 8032 secret which includes the secret seed + derived state). the wallet only needs the 32-byte pubkey.
 
 ## `--gen-dev-key`
 
-derive the deterministic dev publisher keypair from the seed `chromatika-dev-publisher-v0`. anyone running this command produces the same keypair. used for local demos where the bundled `PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64` is the deterministic pubkey from this seed.
+derive the deterministic dev publisher keypair from the seed `chromatika-dev-publisher-v0`. anyone running this command produces the same keypair. used for hackathon demos where the bundled `PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64` is the deterministic pubkey from this seed.
 
 ```sh
 node scripts/publish-alert.mjs --gen-dev-key
 ```
 
 output (always identical):
-
 ```
 deterministic dev publisher
   pub (b64): +Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=
@@ -60,10 +57,9 @@ note: this keypair is DETERMINISTIC and BUNDLED into the wallet's allowlist.
 ```
 
 implementation:
-
 ```js
-const SEED = new TextEncoder().encode("chromatika-dev-publisher-v0");
-const priv = sha512(SEED).slice(0, 32); // 32-byte seed for ed25519
+const SEED = new TextEncoder().encode('chromatika-dev-publisher-v0');
+const priv = sha512(SEED).slice(0, 32);   // 32-byte seed for ed25519
 const pub = await ed.getPublicKeyAsync(priv);
 ```
 
@@ -81,7 +77,6 @@ node scripts/publish-alert.mjs sign \
 ```
 
 input file (unsigned envelope - publisher fills `id`, `severity`, etc. but not `signatureB64`):
-
 ```json
 {
   "v": 1,
@@ -98,27 +93,25 @@ input file (unsigned envelope - publisher fills `id`, `severity`, etc. but not `
 ```
 
 output:
-
 - writes signed envelope to `--out` path
 - includes `signatureB64` field
 - echoes `wrote signed alert to <path>` on stdout
 
 implementation:
-
 ```js
-const unsigned = JSON.parse(fs.readFileSync(args.in, "utf-8"));
+const unsigned = JSON.parse(fs.readFileSync(args.in, 'utf-8'));
 
 // canonical bytes (key-sorted, undefined dropped, no whitespace)
 const canonical = canonicalAlertBytes(unsigned);
 
 const priv = base64Decode(args.priv);
-const sig = await ed.signAsync(canonical, priv.slice(0, 32)); // first 32 bytes is the seed
+const sig = await ed.signAsync(canonical, priv.slice(0, 32));   // first 32 bytes is the seed
 
 // optional: verify against the expected pubkey to catch input errors
 const pub = await ed.getPublicKeyAsync(priv.slice(0, 32));
 const expectedPub = unsigned.publisherKeyB64;
 if (base64Encode(pub) !== expectedPub) {
-  console.error("publisherKeyB64 in input does not match privkey-derived pubkey");
+  console.error('publisherKeyB64 in input does not match privkey-derived pubkey');
   process.exit(1);
 }
 
@@ -137,31 +130,21 @@ node scripts/publish-alert.mjs feed --in signed-alerts.json --out safety-alerts.
 ```
 
 input file (an array of pre-signed alerts):
-
 ```json
 [
-  {
-    /* signed alert 1 */
-  },
-  {
-    /* signed alert 2 */
-  }
+  { /* signed alert 1 */ },
+  { /* signed alert 2 */ }
 ]
 ```
 
 output:
-
 ```json
 {
   "v": 1,
   "generatedAtMs": 1712345700000,
   "alerts": [
-    {
-      /* signed alert 1 */
-    },
-    {
-      /* signed alert 2 */
-    }
+    { /* signed alert 1 */ },
+    { /* signed alert 2 */ }
   ]
 }
 ```
@@ -170,7 +153,7 @@ output:
 
 ## `sample --priv <b64> --out <sample-feed.json>`
 
-generate a 3-alert demo feed: one critical, one warning, one info, all with 7-day expiry. used for local demos when the production feed isn't reachable.
+generate a 3-alert demo feed: one critical, one warning, one info, all with 7-day expiry. used for hackathon demos when the production feed isn't reachable.
 
 ```sh
 node scripts/publish-alert.mjs sample --priv <base64 priv> --out sample-feed.json
@@ -179,7 +162,6 @@ node scripts/publish-alert.mjs sample --priv <base64 priv> --out sample-feed.jso
 output: a fully-formed `AlertsFeedResponse` with three alerts ready to drop into the wallet via the dev-injection tRPC procedure (`injectSignedAlertForDev`).
 
 useful workflow:
-
 ```sh
 # 1. derive the dev key
 node scripts/publish-alert.mjs --gen-dev-key

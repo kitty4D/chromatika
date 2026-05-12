@@ -17,12 +17,19 @@
  * Usage:
  *   node scripts/deploy-solana-policy.mjs [--cluster devnet|testnet|mainnet|localnet]
  *                                          [--build-only] [--skip-build]
- *                                          [--sync-program-id] [--dry-run]
+ *                                          [--sync-program-id] [--dry-run] [--final]
  *
  * Examples:
- *   pnpm run deploy:solana-policy:devnet   # the only cluster you should use today
- *   pnpm run build:solana-policy           # build-only (anchor build)
- *   pnpm run test:solana-policy            # anchor test (skip-local-validator)
+ *   pnpm run deploy:solana-policy:devnet           # iteration deploy, upgrade authority retained
+ *   pnpm run deploy:solana-policy:devnet:final     # audited production cut: upgrade authority None
+ *   pnpm run build:solana-policy                   # build-only (anchor build)
+ *   pnpm run test:solana-policy                    # anchor test (skip-local-validator)
+ *
+ * --final is the audited-production-cut flag. After `anchor deploy`, it runs `solana program
+ * set-upgrade-authority --final` which permanently sets the program's upgrade authority to
+ * None. No future `anchor deploy` or `solana program deploy` against this program id can
+ * succeed; bugfixes require deploying a fresh program id and migrating users via the
+ * chromatika unwrap + re-wrap flow.
  *
  * Prereqs:
  *   - `anchor` CLI installed (https://www.anchor-lang.com/docs/installation)
@@ -32,7 +39,7 @@
  *   - First-time deploy: `anchor build` creates `target/deploy/chromatika_policy-keypair.json`
  *     with a randomly-generated program keypair. Pass `--sync-program-id` to splice that
  *     pubkey into `lib.rs` and `Anchor.toml` automatically (replaces the placeholder
- *     `ChrPo1icyVau1tProgramID11111111111111111111`).
+ *     `Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS`).
  *   - Subsequent deploys: program id is fixed; `anchor deploy` upgrades the existing program
  *     account if you're the upgrade authority.
  */
@@ -50,7 +57,11 @@ const PROGRAM_DIR = join(REPO_ROOT, 'solana', 'chromatika-policy');
 const LIB_RS_PATH = join(PROGRAM_DIR, 'programs', 'chromatika-policy', 'src', 'lib.rs');
 const ANCHOR_TOML_PATH = join(PROGRAM_DIR, 'Anchor.toml');
 const PROGRAM_KEYPAIR_PATH = join(PROGRAM_DIR, 'target', 'deploy', 'chromatika_policy-keypair.json');
-const PLACEHOLDER_PROGRAM_ID = 'ChrPo1icyVau1tProgramID11111111111111111111';
+// Canonical Anchor scaffold placeholder; valid Base58 + correct 32-byte length so
+// `anchor build` parses it cleanly. Gets overwritten on first run with --sync-program-id.
+// Note: we picked this exact constant over our previous custom string because the previous
+// string contained a capital `I`, which is excluded from Base58 (along with 0, O, l).
+const PLACEHOLDER_PROGRAM_ID = 'Fg6PaFpoGXkYsidMpWTK6W2BeZ7FEfcYkg476zPFsLnS';
 
 function parseArgs(args) {
   const out = {
@@ -59,6 +70,7 @@ function parseArgs(args) {
     skipBuild: false,
     syncProgramId: false,
     dryRun: false,
+    final: false,
   };
   for (let i = 0; i < args.length; i++) {
     const a = args[i];
@@ -67,6 +79,7 @@ function parseArgs(args) {
     else if (a === '--skip-build') out.skipBuild = true;
     else if (a === '--sync-program-id') out.syncProgramId = true;
     else if (a === '--dry-run') out.dryRun = true;
+    else if (a === '--final') out.final = true;
     else if (a === '--help' || a === '-h') {
       console.log(USAGE);
       exit(0);
@@ -80,12 +93,16 @@ usage:
   node scripts/deploy-solana-policy.mjs [options]
 
 options:
-  --cluster <name>      target Solana cluster (devnet/testnet/mainnet/localnet); defaults to Anchor.toml
-  --build-only          run \`anchor build\` only (no deploy)
-  --skip-build          skip the build step
-  --sync-program-id     splice the keypair's pubkey into lib.rs declare_id! + Anchor.toml
-  --dry-run             print what would run without invoking anchor deploy
-  --help, -h            show this message
+  --cluster <name>       target Solana cluster (devnet/testnet/mainnet/localnet); defaults to Anchor.toml
+  --build-only           run \`anchor build\` only (no deploy)
+  --skip-build           skip the build step
+  --sync-program-id      splice the keypair's pubkey into lib.rs declare_id! + Anchor.toml
+  --dry-run              print what would run without invoking anchor deploy
+  --final                after deploy, run \`solana program set-upgrade-authority --final\` so
+                         the program becomes IMMUTABLE FOREVER. Use only for the audited
+                         production cut; iteration deploys should leave this off so bugs can
+                         be patched via repeat \`anchor deploy\`.
+  --help, -h             show this message
 
 WARNING: pre-alpha. Solana ika today uses a single mock signer + program data wipes on
 Alpha-1. \`do_approve_message_cpi\` is a Ok(()) stub. Deploy for storage-shape + UI-surface
@@ -201,7 +218,42 @@ function deployAnchor(opts) {
   run('anchor', args, { cwd: PROGRAM_DIR, dryRun: opts.dryRun });
 }
 
-function printNextSteps(programPubkey, cluster) {
+/**
+ * Mark the program's upgrade authority as `None` via `solana program set-upgrade-authority --final`.
+ * After this, no future `anchor deploy` or `solana program deploy` against this program id can
+ * succeed: the program account's upgrade authority is permanently null.
+ *
+ * Mirrors the Sui-side `make_immutable(UpgradeCap)` step. Runs as a separate solana CLI call
+ * after `anchor deploy` (Anchor's CLI does not expose a `--final` flag directly).
+ *
+ * Recovery: if this fails (network error, fee insufficient), the program is deployed but
+ * upgrade authority is still on the deployer keypair. Rerun the command manually:
+ *   solana program set-upgrade-authority <program_id> --final
+ */
+function setUpgradeAuthorityFinal(programPubkey, opts) {
+  console.log('');
+  console.log('-----------------------------------------------------------');
+  console.log('  burning Solana program upgrade authority (--final)');
+  console.log('-----------------------------------------------------------');
+  console.log(`  program id: ${programPubkey}`);
+  console.log('');
+  console.log('  WARNING: this sets the upgrade authority to None. After this');
+  console.log('  transaction, no future `anchor deploy` or `solana program deploy`');
+  console.log('  against this program id can succeed. The program becomes IMMUTABLE');
+  console.log('  FOREVER. Bugfixes will require a fresh program id and chromatika-side');
+  console.log('  migration via the unwrap + re-wrap flow.');
+  console.log('-----------------------------------------------------------');
+  console.log('');
+  const args = ['program', 'set-upgrade-authority', programPubkey, '--final'];
+  if (opts.cluster) {
+    args.push('--url', opts.cluster);
+  }
+  run('solana', args, { cwd: PROGRAM_DIR, dryRun: opts.dryRun });
+  console.log('');
+  console.log(`[solana-policy] upgrade authority for ${programPubkey} is now None. Program is immutable.`);
+}
+
+function printNextSteps(programPubkey, cluster, opts) {
   const clusterLabel = cluster ?? 'as configured in Anchor.toml';
   console.log('');
   console.log('-----------------------------------------------------------');
@@ -209,18 +261,27 @@ function printNextSteps(programPubkey, cluster) {
   console.log('-----------------------------------------------------------');
   console.log(`  cluster:    ${clusterLabel}`);
   console.log(`  program id: ${programPubkey}`);
+  if (opts.final) {
+    console.log('  upgrade authority: None (program is immutable forever)');
+  } else {
+    console.log('  upgrade authority: held on deployer keypair (program is upgradable)');
+  }
   console.log('');
-  console.log('  next steps:');
-  console.log('    1. open chromatika side panel');
-  console.log('    2. Settings -> Security -> "On-chain spend caps + panic button"');
-  console.log('    3. paste the program id into the Solana program id field');
-  console.log('    4. opt in your Solana-base dWallet (pre-alpha; CPI body is a stub')
-  console.log('       until ika Solana Alpha-1)');
+  if (opts.final) {
+    console.log('  this is an audited production cut. To register it as a built-in market in');
+    console.log('  chromatika, paste the program id into src/background/policy-vault/policy-vault-builtin.ts');
+    console.log('  alongside the audit hash + audit report link, then ship a chromatika release.');
+  } else {
+    console.log('  this is a testing / iteration deploy. Upgrade authority stays on the deployer');
+    console.log('  keypair so you can patch bugs via repeat `anchor deploy`. When the program is');
+    console.log('  audit-clean, run the same command with --final to lock the upgrade authority.');
+  }
   console.log('');
   console.log('  honesty disclosure: per CLAUDE.md, Solana ika is pre-alpha. The');
   console.log('  chromatika-policy program enforces panic / cap / cool-down state changes,');
-  console.log('  but `do_approve_message_cpi` is a Ok(()) stub - real signature production');
-  console.log('  awaits ika Solana Alpha-1. Do NOT use for real-value transactions.');
+  console.log('  but `do_approve_message_cpi` and `do_release_authority_cpi` are Ok(()) stubs.');
+  console.log('  Real signature production + dWallet authority release await ika Solana Alpha-1.');
+  console.log('  Do NOT use for real-value transactions.');
   console.log('-----------------------------------------------------------');
 }
 
@@ -263,7 +324,11 @@ async function main() {
   }
 
   deployAnchor(opts);
-  if (!opts.dryRun) printNextSteps(programPubkey, opts.cluster);
+  if (opts.final && !opts.dryRun && programPubkey !== PLACEHOLDER_PROGRAM_ID) {
+    ensureCliInstalled('solana');
+    setUpgradeAuthorityFinal(programPubkey, opts);
+  }
+  if (!opts.dryRun) printNextSteps(programPubkey, opts.cluster, opts);
 }
 
 main().catch((e) => {

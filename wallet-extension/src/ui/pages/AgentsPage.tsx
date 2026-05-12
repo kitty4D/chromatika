@@ -14,7 +14,7 @@ export function AgentsPage({ onBack }: { onBack: () => void }) {
         <button type="button" className="sp-backBtn" onClick={onBack}>
           ← back
         </button>
-        <div className="sp-pageTitle">agents · MCP</div>
+        <h2 className="sp-pageTitle">agents · MCP</h2>
       </div>
 
       <p className="sp-muted" style={{ fontSize: 11, marginTop: 0 }}>

@@ -1,5 +1,5 @@
 /**
- * local tracker for the policy vault's presign cap object ids.
+ * local tracker for the policy vault's presign cap object ids per opted-in dwallet.
  *
  * the Move side stores `presigns: vector<UnverifiedPresignCap>` and pops with `pop_back`
  * (LIFO). to compute `messageCentralizedSignature` client-side via
@@ -16,19 +16,19 @@
  * if the local cache and on-chain state ever drift (e.g. chromatika reinstall, lost storage),
  * `resyncPolicyPresignsFromChain` reads the vault and replaces the local cache wholesale.
  *
- * storage shape: `chromatika_policy_presigns_v1_<vaultId>` -> `string[]`. empty array =
- * empty pool. cleared on `clearLocalPolicyVaultLink`.
+ * storage shape: `chromatika_policy_presigns_v1_<vaultId>_<dwalletId>` -> `string[]`. empty
+ * array = empty pool. cleared on `clearLocalPolicyVaultLink` for the same dwalletId.
  */
 
 import type { SuiGraphQLClient } from '@mysten/sui/graphql';
 import { VAULT_SCOPED_KEYS } from '@/background/storage';
 
-function storageKey(vaultId: string): string {
-  return VAULT_SCOPED_KEYS.policyPresigns(vaultId);
+function storageKey(vaultId: string, dwalletId: string): string {
+  return VAULT_SCOPED_KEYS.policyPresigns(vaultId, dwalletId);
 }
 
-async function read(vaultId: string): Promise<string[]> {
-  const key = storageKey(vaultId);
+async function read(vaultId: string, dwalletId: string): Promise<string[]> {
+  const key = storageKey(vaultId, dwalletId);
   return new Promise((resolve) => {
     chrome.storage.local.get([key], (r) => {
       const v = r[key];
@@ -38,8 +38,8 @@ async function read(vaultId: string): Promise<string[]> {
   });
 }
 
-async function write(vaultId: string, ids: string[]): Promise<void> {
-  const key = storageKey(vaultId);
+async function write(vaultId: string, dwalletId: string, ids: string[]): Promise<void> {
+  const key = storageKey(vaultId, dwalletId);
   return new Promise((resolve, reject) => {
     chrome.storage.local.set({ [key]: ids }, () => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
@@ -48,41 +48,69 @@ async function write(vaultId: string, ids: string[]): Promise<void> {
   });
 }
 
-export async function listPolicyPresignCapIds(vaultId: string): Promise<string[]> {
-  return read(vaultId);
+export async function listPolicyPresignCapIds(
+  vaultId: string,
+  dwalletId: string,
+): Promise<string[]> {
+  return read(vaultId, dwalletId);
 }
 
-export async function appendPolicyPresignCapId(vaultId: string, capObjectId: string): Promise<void> {
+export async function appendPolicyPresignCapId(
+  vaultId: string,
+  dwalletId: string,
+  capObjectId: string,
+): Promise<void> {
   if (!/^0x[0-9a-fA-F]{64}$/.test(capObjectId)) {
     throw new Error('capObjectId must be a 0x-prefixed 32-byte hex Sui object id');
   }
-  const ids = await read(vaultId);
+  const ids = await read(vaultId, dwalletId);
   if (!ids.includes(capObjectId)) {
     ids.push(capObjectId);
-    await write(vaultId, ids);
+    await write(vaultId, dwalletId, ids);
   }
 }
 
 /** pop the LAST id (matches Move's `pop_back`). returns null when empty. */
-export async function popPolicyPresignCapId(vaultId: string): Promise<string | null> {
-  const ids = await read(vaultId);
+export async function popPolicyPresignCapId(
+  vaultId: string,
+  dwalletId: string,
+): Promise<string | null> {
+  const ids = await read(vaultId, dwalletId);
   if (ids.length === 0) return null;
   const last = ids.pop()!;
-  await write(vaultId, ids);
+  await write(vaultId, dwalletId, ids);
   return last;
 }
 
 /** push back without dedup (used by re-sync). */
-async function setAll(vaultId: string, ids: string[]): Promise<void> {
-  await write(vaultId, ids);
+async function setAll(vaultId: string, dwalletId: string, ids: string[]): Promise<void> {
+  await write(vaultId, dwalletId, ids);
 }
 
-export async function clearPolicyPresignIds(vaultId: string): Promise<void> {
-  const key = storageKey(vaultId);
+export async function clearPolicyPresignIds(
+  vaultId: string,
+  dwalletId: string,
+): Promise<void> {
+  const key = storageKey(vaultId, dwalletId);
   return new Promise((resolve, reject) => {
     chrome.storage.local.remove([key], () => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
       else resolve();
+    });
+  });
+}
+
+/** Remove presign pools for every dWallet in a vault. Used by `removeVault`. */
+export async function clearAllPolicyPresignsForVault(vaultId: string): Promise<void> {
+  const prefix = VAULT_SCOPED_KEYS.policyPresignsPrefix(vaultId);
+  return new Promise((resolve) => {
+    chrome.storage.local.get(null, (r) => {
+      const keys = Object.keys(r).filter((k) => k.startsWith(prefix));
+      if (keys.length === 0) {
+        resolve();
+        return;
+      }
+      chrome.storage.local.remove(keys, () => resolve());
     });
   });
 }
@@ -98,6 +126,7 @@ export async function clearPolicyPresignIds(vaultId: string): Promise<void> {
 export async function resyncPolicyPresignsFromChain(
   client: SuiGraphQLClient,
   vaultId: string,
+  dwalletId: string,
   vaultObjectId: string,
 ): Promise<number> {
   type RespShape = {
@@ -139,12 +168,15 @@ export async function resyncPolicyPresignsFromChain(
       }
     }
   }
-  await setAll(vaultId, capIds);
+  await setAll(vaultId, dwalletId, capIds);
   return capIds.length;
 }
 
 /** convenience: get the LAST cap id (the next one Move would pop) without removing it. */
-export async function peekNextPolicyPresignCapId(vaultId: string): Promise<string | null> {
-  const ids = await read(vaultId);
+export async function peekNextPolicyPresignCapId(
+  vaultId: string,
+  dwalletId: string,
+): Promise<string | null> {
+  const ids = await read(vaultId, dwalletId);
   return ids.length > 0 ? ids[ids.length - 1]! : null;
 }

@@ -9,6 +9,11 @@ import { VaultBaseCard } from '@/ui/components/VaultBaseCard';
 import { DWalletReorderList } from '@/ui/components/DWalletReorderList';
 import { PendingDWalletCard } from '@/ui/components/DWalletCard';
 import { ReceiveAddressSheet } from '@/ui/components/ReceiveAddressSheet';
+import {
+  CreateDwalletPrompt,
+  useDWalletCreatePromptState,
+} from '@/ui/components/CreateDwalletPrompt';
+import { usePostCreatePolicyPrompt } from '@/ui/components/use-post-create-policy-prompt';
 import { feePayerExplorerHref } from '@/lib/explorer-href';
 import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
 import type { Balances, Networks } from '@/ui/types';
@@ -23,6 +28,7 @@ export function WalletPage({
   onViewPortfolio,
   onOpenDWalletMgmt,
   onOpenSend,
+  onOpenPolicyVault,
   uiHelpHints,
 }: {
   balances: Balances | null;
@@ -34,6 +40,9 @@ export function WalletPage({
   onOpenDWalletMgmt: () => void;
   /** navigate the shell to the Send page. when omitted the vault-card send button stays disabled. */
   onOpenSend?: () => void;
+  /** navigate the shell to the Policy Vault settings panel (deep link). Used by the
+   *  post-creation prompt's "Customize first" / "What does each setting mean?" paths. */
+  onOpenPolicyVault?: () => void;
   /** when false, inline tips (HelpBubble) are hidden, see settings, screen help */
   uiHelpHints: boolean;
 }) {
@@ -41,6 +50,7 @@ export function WalletPage({
   const [receiveOpen, setReceiveOpen] = useState(false);
   const explorerPrefs = useExplorerPreferences();
   const [ownedCaps, setOwnedCaps] = useState<Awaited<ReturnType<typeof trpc.listOwnedDWalletCaps.query>>>([]);
+  const [capsLoaded, setCapsLoaded] = useState(false);
   const [metaSecp, setMetaSecp] = useState<string | null>(null);
   const [capsErr, setCapsErr] = useState<string | null>(null);
   const [completeBusy, setCompleteBusy] = useState<string | null>(null);
@@ -62,6 +72,7 @@ export function WalletPage({
     try {
       const rows = await trpc.listOwnedDWalletCaps.query();
       setOwnedCaps(rows);
+      setCapsLoaded(true);
     } catch (e) {
       setCapsErr(e instanceof Error ? e.message : String(e));
       setOwnedCaps([]);
@@ -177,6 +188,34 @@ export function WalletPage({
     setCapsErr(msg);
   }, []);
 
+  // hook runs unconditionally (React rules); the inner query only fires when `enabled` is true.
+  // null-safe derivation: when balances are still loading or locked, promptEnabled stays false.
+  const noDwalletsForPrompt = deckList.length === 0 && pendingList.length === 0;
+  const fundedForPrompt = balances?.funding?.ready === true;
+  const promptEnabled =
+    !!balances && !balances.locked && noDwalletsForPrompt && fundedForPrompt;
+  const { dismissed: promptDismissed, setLocallyDismissed: setPromptLocallyDismissed } =
+    useDWalletCreatePromptState(promptEnabled);
+
+  // Post-creation Policy Vault prompt - fires immediately after a SECP256K1 DKG resolves
+  // on a Sui-base vault when no existing Policy Vault link is present and the user hasn't
+  // globally dismissed the prompt. Shared with DWalletManagementScreen via the hook so
+  // both creation surfaces surface the same modal.
+  const { triggerAfterCreate: triggerPolicyPrompt, modal: policyPromptModal } =
+    usePostCreatePolicyPrompt(
+      onOpenPolicyVault,
+      () => {
+        void refreshCaps();
+        onRefresh();
+      },
+    );
+
+  function handleDWalletCreated(curve: 'SECP256K1' | 'ED25519') {
+    void refreshCaps();
+    onRefresh();
+    triggerPolicyPrompt(curve);
+  }
+
   if (!balances || balances.locked) {
     const loadFailed = Boolean(balanceError);
     return (
@@ -209,6 +248,7 @@ export function WalletPage({
 
   return (
     <div className="sp-page sp-page--walletHome">
+      {policyPromptModal}
       <VaultBaseCard
         balances={balances}
         network={balances.network}
@@ -309,19 +349,30 @@ export function WalletPage({
           {noDwallets ? (
             <div className="cv-dwalletsEmpty" role="status">
               {funded ? (
-                <>
-                  <p className="cv-dwalletsEmpty-title">No dWallets yet</p>
-                  <p className="cv-dwalletsEmpty-text">
-                    Your vault is funded — you can create your first dWallet to start signing.
-                  </p>
-                  <button
-                    type="button"
-                    className="sp-btn sp-btnPrimary cv-dwalletsEmpty-btn"
-                    onClick={onOpenDWalletMgmt}
-                  >
-                    Create a dWallet
-                  </button>
-                </>
+                promptDismissed === false ? (
+                  <CreateDwalletPrompt
+                    onCreated={handleDWalletCreated}
+                    onDismissed={setPromptLocallyDismissed}
+                    onError={(msg) => setCapsErr(msg)}
+                  />
+                ) : (
+                  // promptDismissed === true OR still loading (null) -> show the existing
+                  // single-button fallback. while null we keep the fallback visible so the
+                  // 3-option prompt doesn't briefly flash for users who already dismissed.
+                  <>
+                    <p className="cv-dwalletsEmpty-title">No dWallets yet</p>
+                    <p className="cv-dwalletsEmpty-text">
+                      Your vault is funded — you can create your first dWallet to start signing.
+                    </p>
+                    <button
+                      type="button"
+                      className="sp-btn sp-btnPrimary cv-dwalletsEmpty-btn"
+                      onClick={onOpenDWalletMgmt}
+                    >
+                      Create a dWallet
+                    </button>
+                  </>
+                )
               ) : (
                 <>
                   <p className="cv-dwalletsEmpty-title">No dWallets yet</p>
@@ -340,7 +391,6 @@ export function WalletPage({
               setCardOrderIds={setCardOrderIds}
               networks={networks}
               metaSecp={metaSecp}
-              dwalletNameMap={dwalletNameMap}
               labelForCap={labelForCap}
               vaultHomeGasById={vaultHomeGasById}
               vaultHomeGasLoading={vaultHomeGasLoading}

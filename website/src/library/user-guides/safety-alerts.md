@@ -6,7 +6,7 @@ chromatika polls a signed feed every 5 minutes for in-the-wild attack reports (p
 
 - chromatika is installed
 - chrome's notifications permission was granted on install (manifest declares `notifications`)
-- network access to `https://www.chromatika.xyz/safety-alerts.json` (or the user-set custom feed URL) every 5 min
+- network access to `https://chromatika.dev/safety-alerts.json` (or the user-set custom feed URL) every 5 min
 
 ## options at a glance
 
@@ -41,7 +41,7 @@ chromatika polls a signed feed every 5 minutes for in-the-wild attack reports (p
 1. in the alerts settings, paste a custom feed URL
 2. saves trigger an immediate poll against the new URL
 3. useful for: self-hosted feeds during development, alternative trusted publishers, testing
-4. clearing the field reverts to the default (`https://www.chromatika.xyz/safety-alerts.json` or `VITE_ALERTS_FEED_URL` if set at build time)
+4. clearing the field reverts to the default (`https://chromatika.dev/safety-alerts.json` or `VITE_ALERTS_FEED_URL` if set at build time)
 
 ## how to view alert history
 
@@ -65,12 +65,11 @@ chromatika polls a signed feed every 5 minutes for in-the-wild attack reports (p
 1. visible only when `import.meta.env.DEV` is true (developer build)
 2. paste a signed alert JSON envelope
 3. the wallet runs it through the same `verifySignedAlert` pipeline as a feed-fetched alert (signature check, time-bounds check, allowlist check). a malformed dev alert can't bypass verification
-4. used for: testing notification + dNR rendering during local demos when the feed isn't reachable
+4. used for: testing notification + dNR rendering during hackathon demos when the feed isn't reachable
 
 ## how alerts route from the feed to your wallet
 
 at a glance:
-
 1. every 5 minutes, the poller fetches the signed feed JSON
 2. each alert in the feed is independently verified (ed25519 signature, publisher allowlist, time bounds)
 3. dropped alerts are logged but don't poison the rest of the batch
@@ -82,7 +81,7 @@ at a glance:
 
 ## notes
 
-- the feed is anonymous HTTP GET. the wallet doesn't send your address, chain id, or any identifying state. ISP / DNS resolvers can see you're polling www.chromatika.xyz every 5 min, but not what's in your wallet
+- the feed is anonymous HTTP GET. the wallet doesn't send your address, chain id, or any identifying state. ISP / DNS resolvers can see you're polling chromatika.dev every 5 min, but not what's in your wallet
 - the alerts subsystem is **separate** from the existing `eth-phishing-detect` MetaMask blocklist (which has its own daily refresh and ~3500 bundled domains). both layers compose: eth-phishing-detect rules use IDs 1-4900; chromatika alerts rules use IDs 10000-19999. no collision
 - `info`-severity alerts only show as in-app banners. they don't trigger notifications or URL blocks. typical use: educational reminders, soft informational nudges
 - if a critical alert lists a domain you legitimately use (false positive), report it. there's no in-wallet allowlist override today; the only fix is upstream feed correction. tracked future

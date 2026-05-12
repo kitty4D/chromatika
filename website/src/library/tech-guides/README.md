@@ -141,24 +141,28 @@ chromatika is **pre-release**. Solana ika base is **pre-alpha** (single mock sig
 - [multi-chunk labels](/library/tech/encrypt-multi-chunk-labels) - 1-64 utf-8 → 1-4 EUint128 chunks
 - [on-chain status polling](/library/tech/encrypt-on-chain-status-polling) - the 4s `verified` / `encrypting` / `missing` pill
 
-## activity scan service
+## operation progress + caching
 
-- [scan service architecture](/library/tech/scan-service-architecture) - module layout, candidate generation, per-chain probes, dwallet cap matching
-- [SS58 + cosmos bech32 address derivation](/library/tech/ss58-cosmos-bech32-address-derivation) - polkadot / cosmos / DeSo address shapes for scan probes
-
-## on-chain policy
-
-- [policy vault (Sui Move + Solana Anchor)](/library/tech/policy-vault) - on-chain spend caps, panic, rescue, multi-actuator design
-
-## test infrastructure
-
-- [e2e test patterns](/library/tech/e2e-test-patterns) - SW fetch mock, Lazor mock harness, synthetic dwallet inventory, dev harness flags
+- [operation-progress banner](/library/tech/operation-progress-banner) - `chrome.storage.session` push channel for long-running background operations (ika sign, presign refill, Solana confirm)
+- [vault-total-cache](/library/tech/vault-total-cache) - per-vault USD aggregate SWR cache (5-min TTL, `chrome.storage.session`)
+- [Solana confirm-by-polling](/library/tech/solana-confirm-polling) - HTTP polling replacement for `Connection.confirmTransaction()` (avoids websocket `window` ReferenceError in MV3 SW)
+- [offscreen media cache](/library/tech/offscreen-media-cache) - IndexedDB-backed NFT image cache in the offscreen document (100 MB LRU, 7-day TTL, privacy-isolated fetches)
 
 ## other tech + internals
 
 - [buffer polyfill](/library/tech/buffer-polyfill) - Node Buffer shim for browser
 - [bitcoinjs-lib usage](/library/tech/bitcoinjs-lib-usage) - tx building + sighash + addresses
 - [`@noble/*` + `@scure/*` crypto libs](/library/tech/noble-and-scure-crypto-libs) - the audit-grade primitive set
+- [`@mysten/sui` pinning + patches](/library/tech/mysten-sui-pinning-and-patches) - 2.16.0 override + GraphQL chunking patch + postinstall
 - [WebAuthn PRF / hmac-secret](/library/tech/webauthn-prf-hmac-secret) - the deterministic 32-byte secret extension
 - [WAAP determinism probe](/library/tech/waap-determinism-probe) - sign-twice-and-compare at pairing
 - [session state + multi-vault](/library/tech/session-state-multi-vault) - what's unlocked + how switchVault works
+
+## scan service + multi-chain probes
+
+- [scan service architecture](/library/tech/scan-service-architecture) - types / derivations / probes / orchestrator + adding a new chain
+- [SS58 + Cosmos bech32 address derivation](/library/tech/ss58-cosmos-bech32-address-derivation) - Polkadot / Kusama SS58 + Cosmos-SDK bech32 + DeSo cross-reference
+
+## e2e infrastructure
+
+- [e2e test patterns](/library/tech/e2e-test-patterns) - SW-context fetch mocks (`mockSwFetch`), lazor portal mock harness (`?e2eLazorMock=...`), synthetic dwallet inventory (`?syntheticInventory=<orphans>:<matched>`)

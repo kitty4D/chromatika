@@ -13,10 +13,12 @@ import { Link } from "react-router-dom";
 import { kbArticles } from "../data/kb";
 
 import { filterLibrarySearch } from "../data/library-docs";
+import { staticSearchHits } from "../data/site-search-hits";
 
 export type SearchResultItem =
   | { kind: "kb"; slug: string; title: string; summary: string; href: string }
-  | { kind: "lib-user" | "lib-tech"; slug: string; title: string; summary: string; href: string };
+  | { kind: "lib-user" | "lib-tech"; slug: string; title: string; summary: string; href: string }
+  | { kind: "site"; slug: string; title: string; summary: string; href: string };
 
 function matches(needle: string, title: string, summary: string, slug: string): boolean {
   return (
@@ -29,6 +31,15 @@ function matches(needle: string, title: string, summary: string, slug: string): 
 export function filterSiteSearch(needle: string): SearchResultItem[] {
   const n = needle.trim().toLowerCase();
   if (!n) return [];
+  const site: SearchResultItem[] = staticSearchHits
+    .filter((h) => matches(n, h.title, h.summary, h.slug))
+    .map((h) => ({
+      kind: "site",
+      slug: h.slug,
+      title: h.title,
+      summary: h.summary,
+      href: h.href,
+    }));
   const kb: SearchResultItem[] = kbArticles
     .filter((a) => matches(n, a.title, a.summary, a.slug))
     .map((a) => ({
@@ -45,7 +56,7 @@ export function filterSiteSearch(needle: string): SearchResultItem[] {
     summary: h.summary,
     href: h.href,
   })) as SearchResultItem[];
-  return [...kb, ...lib];
+  return [...site, ...kb, ...lib];
 }
 
 type SearchModalCtx = {
@@ -150,7 +161,7 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
           </button>
         </div>
         <label htmlFor={inputId} className="visually-hidden">
-          search knowledge base, user guides, and tech guides
+          search roadmap, tutorial, knowledge base, user guides, and tech guides
         </label>
         <div className="search-modal-input-row">
           <span className="search-modal-input-icon" aria-hidden>
@@ -161,7 +172,7 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
             ref={inputRef}
             type="search"
             className="search-modal-input"
-            placeholder="knowledge base, user guides, tech guides…"
+            placeholder="roadmap, tutorial, knowledge base, guides…"
             value={q}
             onChange={(e) => setQ(e.target.value)}
             autoComplete="off"
@@ -170,7 +181,7 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
         <ul className="search-modal-results" aria-label="search results">
           {!q.trim() && (
             <li className="search-modal-empty">
-              type to search the knowledge base, user guides, and tech guides.
+              type to search roadmap, tutorial, knowledge base, and markdown guides.
             </li>
           )}
           {q.trim() && results.length === 0 && (
@@ -180,7 +191,13 @@ function SearchModalDialog({ open, onClose }: { open: boolean; onClose: () => vo
             <li key={`${r.kind}-${r.slug}`}>
               <Link to={r.href} className="search-modal-hit" onClick={() => onClose()}>
                 <span className="search-modal-hit-badge">
-                  {r.kind === "kb" ? "kb" : r.kind === "lib-user" ? "user md" : "tech md"}
+                  {r.kind === "kb"
+                    ? "kb"
+                    : r.kind === "site"
+                      ? "page"
+                      : r.kind === "lib-user"
+                        ? "user md"
+                        : "tech md"}
                 </span>
                 <span className="search-modal-hit-title">{r.title}</span>
                 <span className="search-modal-hit-sum">{r.summary}</span>

@@ -6,11 +6,11 @@ ika MPC signing has two phases: an **online** phase (fast, runs at the moment a 
 
 chromatika maintains three presign pools, each scoped per active dWallet Vault:
 
-| pool key            | what it's for                      |
-| ------------------- | ---------------------------------- |
-| `SECP256K1_ECDSA`   | EVM signing, generic ECDSA         |
-| `SECP256K1_TAPROOT` | BTC P2TR Schnorr signing           |
-| `ED25519_EDDSA`     | Sui, Solana, Aptos ed25519 signing |
+| pool key | what it's for |
+|----------|---------------|
+| `SECP256K1_ECDSA` | EVM signing, generic ECDSA |
+| `SECP256K1_TAPROOT` | BTC P2TR Schnorr signing |
+| `ED25519_EDDSA` | Sui, Solana, Aptos ed25519 signing |
 
 separate pools exist because the presign math differs per algorithm (see [ecdsa-secp256k1.md](/library/tech/ecdsa-secp256k1), [taproot-schnorr.md](/library/tech/taproot-schnorr), [ed25519-eddsa.md](/library/tech/ed25519-eddsa)). a SECP256K1_ECDSA presign cannot be used for a Taproot signature even though both run on secp256k1.
 
@@ -42,8 +42,7 @@ per-vault scoping (`<vaultId>` suffix) means switching active vault loads a diff
 3. persist updated pool to chrome.storage.local
 ```
 
-constants:
-
+constants per CLAUDE.md:
 - low-water = 2
 - refill count = 3
 
@@ -68,7 +67,6 @@ each `requestPresign` call is its own transaction (Sui PTB or Solana gRPC). fund
 ## taking a presign
 
 `takePresign(poolKey)` pops one entry from the pool:
-
 ```
 function takePresign(poolKey):
   if pool[poolKey].length === 0:

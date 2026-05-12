@@ -18,10 +18,11 @@
 //!
 //! What's here today:
 //!   - The full `PolicyVault` PDA shape mirroring the Sui Move struct (panicked, cap,
-//!     cool-down, actuators, rescue, staging fields).
-//!   - All instructions (`wrap_authority`, `panic`, `unfreeze`, setters, staging entries).
-//!   - Pre-CPI policy enforcement so when Alpha-1 lands we just plug the CPI target into
-//!     `do_approve_message_cpi`.
+//!     cool-down, actuators, rescue, staging fields, unwrap two-step).
+//!   - All instructions (`wrap_authority`, `panic`, `unfreeze`, setters, staging entries,
+//!     `request_unwrap` / `cancel_unwrap` / `claim_unwrap`).
+//!   - Pre-CPI policy enforcement so when Alpha-1 lands we just plug the CPI targets into
+//!     `do_approve_message_cpi` (for signing) and `do_release_authority_cpi` (for unwrap).
 //!   - Storage-shape parity with the Sui side so the chromatika TS dispatch can branch on
 //!     `getDwalletMeta(activeVault).baseChain` and call the same logical setters with the
 //!     same micro-USD / ms semantics.
@@ -32,7 +33,7 @@
 
 use anchor_lang::prelude::*;
 
-declare_id!("ChrPo1icyVau1tProgramID11111111111111111111");
+declare_id!("F6fnHYySvjJjvFGzqLb8h2L9qZrq2M8krNviXdNJaPsP");
 
 /// PDA seeds for `PolicyVault`. Derived per-dWallet so each user can have many policy-gated
 /// dWallets in one chromatika install. Seed shape:
@@ -110,6 +111,10 @@ pub mod chromatika_policy {
         vault.pending_stage_off_at_ms = 0;
         vault.stage_delay_ms = args.stage_delay_ms;
 
+        // unwrap two-step: dormant at wrap; user calls request_unwrap to start the countdown
+        vault.unwrap_requested = false;
+        vault.unwrap_at_ms = 0;
+
         vault.bump = ctx.bumps.policy_vault;
 
         emit!(VaultCreated {
@@ -141,48 +146,54 @@ pub mod chromatika_policy {
         ctx: Context<SignWithPolicy>,
         args: SignWithPolicyArgs,
     ) -> Result<()> {
-        let vault = &mut ctx.accounts.policy_vault;
         let actuator = ctx.accounts.actuator.key();
-        require!(vault.actuators.contains(&actuator), PolicyError::NotActuator);
-        require!(!vault.panicked, PolicyError::Panicked);
-
         let now_ms = Clock::get()?.unix_timestamp.max(0) as u64 * 1000;
-
-        // Lazy-commit any pending staged changes whose delay has elapsed.
-        lazy_commit_pending(vault, now_ms);
-
-        require!(
-            now_ms >= vault.last_sign_at_ms + vault.cool_down_ms,
-            PolicyError::CoolDownActive
-        );
-
-        // Roll daily bucket on day change.
         let today = now_ms / ONE_DAY_MS;
-        if today != vault.epoch_day {
-            vault.spent_today_micros = 0;
-            vault.epoch_day = today;
-        }
 
-        if vault.daily_cap_micros > 0 {
+        // Phase 1: validate + lazy-commit + day rollover + cap check while holding the
+        // mutable vault borrow. Scoped in a block so the borrow drops before the CPI.
+        {
+            let vault = &mut ctx.accounts.policy_vault;
+            require!(vault.actuators.contains(&actuator), PolicyError::NotActuator);
+            require!(!vault.panicked, PolicyError::Panicked);
+
+            lazy_commit_pending(vault, now_ms);
+
             require!(
-                vault
-                    .spent_today_micros
-                    .saturating_add(args.declared_value_micros)
-                    <= vault.daily_cap_micros,
-                PolicyError::CapExceeded
+                now_ms >= vault.last_sign_at_ms + vault.cool_down_ms,
+                PolicyError::CoolDownActive
             );
+
+            if today != vault.epoch_day {
+                vault.spent_today_micros = 0;
+                vault.epoch_day = today;
+            }
+
+            if vault.daily_cap_micros > 0 {
+                require!(
+                    vault
+                        .spent_today_micros
+                        .saturating_add(args.declared_value_micros)
+                        <= vault.daily_cap_micros,
+                    PolicyError::CapExceeded
+                );
+            }
         }
 
-        // Approve + sign via CPI into ika Solana program. Pre-alpha gap.
+        // Phase 2: approve + sign via CPI into ika Solana program. Pre-alpha gap (stub).
+        // Vault mutable borrow is dropped here so we can pass `&ctx` without aliasing.
         do_approve_message_cpi(&ctx, &args)?;
 
+        // Phase 3: post-CPI state update + event emission.
+        let vault = &mut ctx.accounts.policy_vault;
+        let vault_key = vault.key();
         vault.spent_today_micros = vault
             .spent_today_micros
             .saturating_add(args.declared_value_micros);
         vault.last_sign_at_ms = now_ms;
 
         emit!(PolicySigned {
-            vault: vault.key(),
+            vault: vault_key,
             actuator,
             declared_value_micros: args.declared_value_micros,
             spent_today_after_micros: vault.spent_today_micros,
@@ -311,11 +322,15 @@ pub mod chromatika_policy {
         Ok(())
     }
 
+    /// Add a new actuator. Forbidden while panicked or while an unwrap is pending: the
+    /// latter is the anti-bypass gate (attacker must not be able to add a confederate
+    /// during their stolen-key unwrap window).
     pub fn add_actuator(ctx: Context<ActuatorOnly>, new_actuator: Pubkey) -> Result<()> {
         let vault = &mut ctx.accounts.policy_vault;
         let actuator = ctx.accounts.actuator.key();
         require!(vault.actuators.contains(&actuator), PolicyError::NotActuator);
         require!(!vault.panicked, PolicyError::Panicked);
+        require!(!vault.unwrap_requested, PolicyError::UnwrapAlreadyRequested);
         require!(
             !vault.actuators.contains(&new_actuator),
             PolicyError::ActuatorAlreadyExists
@@ -332,11 +347,16 @@ pub mod chromatika_policy {
         Ok(())
     }
 
+    /// Remove an actuator. Forbidden while panicked. Also forbidden while an unwrap is
+    /// pending: this is the critical anti-bypass gate. Attacker who stole an actuator key
+    /// must not be able to `request_unwrap` and then `remove_actuator(legitimate_user)` to
+    /// lock the legitimate user out of panicking during the delay window.
     pub fn remove_actuator(ctx: Context<ActuatorOnly>, target: Pubkey) -> Result<()> {
         let vault = &mut ctx.accounts.policy_vault;
         let actuator = ctx.accounts.actuator.key();
         require!(vault.actuators.contains(&actuator), PolicyError::NotActuator);
         require!(!vault.panicked, PolicyError::Panicked);
+        require!(!vault.unwrap_requested, PolicyError::UnwrapAlreadyRequested);
         require!(vault.actuators.len() > 1, PolicyError::ActuatorNotFound);
         let idx = vault
             .actuators
@@ -347,6 +367,89 @@ pub mod chromatika_policy {
         emit!(ActuatorRemoved {
             vault: vault.key(),
             actuator: target,
+        });
+        Ok(())
+    }
+
+    /// Request unwrap. Mirrors the Sui Move `request_unwrap`. Actuator-only, not-panicked,
+    /// no double-request. Sets `unwrap_requested = true` and `unwrap_at_ms = now + stage_delay_ms`.
+    /// See the Sui-side doc comment for the bypass-attack analysis.
+    pub fn request_unwrap(ctx: Context<ActuatorOnly>) -> Result<()> {
+        let vault = &mut ctx.accounts.policy_vault;
+        let actuator = ctx.accounts.actuator.key();
+        require!(vault.actuators.contains(&actuator), PolicyError::NotActuator);
+        require!(!vault.panicked, PolicyError::Panicked);
+        require!(!vault.unwrap_requested, PolicyError::UnwrapAlreadyRequested);
+
+        let now_ms = (Clock::get()?.unix_timestamp.max(0) as u64) * 1000;
+        let claimable_at_ms = now_ms.saturating_add(vault.stage_delay_ms);
+        vault.unwrap_requested = true;
+        vault.unwrap_at_ms = claimable_at_ms;
+
+        emit!(UnwrapRequested {
+            vault: vault.key(),
+            actuator,
+            request_at_ms: now_ms,
+            claimable_at_ms,
+            stage_delay_ms: vault.stage_delay_ms,
+        });
+        Ok(())
+    }
+
+    /// Cancel a pending unwrap. Any actuator. Idempotent. Allowed even while panicked
+    /// (cancel is always safe).
+    pub fn cancel_unwrap(ctx: Context<ActuatorOnly>) -> Result<()> {
+        let vault = &mut ctx.accounts.policy_vault;
+        let actuator = ctx.accounts.actuator.key();
+        require!(vault.actuators.contains(&actuator), PolicyError::NotActuator);
+
+        if vault.unwrap_requested {
+            vault.unwrap_requested = false;
+            vault.unwrap_at_ms = 0;
+            let now_ms = (Clock::get()?.unix_timestamp.max(0) as u64) * 1000;
+            emit!(UnwrapCancelled {
+                vault: vault.key(),
+                actuator,
+                cancelled_at_ms: now_ms,
+            });
+        }
+        Ok(())
+    }
+
+    /// Claim the unwrap. Mirrors the Sui Move `claim_unwrap`. Actuator-only, unwrap
+    /// requested, delay elapsed, not-panicked. The CPI body that resets the on-chain ika
+    /// dWallet authority to the caller's pubkey is `do_release_authority_cpi`, a `todo!`
+    /// stub until ika Solana Alpha-1 publishes the inverse of its caller-PDA-as-authority
+    /// surface. Until then, this instruction performs the local state transition (clears
+    /// `unwrap_requested`, emits the event) so storage + UI surfaces can be exercised, but
+    /// does NOT actually release dWallet authority on chain.
+    ///
+    /// Once Alpha-1 lands, fill `do_release_authority_cpi` with the real `invoke_signed`
+    /// call (the inverse of `do_approve_message_cpi`). At that point the account will also
+    /// be closed (lamports returned to the actuator) to mirror Sui's `object::delete`.
+    pub fn claim_unwrap(ctx: Context<ClaimUnwrap>) -> Result<()> {
+        let actuator = ctx.accounts.actuator.key();
+        let vault_key = ctx.accounts.policy_vault.key();
+        let now_ms = (Clock::get()?.unix_timestamp.max(0) as u64) * 1000;
+
+        {
+            let vault = &ctx.accounts.policy_vault;
+            require!(vault.actuators.contains(&actuator), PolicyError::NotActuator);
+            require!(vault.unwrap_requested, PolicyError::UnwrapNotRequested);
+            require!(!vault.panicked, PolicyError::Panicked);
+            require!(now_ms >= vault.unwrap_at_ms, PolicyError::UnwrapDelayActive);
+        }
+
+        do_release_authority_cpi(&ctx, actuator)?;
+
+        let vault = &mut ctx.accounts.policy_vault;
+        vault.unwrap_requested = false;
+        vault.unwrap_at_ms = 0;
+
+        emit!(VaultUnwrapped {
+            vault: vault_key,
+            actuator,
+            claimed_at_ms: now_ms,
         });
         Ok(())
     }
@@ -475,6 +578,24 @@ fn do_approve_message_cpi(
     Ok(())
 }
 
+/// Pre-alpha CPI stub for releasing dWallet authority back to the actuator (the inverse of
+/// `do_approve_message_cpi`). Once ika Solana Alpha-1 publishes a CPI target for
+/// "set dWallet authority under caller-PDA-as-authority," replace this body with the real
+/// `invoke_signed` that resets the on-chain dWallet authority to `new_authority`.
+///
+/// Until then, this is a no-op so the policy-vault state transition (clearing
+/// `unwrap_requested`, emitting `VaultUnwrapped`) can be exercised end-to-end at the
+/// chromatika layer without a working ika authority transfer. The vault account itself is
+/// NOT closed in this pre-alpha stub; once the real CPI lands, switch to `close = actuator`
+/// on the `policy_vault` account constraint so claim_unwrap returns rent to the caller and
+/// burns the PDA, mirroring Sui's `object::delete` consumption.
+fn do_release_authority_cpi(_ctx: &Context<ClaimUnwrap>, _new_authority: Pubkey) -> Result<()> {
+    msg!(
+        "[chromatika-policy] PRE-ALPHA: do_release_authority_cpi is a no-op stub. ika Solana Alpha-1 must expose a CPI target for caller-PDA-as-authority set_authority before claim_unwrap can actually release the dWallet."
+    );
+    Ok(())
+}
+
 // ─── account contexts ────────────────────────────────────────────────────────────
 
 #[derive(Accounts)]
@@ -513,6 +634,21 @@ pub struct ActuatorOnly<'info> {
     pub actuator: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct ClaimUnwrap<'info> {
+    #[account(mut, seeds = [POLICY_VAULT_SEED, policy_vault.dwallet_pubkey_hash.as_ref()], bump = policy_vault.bump)]
+    pub policy_vault: Account<'info, PolicyVault>,
+    /// Receives the released dWallet authority once `do_release_authority_cpi` is wired up.
+    #[account(mut)]
+    pub actuator: Signer<'info>,
+    /// CHECK: ika program account; validated at CPI time once Alpha-1 publishes the inverse
+    /// of caller-PDA-as-authority set_authority.
+    pub ika_program: AccountInfo<'info>,
+    /// CHECK: ika dWallet PDA whose authority will be reset. Validated at CPI time.
+    #[account(mut)]
+    pub ika_dwallet: AccountInfo<'info>,
+}
+
 // ─── account data + arg structs ──────────────────────────────────────────────────
 
 #[account]
@@ -543,6 +679,10 @@ pub struct PolicyVault {
     pub pending_stage_off_at_ms: u64,
     pub stage_delay_ms: u64,
 
+    // unwrap two-step (user-controlled exit; mirrors the Sui Move sign_gate semantics)
+    pub unwrap_requested: bool,
+    pub unwrap_at_ms: u64,
+
     pub bump: u8,
 }
 
@@ -552,7 +692,7 @@ impl PolicyVault {
     ///   - dwallet_pubkey_hash: 32
     ///   - network_encryption_key_id: 32
     ///   - curve: 2 + signature_algorithm: 2
-    ///   - 6× u64 (cap, spent, epoch, cool, last_sign, panic_at): 48
+    ///   - 6 x u64 (cap, spent, epoch, cool, last_sign, panic_at): 48
     ///   - panicked: 1
     ///   - unfreeze_delay_ms: 8
     ///   - actuators: 4 (Vec len) + 32 * MAX_ACTUATORS = 4 + 512 = 516
@@ -563,9 +703,11 @@ impl PolicyVault {
     ///   - pending_stage_off: 1
     ///   - pending_stage_off_at_ms: 8
     ///   - stage_delay_ms: 8
+    ///   - unwrap_requested: 1
+    ///   - unwrap_at_ms: 8
     ///   - bump: 1
-    /// Total fields: ≈ 781 bytes. Plus 8 discriminator + ~32 padding for safety = 824.
-    pub const ACCOUNT_SIZE: usize = 8 + 32 + 32 + 2 + 2 + 48 + 1 + 8 + 516 + 105 + 1 + 9 + 8 + 1 + 8 + 8 + 1 + 32;
+    /// Total fields: 781 + 9 = 790 bytes. Plus 8 discriminator + ~32 padding for safety = 833.
+    pub const ACCOUNT_SIZE: usize = 8 + 32 + 32 + 2 + 2 + 48 + 1 + 8 + 516 + 105 + 1 + 9 + 8 + 1 + 8 + 8 + 1 + 8 + 1 + 32;
 }
 
 #[derive(AnchorSerialize, AnchorDeserialize, Clone)]
@@ -699,6 +841,29 @@ pub struct StageDelayChanged {
     pub staged: bool,
 }
 
+#[event]
+pub struct UnwrapRequested {
+    pub vault: Pubkey,
+    pub actuator: Pubkey,
+    pub request_at_ms: u64,
+    pub claimable_at_ms: u64,
+    pub stage_delay_ms: u64,
+}
+
+#[event]
+pub struct UnwrapCancelled {
+    pub vault: Pubkey,
+    pub actuator: Pubkey,
+    pub cancelled_at_ms: u64,
+}
+
+#[event]
+pub struct VaultUnwrapped {
+    pub vault: Pubkey,
+    pub actuator: Pubkey,
+    pub claimed_at_ms: u64,
+}
+
 // ─── errors ──────────────────────────────────────────────────────────────────────
 
 #[error_code]
@@ -725,4 +890,10 @@ pub enum PolicyError {
     TooManyActuators,
     #[msg("rescue address bytes exceed 100-byte cap")]
     RescueAddressTooLong,
+    #[msg("no unwrap has been requested")]
+    UnwrapNotRequested,
+    #[msg("unwrap delay still active")]
+    UnwrapDelayActive,
+    #[msg("an unwrap is already pending")]
+    UnwrapAlreadyRequested,
 }

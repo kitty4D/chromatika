@@ -69,7 +69,7 @@ To prevent the user from re-typing their password for every transaction, you mus
 ## Future hardening (tracked, not shipped)
 
 1. ~~**`sui_signPersonalMessage` Mysten parity**~~ — ✅ shipped 2026-04-30; see "Dapp compatibility" section above.
-2. **Offscreen media cache** — `chrome.offscreen` + safer image caching when `MediaSafetyMode` ships offscreen in the manifest.
+2. ~~**Offscreen media cache**~~ — ✅ shipped 2026-05-10. `chrome.offscreen` document hosts an IndexedDB cache (`chromatika_media_cache_v1`, 100 MB / 7-day TTL) with `credentials: 'omit'` + `referrerPolicy: 'no-referrer'` on every fetch. NFT grid uses `<NftImage>` to mint per-instance blob URLs from cached bytes; cookies/referer no longer leak from the wallet's NFT rendering. See [`OFFSCREEN_MEDIA_CACHE.md`](OFFSCREEN_MEDIA_CACHE.md).
 3. ~~**Sui JSON-RPC migration**~~ — ✅ shipped 2026-05-01. `nft.ts`, `sui-kiosk.ts`, and `activity.ts` all use `SuiGraphQLClient`. `activity.ts` uses a hand-rolled `Query.transactionBlocks(filter)` via `client.query` (see `queryTransactionBlocksGraphQL` at `sui-client.ts:306`) since `@mysten/sui` 2.16.x GraphQL core has no filtered/address-scoped transaction-list wrapper yet. The wallet no longer talks Mysten JSON-RPC at all.
 
 ### Shipped this revision (B1)

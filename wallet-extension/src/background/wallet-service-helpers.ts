@@ -68,8 +68,8 @@ export type FinalizeUnlockOptions = {
   /**
    * `true` only when the calling site just CREATED a new vault (passkey/waap/mnemonic create
    * paths that auto-unlock). `false` (default) for every plain unlock-an-existing-vault path.
-   * gates side-effects that should fire ONCE on first finalize: today, just the team faucet
-   * call for Sui-base vaults; potentially more in future.
+   * preserved for downstream side-effects that may fire ONCE on first finalize (today: none -
+   * team faucet now requires explicit user consent via the `TeamFundingOfferBanner`).
    */
   isFreshlyCreated?: boolean;
 };
@@ -81,10 +81,9 @@ export type FinalizeUnlockOptions = {
  * AND by the per-method create paths that auto-unlock the freshly-created blob (passkey,
  * waap, lazor) so the user doesn't have to re-tap or re-type immediately after onboarding.
  *
- * when `options.isFreshlyCreated` is true AND the active vault is Sui-base, fires the team
- * faucet call so the user has SUI + IKA on hand to create their first dWallets without
- * acquiring tokens themselves. credential-agnostic: works for passkey, WaaP, mnemonic HD,
- * any future Sui-base auto-unlock path. silent no-op when faucet env vars are unset.
+ * does NOT auto-trigger the team faucet anymore. when the user's vault count is exactly 1 +
+ * Sui-base, the `TeamFundingOfferBanner` queries `getTeamFundingOffer` and asks the user
+ * explicitly before any HTTP call. accept flow re-uses `triggerTeamFunding` below.
  */
 export async function finalizeUnlock(
   r: { keyBytes: Uint8Array; key: CryptoKey; kdfMeta: VaultCredential['kdfMeta']; payload: VaultPayloadV3 },
@@ -114,24 +113,18 @@ export async function finalizeUnlock(
       await clearUnlockCache();
     }
     void kickDiscoveryForVault(record.id);
-
-    // team faucet trigger - fires ONCE on first finalize for Sui-base vaults. credential-agnostic.
-    // surface progress + retry affordance via the OperationProgressBanner pattern. failures here
-    // never block onboarding - the user can self-fund or retry from the banner.
-    if (options?.isFreshlyCreated && record.baseChain === 'sui') {
-      void triggerTeamFunding(s);
-    }
   } finally {
     r.keyBytes.fill(0);
   }
 }
 
 /**
- * fire-and-forget faucet trigger. extracted so `finalizeUnlock` stays linear; callers that
- * want to retry after a failure (the OperationProgressBanner "Retry" action) can also call
- * this directly via `retryTeamFundingFromActiveSession()` below.
+ * runs the team-faucet HTTP call and surfaces progress via the OperationProgressBanner. exported
+ * so the team-funding-offer accept handler + the banner's "Retry" action can both invoke it.
+ * fire-and-forget by convention (caller `void`s it); failures land on the banner with a retry
+ * affordance rather than throwing back through the caller chain.
  */
-async function triggerTeamFunding(s: Awaited<ReturnType<typeof sessionStateFromRecord>>): Promise<void> {
+export async function triggerTeamFunding(s: Awaited<ReturnType<typeof sessionStateFromRecord>>): Promise<void> {
   const { faucetEnvConfigured, requestTeamFunding } = await import('@/background/onboarding-faucet');
   if (!faucetEnvConfigured()) return;
   const { getSuiFeePayerSuiAddress } = await import('@/background/sui/sui-fee-payer-signing');

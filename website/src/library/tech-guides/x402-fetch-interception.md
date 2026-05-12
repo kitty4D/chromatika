@@ -7,7 +7,7 @@ every page chromatika injects into gets a `window.fetch` wrapper that watches fo
 `inject.ts` (the page-script injected by the content script in every frame) installs the wrapper:
 
 ```ts
-import { installX402FetchWrapper } from "./x402-fetch-wrapper";
+import { installX402FetchWrapper } from './x402-fetch-wrapper';
 installX402FetchWrapper();
 ```
 
@@ -25,16 +25,16 @@ function installX402FetchWrapper() {
     // not a 402 - pass through unchanged
     if (response.status !== 402) return response;
 
-    const paymentRequiredHeader = response.headers.get("payment-required");
-    if (!paymentRequiredHeader) return response; // 402 without our header - dapp's own 402
+    const paymentRequiredHeader = response.headers.get('payment-required');
+    if (!paymentRequiredHeader) return response;   // 402 without our header - dapp's own 402
 
     // we have an x402-shaped 402. hand off to chromatika
     let paymentSignatureHeader: string | null;
     try {
       const result = await chrome.runtime.sendMessage({
-        type: "chromatika_x402_handle_402",
+        type: 'chromatika_x402_handle_402',
         paymentRequiredHeaderB64: paymentRequiredHeader,
-        callerHint: { url: input.toString(), method: init?.method ?? "GET" },
+        callerHint: { url: input.toString(), method: init?.method ?? 'GET' },
       });
       if (!result?.ok) {
         // user rejected, cap exceeded, signing failed - return the original 402
@@ -48,20 +48,17 @@ function installX402FetchWrapper() {
     }
 
     // retry with payment-signature
-    const newInit = {
-      ...(init ?? {}),
-      headers: {
-        ...((init?.headers as any) ?? {}),
-        "payment-signature": paymentSignatureHeader,
-      },
-    };
+    const newInit = { ...(init ?? {}), headers: {
+      ...((init?.headers as any) ?? {}),
+      'payment-signature': paymentSignatureHeader,
+    } };
     const retryResponse = await originalFetch.call(this, input, newInit);
 
     // optionally record settlement
-    const paymentResponseHeader = retryResponse.headers.get("payment-response");
+    const paymentResponseHeader = retryResponse.headers.get('payment-response');
     if (paymentResponseHeader && result.receiptId) {
       void chrome.runtime.sendMessage({
-        type: "chromatika_x402_record_settlement",
+        type: 'chromatika_x402_record_settlement',
         receiptId: result.receiptId,
         paymentResponseHeaderB64: paymentResponseHeader,
       });
@@ -73,7 +70,6 @@ function installX402FetchWrapper() {
 ```
 
 key invariants:
-
 - non-402 responses pass through unchanged
 - 402s without our `payment-required` header pass through unchanged (some dapps return 402 for their own reasons)
 - chromatika failure modes return the **original 402** so the page can fall back to whatever it would normally do
@@ -135,7 +131,6 @@ async function dispatchX402(paymentRequiredHeaderB64, callerHint) {
 ## why pre-popup cap check
 
 `wouldExceedCaps(host, amountUsd)` runs synchronously **before** opening the approval popup. if the user is over their daily limit:
-
 - popup never opens
 - user doesn't waste attention on a request that would be rejected anyway
 - dapp gets the 402 back, can degrade gracefully (offer a cheaper tier, ask user to top up cap, etc.)
@@ -145,7 +140,6 @@ caps reset at local-timezone midnight. see [x402-caps-receipts.md](/library/tech
 ## the failure-pass-through philosophy
 
 if anything goes wrong on chromatika's side - cap exceeded, user closed popup, signing crashed, ika network down, WC session expired - the wrapper returns the **original 402** to the page. this means:
-
 - explicit dapp 402 handlers (e.g. `if (resp.status === 402) showPayWall(resp)`) keep working
 - dapps that built their own non-x402 payment flow on top of 402 are unaffected
 - chromatika is opt-in at the **wallet** layer, not at the dapp layer

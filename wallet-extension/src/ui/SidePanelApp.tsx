@@ -487,6 +487,7 @@ function SidePanelMain() {
         setBalances(null);
         setUnlocked(false);
       }}
+      onAddVaultForBase={(c) => setIkaGateMissingChain(c)}
     />
   );
 }
@@ -539,7 +540,7 @@ function SidePanelDevGallery() {
   return (
     <div className="sp-root" style={{ padding: 16 }}>
       <div style={{ marginBottom: 12 }}>
-        <div className="sp-pageTitle">dev screen gallery</div>
+        <h2 className="sp-pageTitle">dev screen gallery</h2>
         <div className="sp-muted" style={{ fontSize: 12, marginTop: 6, lineHeight: 1.5 }}>
           quick links to render UI states without creating a real wallet.
           side panel renders mocked balances/networks when <code>dev=1</code>.

@@ -1,0 +1,125 @@
+/**
+ * Chromatika elevation tiers — depth with discipline.
+ *
+ * Per the design plan and `.impeccable.md` principle 4 ("Depth with discipline —
+ * glass, glow, and layers signal premium / lab; avoid noise — not every row needs a glow").
+ *
+ * Use these classes to opt INTO elevation. Default state is tier-0 (no shadow,
+ * no glow). The plan rule: AT MOST one tier-2 element per screen. Approval popups
+ * + modals are tier-3 by definition (they ARE the chrome).
+ *
+ * Tier 0 — list rows, settings rows, plain content. Hairline border-bottom only.
+ * Tier 1 — standard cards (use .ch-hit-card from signature-motifs.css for the
+ *          interactive variant; .ch-elev-1 here is for non-interactive cards).
+ * Tier 2 — THE hero card per screen (one per screen). Tier 1 + a halo radial behind.
+ * Tier 3 — approval popups + modals. Glass-stack chrome + signature ribbon.
+ */
+
+/* ----- tier 0 — flat row with hairline divider -----
+ * applied to <li>, settings rows, activity rows. last-child drops the border.
+ */
+.ch-elev-0 {
+  position: relative;
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+
+.ch-elev-0:last-child {
+  border-bottom: none;
+}
+
+/* ----- tier 1 — non-interactive card -----
+ * use for static info cards. interactive cards should use .ch-hit-card instead
+ * (which extends this with hover lift + ika tint).
+ */
+.ch-elev-1 {
+  position: relative;
+  padding: var(--space-2);
+  border-radius: var(--theme-radius-surface, 18px);
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--surface) 90%, transparent);
+  box-shadow: 0 1px 0 color-mix(in oklch, var(--text) 6%, transparent) inset;
+}
+
+/* ----- tier 2 — the hero card per screen -----
+ * tier 1 + a halo radial behind. apply sparingly. the halo is a ::before so the
+ * card content stays at z-index above it.
+ *
+ * perf (i-optimize P2): removed `filter: blur(2px)` on the ::before — radial-gradient
+ * already provides soft edges, and filter creates an unneeded compositing layer.
+ * `contain: layout style paint` isolates the card's paint region.
+ */
+.ch-elev-2 {
+  position: relative;
+  padding: var(--space-2);
+  border-radius: var(--theme-radius-surface, 18px);
+  border: 1px solid var(--border-strong);
+  background: color-mix(in oklch, var(--surface) 90%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in oklch, var(--text) 8%, transparent) inset,
+    var(--shadow-float);
+  isolation: isolate;
+  contain: layout style paint;
+}
+
+.ch-elev-2::before {
+  content: '';
+  position: absolute;
+  inset: -24px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 70% at 50% 0%, color-mix(in oklch, var(--accent-2) 22%, transparent), transparent 60%),
+    radial-gradient(ellipse 70% 60% at 100% 100%, color-mix(in oklch, var(--ika) 14%, transparent), transparent 65%);
+  opacity: 0.85;
+}
+
+/* ----- tier 3 — chrome surface for approval popups + modals -----
+ * combine with .ch-glass-stack from signature-motifs.css for the full chrome treatment.
+ * .ch-elev-3 itself just adds the ribbon + heavy outer shadow.
+ */
+.ch-elev-3 {
+  position: relative;
+  border-radius: var(--theme-radius-panel, 22px);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--text) 8%, transparent) inset,
+    0 24px 64px color-mix(in oklch, var(--ink) 55%, transparent),
+    0 0 80px color-mix(in oklch, var(--ika) 8%, transparent);
+  overflow: hidden;
+}
+
+.ch-elev-3::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+  background: var(--ch-bleed-gradient);
+  opacity: 0.95;
+}
+
+/* light-appearance variants: lower-contrast shadows, brighter inset highlights */
+html[data-appearance='light'] .ch-elev-1 {
+  background: color-mix(in oklch, var(--surface) 95%, transparent);
+  box-shadow: 0 1px 0 oklch(1 0 0 / 0.6) inset;
+}
+
+html[data-appearance='light'] .ch-elev-2 {
+  background: color-mix(in oklch, var(--surface) 95%, transparent);
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.65) inset,
+    var(--shadow-float);
+}
+
+html[data-appearance='light'] .ch-elev-2::before {
+  opacity: 0.5;
+}
+
+html[data-appearance='light'] .ch-elev-3 {
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--text) 8%, transparent) inset,
+    0 24px 64px color-mix(in oklch, oklch(0.45 0.05 280) 22%, transparent),
+    0 0 80px color-mix(in oklch, var(--ika) 6%, transparent);
+}

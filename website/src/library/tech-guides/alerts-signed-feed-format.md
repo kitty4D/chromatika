@@ -7,21 +7,20 @@ every safety alert in chromatika is a `SignedAlertV1` JSON envelope: signed-once
 ```ts
 interface SignedAlertV1 {
   v: 1;
-  id: string; // uuid or content-hash; stable identifier
-  severity: "critical" | "warning" | "info";
-  timestampMs: number; // when published (ms since epoch)
-  expiresAtMs: number; // alert's natural expiry (controls dNR TTL + history pruning)
-  affectedDomains: string[]; // lowercased hostnames, no scheme, max 50
-  affectedChains?: ("evm" | "sui" | "solana" | "bitcoin" | "aptos" | "cross-chain")[];
-  titleShort: string; // ≤100 chars
-  bodyLong: string; // ≤4000 chars (markdown ok)
-  publisherKeyB64: string; // 32-byte ed25519 pubkey, base64
-  signatureB64: string; // 64-byte ed25519 sig, base64
+  id: string;                              // uuid or content-hash; stable identifier
+  severity: 'critical' | 'warning' | 'info';
+  timestampMs: number;                     // when published (ms since epoch)
+  expiresAtMs: number;                     // alert's natural expiry (controls dNR TTL + history pruning)
+  affectedDomains: string[];               // lowercased hostnames, no scheme, max 50
+  affectedChains?: ('evm' | 'sui' | 'solana' | 'bitcoin' | 'aptos' | 'cross-chain')[];
+  titleShort: string;                      // ≤100 chars
+  bodyLong: string;                        // ≤4000 chars (markdown ok)
+  publisherKeyB64: string;                 // 32-byte ed25519 pubkey, base64
+  signatureB64: string;                    // 64-byte ed25519 sig, base64
 }
 ```
 
 example:
-
 ```jsonc
 {
   "v": 1,
@@ -34,7 +33,7 @@ example:
   "titleShort": "phishing uniswap clone draining USDC",
   "bodyLong": "Two domains run an exact uniswap v4 UI clone but the swap router transfers USDC to attacker-controlled addresses...",
   "publisherKeyB64": "+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=",
-  "signatureB64": "<base64 64-byte ed25519 sig>",
+  "signatureB64": "<base64 64-byte ed25519 sig>"
 }
 ```
 
@@ -60,7 +59,7 @@ function canonicalAlertBytes(unsigned: UnsignedAlertView): Uint8Array {
 
 function sortKeysRecursive(obj: any): any {
   if (Array.isArray(obj)) return obj.map(sortKeysRecursive);
-  if (obj === null || typeof obj !== "object") return obj;
+  if (obj === null || typeof obj !== 'object') return obj;
   const out: Record<string, any> = {};
   for (const key of Object.keys(obj).sort()) {
     if (obj[key] !== undefined) out[key] = sortKeysRecursive(obj[key]);
@@ -74,11 +73,11 @@ function sortKeysRecursive(obj: any): any {
 ## the signing primitive
 
 ```ts
-import * as ed from "@noble/ed25519";
-import { sha512 } from "@noble/hashes/sha2";
-import { hmac } from "@noble/hashes/hmac";
+import * as ed from '@noble/ed25519';
+import { sha512 } from '@noble/hashes/sha2';
+import { hmac } from '@noble/hashes/hmac';
 
-ed.hashes.sha512 = sha512; // inject for noble/ed25519 v3
+ed.hashes.sha512 = sha512;       // inject for noble/ed25519 v3
 ed.hashes.hmacSha512 = (key, message) => hmac(sha512, key, message);
 
 const canonicalBytes = canonicalAlertBytes(unsignedView(alert));
@@ -96,12 +95,12 @@ ed25519 RFC 8032 deterministic - same key + same message = same signature. so a 
 async function verifySignedAlert(raw: unknown, nowMs: number): Promise<VerifyResult> {
   // 1. shape validation via Zod
   const parsed = SignedAlertV1Schema.safeParse(raw);
-  if (!parsed.success) return { ok: false, reason: "invalid-shape", detail: parsed.error.message };
+  if (!parsed.success) return { ok: false, reason: 'invalid-shape', detail: parsed.error.message };
   const alert = parsed.data;
 
   // 2. publisher allowlist check
   if (!isAllowedPublisher(alert.publisherKeyB64)) {
-    return { ok: false, reason: "unknown-publisher", detail: alert.publisherKeyB64 };
+    return { ok: false, reason: 'unknown-publisher', detail: alert.publisherKeyB64 };
   }
 
   // 3. decode signature + pubkey
@@ -110,30 +109,26 @@ async function verifySignedAlert(raw: unknown, nowMs: number): Promise<VerifyRes
     pubkey = base64Decode(alert.publisherKeyB64);
     sig = base64Decode(alert.signatureB64);
   } catch (e) {
-    return { ok: false, reason: "invalid-pubkey", detail: e.message };
+    return { ok: false, reason: 'invalid-pubkey', detail: e.message };
   }
-  if (pubkey.length !== 32) return { ok: false, reason: "invalid-pubkey", detail: "not 32 bytes" };
-  if (sig.length !== 64)
-    return { ok: false, reason: "invalid-signature-bytes", detail: "not 64 bytes" };
+  if (pubkey.length !== 32) return { ok: false, reason: 'invalid-pubkey', detail: 'not 32 bytes' };
+  if (sig.length !== 64) return { ok: false, reason: 'invalid-signature-bytes', detail: 'not 64 bytes' };
 
   // 4. ed25519 signature verify against canonical bytes
   const canonical = canonicalAlertBytes(unsignedView(alert));
   const valid = await ed.verifyAsync(sig, canonical, pubkey);
-  if (!valid) return { ok: false, reason: "bad-signature" };
+  if (!valid) return { ok: false, reason: 'bad-signature' };
 
   // 5. time bounds: not too old, not from the future
   const ageMs = nowMs - alert.timestampMs;
-  if (ageMs > 30 * 24 * 60 * 60 * 1000)
-    return { ok: false, reason: "time-out-of-range", detail: "too old (>30d)" };
-  if (ageMs < -5 * 60 * 1000)
-    return { ok: false, reason: "time-out-of-range", detail: "from the future (>5min skew)" };
+  if (ageMs > 30 * 24 * 60 * 60 * 1000) return { ok: false, reason: 'time-out-of-range', detail: 'too old (>30d)' };
+  if (ageMs < -5 * 60 * 1000) return { ok: false, reason: 'time-out-of-range', detail: 'from the future (>5min skew)' };
 
   return { ok: true, alert };
 }
 ```
 
 failure modes (all surfaced as `{ ok: false, reason, detail }`):
-
 - `invalid-shape` - Zod schema mismatch (missing field, wrong type, length cap exceeded)
 - `unknown-publisher` - pubkey not in `BUNDLED_PUBLISHERS`
 - `invalid-pubkey` - base64 decode failed or wrong length
@@ -156,13 +151,11 @@ these are heuristic but reasonable defaults. tighter windows would catch edge ca
 const SignedAlertV1Schema = z.object({
   v: z.literal(1),
   id: z.string().min(1).max(128),
-  severity: z.enum(["critical", "warning", "info"]),
+  severity: z.enum(['critical', 'warning', 'info']),
   timestampMs: z.number().int().nonnegative(),
   expiresAtMs: z.number().int().nonnegative(),
   affectedDomains: z.array(z.string().min(1).max(255)).max(50),
-  affectedChains: z
-    .array(z.enum(["evm", "sui", "solana", "bitcoin", "aptos", "cross-chain"]))
-    .optional(),
+  affectedChains: z.array(z.enum(['evm', 'sui', 'solana', 'bitcoin', 'aptos', 'cross-chain'])).optional(),
   titleShort: z.string().min(1).max(100),
   bodyLong: z.string().min(0).max(4000),
   publisherKeyB64: z.string().min(1).max(64),

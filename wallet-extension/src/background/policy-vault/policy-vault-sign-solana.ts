@@ -67,7 +67,10 @@ export async function shouldDispatchThroughPolicySolana(): Promise<boolean> {
   if (!s?.activeVaultId) return false;
   const cfg = await getPolicyPackageConfig();
   if (!cfg?.solanaProgramId) return false;
-  const link = await getPolicyVaultLink(s.activeVaultId);
+  // Solana-base wraps an ED25519 dWallet today.
+  const dwalletId = s.dwalletMeta?.ED25519?.dwalletId;
+  if (!dwalletId) return false;
+  const link = await getPolicyVaultLink(s.activeVaultId, dwalletId);
   return link != null && link.baseChain === 'solana';
 }
 
@@ -105,11 +108,18 @@ export async function signBytesThroughPolicySolana(
     );
   }
 
-  const link = await getPolicyVaultLink(s.activeVaultId);
+  const dwalletId = s.dwalletMeta?.ED25519?.dwalletId;
+  if (!dwalletId) {
+    throw new PolicyVaultSolanaSignError(
+      'no-link',
+      'no ED25519 dWallet for the active vault.',
+    );
+  }
+  const link = await getPolicyVaultLink(s.activeVaultId, dwalletId);
   if (!link) {
     throw new PolicyVaultSolanaSignError(
       'no-link',
-      'no PolicyVault link for the active vault. Opt in first or use the direct sign path.',
+      'no PolicyVault link for this ED25519 dWallet. Opt in first or use the direct sign path.',
     );
   }
   if (link.baseChain !== 'solana') {
@@ -126,6 +136,7 @@ export async function signBytesThroughPolicySolana(
   if (snap?.panicked) {
     void appendPolicyAuditEntry({
       vaultId: s.activeVaultId,
+      dwalletId,
       kind: 'sign-aborted-panicked',
       detail: `solana-base; declared=${input.declaredValueMicros.toString()}`,
     }).catch(() => {});
@@ -139,6 +150,7 @@ export async function signBytesThroughPolicySolana(
     if (input.declaredValueMicros > remaining) {
       void appendPolicyAuditEntry({
         vaultId: s.activeVaultId,
+        dwalletId,
         kind: 'sign-aborted-over-cap',
         detail: `solana-base; declared=${input.declaredValueMicros.toString()} remaining=${remaining.toString()}`,
       }).catch(() => {});
@@ -157,6 +169,7 @@ export async function signBytesThroughPolicySolana(
   // labelled in the UI).
   void appendPolicyAuditEntry({
     vaultId: s.activeVaultId,
+    dwalletId,
     kind: 'sign-cap-applied',
     detail: `solana-base PRE-ALPHA fallthrough (no CPI target yet); declared=${input.declaredValueMicros.toString()}`,
   }).catch(() => {});

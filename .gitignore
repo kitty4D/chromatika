@@ -7,6 +7,13 @@ wallet-extension/.vite/
 
 website/dist/
 
+# anchor / rust build outputs (solana policy program)
+wallet-extension/solana/chromatika-policy/target/
+wallet-extension/solana/chromatika-policy/.anchor/
+
+# sui move build output (chromatika-policy package)
+wallet-extension/move/chromatika-policy/build/
+
 # test artifacts
 wallet-extension/test-results/
 wallet-extension/playwright-report/
@@ -35,6 +42,10 @@ local/
 .superpowers/
 .vscode/
 .impeccable.md
+.playwright-mcp/
+
+# superpowers planning artifacts (per-session, not shared)
+docs/superpowers/
 
 # agent skills catalog (local reference only)
 skills/

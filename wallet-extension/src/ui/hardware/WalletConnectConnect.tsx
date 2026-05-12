@@ -210,7 +210,7 @@ export function WalletConnectConnect({
   const label: React.CSSProperties = {
     fontSize: 12,
     marginBottom: 6,
-    color: 'rgba(234, 240, 255, 0.62)',
+    color: 'var(--muted)',
   };
 
   return (
@@ -234,7 +234,7 @@ export function WalletConnectConnect({
           style={{
             padding: 14,
             borderRadius: 14,
-            background: 'rgba(255,255,255,0.04)',
+            background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 50%, transparent)',
             border: '1px solid rgba(255,255,255,0.08)',
             marginBottom: 14,
             textAlign: 'center',
@@ -247,7 +247,7 @@ export function WalletConnectConnect({
             height={256}
             style={{ width: 256, height: 256, borderRadius: 10, background: '#fff', padding: 6 }}
           />
-          <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.55)', marginTop: 10, lineHeight: 1.5 }}>
+          <div style={{ fontSize: 11, color: 'var(--faint)', marginTop: 10, lineHeight: 1.5 }}>
             scan with your wallet's WalletConnect scanner, or copy this URI into the wallet's WC input:
           </div>
           <div
@@ -256,7 +256,7 @@ export function WalletConnectConnect({
               fontSize: 10,
               wordBreak: 'break-all',
               marginTop: 6,
-              color: 'rgba(234,240,255,0.7)',
+              color: 'var(--muted)',
               userSelect: 'all',
             }}
           >
@@ -266,16 +266,16 @@ export function WalletConnectConnect({
       )}
 
       {status.kind === 'opening' && (
-        <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 13, marginBottom: 12 }}>{status.msg}</p>
+        <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 13, marginBottom: 12 }}>{status.msg}</p>
       )}
       {status.kind === 'authorizing' && (
-        <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 13, marginBottom: 12 }}>{status.msg}</p>
+        <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 13, marginBottom: 12 }}>{status.msg}</p>
       )}
       {status.kind === 'signing_usk' && (
-        <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 13, marginBottom: 12 }}>{status.msg}</p>
+        <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 13, marginBottom: 12 }}>{status.msg}</p>
       )}
       {status.kind === 'error' && (
-        <p style={{ color: 'rgba(255,99,132,0.95)', fontSize: 13, marginBottom: 12, lineHeight: 1.4 }}>
+        <p style={{ color: 'var(--theme-banner-error-fg, oklch(0.78 0.14 25))', fontSize: 13, marginBottom: 12, lineHeight: 1.4 }}>
           {status.msg}
         </p>
       )}
@@ -285,11 +285,11 @@ export function WalletConnectConnect({
             padding: '10px 12px',
             borderRadius: 12,
             border: '1px solid rgba(16,185,129,0.3)',
-            background: 'rgba(16,185,129,0.08)',
+            background: 'var(--theme-banner-success-bg, rgba(34, 197, 94, 0.16))',
             marginBottom: 12,
           }}
         >
-          <div style={{ fontSize: 11, color: 'rgba(234,240,255,0.65)', marginBottom: 2 }}>paired Solana address</div>
+          <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>paired Solana address</div>
           <div style={{ fontSize: 12, fontFamily: 'monospace', wordBreak: 'break-all' }}>{status.address}</div>
         </div>
       )}
@@ -335,10 +335,10 @@ export function WalletConnectConnect({
           marginTop: 18,
           padding: 12,
           borderRadius: 12,
-          background: 'rgba(255,255,255,0.04)',
+          background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 50%, transparent)',
           border: '1px solid rgba(255,255,255,0.08)',
           fontSize: 11,
-          color: 'rgba(234,240,255,0.55)',
+          color: 'var(--faint)',
           lineHeight: 1.5,
         }}
       >

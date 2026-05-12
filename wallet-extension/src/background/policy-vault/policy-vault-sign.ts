@@ -172,11 +172,19 @@ export async function signBytesSecpThroughPolicy(
       'chromatika_policy package id not configured. Set it in Settings -> Security.',
     );
   }
-  const link = await getPolicyVaultLink(s.activeVaultId);
+  // SECP256K1 signing path covers EVM / BTC / DeSo - all wrap the active vault's SECP dwallet.
+  const dwalletId = s.dwalletMeta?.SECP256K1?.dwalletId;
+  if (!dwalletId) {
+    throw new PolicyVaultSignError(
+      'no-link',
+      'no SECP256K1 dWallet for the active vault.',
+    );
+  }
+  const link = await getPolicyVaultLink(s.activeVaultId, dwalletId);
   if (!link) {
     throw new PolicyVaultSignError(
       'no-link',
-      'no PolicyVault link for the active vault. Opt in first or use the direct sign path.',
+      'no PolicyVault link for this SECP dWallet. Opt in first or use the direct sign path.',
     );
   }
 
@@ -188,6 +196,7 @@ export async function signBytesSecpThroughPolicy(
   if (snapshot?.panicked) {
     void appendPolicyAuditEntry({
       vaultId: s.activeVaultId,
+      dwalletId,
       kind: 'sign-aborted-panicked',
       detail: `declared=${input.declaredValueMicros.toString()}`,
     }).catch(() => {});
@@ -202,6 +211,7 @@ export async function signBytesSecpThroughPolicy(
     if (input.declaredValueMicros > capRemaining) {
       void appendPolicyAuditEntry({
         vaultId: s.activeVaultId,
+        dwalletId,
         kind: 'sign-aborted-over-cap',
         detail: `declared=${input.declaredValueMicros.toString()} remaining=${capRemaining.toString()}`,
       }).catch(() => {});
@@ -213,23 +223,24 @@ export async function signBytesSecpThroughPolicy(
   }
 
   // get + auto-replenish if needed.
-  let presignCapId = await popPolicyPresignCapId(s.activeVaultId);
+  let presignCapId = await popPolicyPresignCapId(s.activeVaultId, dwalletId);
   if (!presignCapId) {
     // re-sync from chain in case the local cache is stale (e.g. chromatika reinstall).
     setSigningProgress('taking-presign', 'resyncing presigns from chain');
     const onChainCount = await resyncPolicyPresignsFromChain(
       s.suiClient,
       s.activeVaultId,
+      dwalletId,
       link.vaultObjectId,
     );
     if (onChainCount > 0) {
-      presignCapId = await popPolicyPresignCapId(s.activeVaultId);
+      presignCapId = await popPolicyPresignCapId(s.activeVaultId, dwalletId);
     }
   }
   if (!presignCapId) {
     setSigningProgress('taking-presign', 'replenishing policy presign');
-    await replenishPolicyPresign();
-    presignCapId = await popPolicyPresignCapId(s.activeVaultId);
+    await replenishPolicyPresign(dwalletId);
+    presignCapId = await popPolicyPresignCapId(s.activeVaultId, dwalletId);
   }
   if (!presignCapId) {
     throw new PolicyVaultSignError(
@@ -387,6 +398,7 @@ export async function signBytesSecpThroughPolicy(
     if (abortKind) {
       void appendPolicyAuditEntry({
         vaultId: s.activeVaultId,
+        dwalletId,
         kind: abortKind,
         detail: friendly.slice(0, 200),
       }).catch(() => {});
@@ -452,6 +464,7 @@ export async function signBytesSecpThroughPolicy(
   for (const b of parsed) signatureHex += b.toString(16).padStart(2, '0');
   void appendPolicyAuditEntry({
     vaultId: s.activeVaultId,
+    dwalletId,
     kind: 'sign-cap-applied',
     digest: signId,
     next: input.declaredValueMicros.toString(),
@@ -504,11 +517,15 @@ async function readPresignIdFromCap(
  * storage only. callers use this to decide between `signBytesSecpThroughPolicy` and the
  * legacy direct `signBytesEvm` etc. paths.
  */
-export async function shouldDispatchThroughPolicy(): Promise<boolean> {
+export async function shouldDispatchThroughPolicy(
+  curve: 'SECP256K1' | 'ED25519' = 'SECP256K1',
+): Promise<boolean> {
   const s = getSession();
   if (!s?.activeVaultId) return false;
   const cfg = await getPolicyPackageConfig();
   if (!cfg) return false;
-  const link = await getPolicyVaultLink(s.activeVaultId);
+  const dwalletId = s.dwalletMeta?.[curve]?.dwalletId;
+  if (!dwalletId) return false;
+  const link = await getPolicyVaultLink(s.activeVaultId, dwalletId);
   return link != null;
 }

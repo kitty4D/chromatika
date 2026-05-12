@@ -56,8 +56,17 @@ export function PolicyVaultBanner() {
     return () => clearInterval(t);
   }, [refresh]);
 
-  if (!state?.link || !state?.snapshot) return null;
-  const snap = state.snapshot;
+  // Policy Vault is Sui-only today; Solana-base sends do not route through any
+  // policy gate, so the banner has nothing to show. The tRPC layer already
+  // short-circuits links for Solana-base, but bail on the explicit flag too as
+  // defense-in-depth.
+  if (state?.activeVaultBaseChain === 'solana') return null;
+  // For now the banner surfaces the FIRST wrapped dwallet's gauge. With multiple
+  // wraps per vault, per-curve banner pick lands when SendPage threads curve
+  // context through; today the banner is informational so the first is fine.
+  const first = state?.links?.[0];
+  if (!first?.link || !first.snapshot) return null;
+  const snap = first.snapshot;
   const cap = BigInt(snap.dailyCapMicros);
   const spent = BigInt(snap.spentTodayMicros);
   const remaining = cap > spent ? cap - spent : 0n;

@@ -12,17 +12,15 @@ chrome native messaging is the channel between the chromatika service worker (vi
 ```
 
 example: sending `{"type":"ping"}` (15 bytes UTF-8):
-
 ```
 [0x0F, 0x00, 0x00, 0x00] [0x7B, 0x22, 0x74, 0x79, 0x70, 0x65, 0x22, 0x3A, 0x22, 0x70, 0x69, 0x6E, 0x67, 0x22, 0x7D]
    ^ length = 15           ^ {"type":"ping"}
 ```
 
 the prefix is **little-endian uint32**. on the host side:
-
 ```js
 function sendFrame(obj) {
-  const body = Buffer.from(JSON.stringify(obj), "utf8");
+  const body = Buffer.from(JSON.stringify(obj), 'utf8');
   const lenBuf = Buffer.alloc(4);
   lenBuf.writeUInt32LE(body.length, 0);
   STDOUT.write(Buffer.concat([lenBuf, body]));
@@ -37,10 +35,10 @@ let buffer = Buffer.alloc(0);
 function processBuffer() {
   while (buffer.length >= 4) {
     const msgLen = buffer.readUInt32LE(0);
-    if (buffer.length < 4 + msgLen) break; // wait for more bytes
+    if (buffer.length < 4 + msgLen) break;   // wait for more bytes
     const body = buffer.subarray(4, 4 + msgLen);
     buffer = buffer.subarray(4 + msgLen);
-    const msg = JSON.parse(body.toString("utf8"));
+    const msg = JSON.parse(body.toString('utf8'));
     handleMessage(msg);
   }
 }
@@ -55,20 +53,18 @@ if you ever need to send more (e.g. a large NFT inventory dump), split into mult
 ## how chrome spawns the host
 
 `chrome.runtime.connectNative('com.chromatika.mcp_host')` looks up the native messaging manifest by name in OS-specific locations:
-
 - **Windows**: `HKEY_CURRENT_USER\SOFTWARE\Google\Chrome\NativeMessagingHosts\com.chromatika.mcp_host` registry key pointing at the manifest JSON
 - **macOS**: `~/Library/Application Support/Google/Chrome/NativeMessagingHosts/com.chromatika.mcp_host.json`
 - **Linux**: `~/.config/google-chrome/NativeMessagingHosts/com.chromatika.mcp_host.json`
 
 the manifest declares the host binary path + which extension ids are allowed to connect:
-
 ```jsonc
 {
   "name": "com.chromatika.mcp_host",
   "description": "Chromatika MCP native messaging host",
   "path": "/absolute/path/to/chromatika-mcp-host.mjs",
   "type": "stdio",
-  "allowed_origins": ["chrome-extension://<your-extension-id>/"],
+  "allowed_origins": ["chrome-extension://<your-extension-id>/"]
 }
 ```
 
@@ -93,7 +89,6 @@ the manifest declares the host binary path + which extension ids are allowed to 
 ## frame types chromatika sends
 
 extension → host:
-
 - `{ type: 'config', tokenHex }` - pushed on connect; sets the bearer token
 - `{ type: 'tool-result', id, result }` - response to a tool-call
 - `{ type: 'tool-result', id, error }` - error response
@@ -101,7 +96,6 @@ extension → host:
 - `{ type: 'ping' }` - liveness check
 
 host → extension:
-
 - `{ ok: true, kind: 'config-ack', hasToken }` - config acknowledged
 - `{ kind: 'listen', host, port }` - HTTP listener bound
 - `{ kind: 'rebind-error', desiredPort, error }` - failed to rebind to user-supplied port

@@ -62,8 +62,8 @@ Pre-release Chrome extension wallet: Ika dWallets (Sui MPC) as canonical cross-c
 
 ### data and integrations
 
-- **Shipped:** price waterfall + cache; NFT pipeline across chains (with API keys for some providers); Sui Kiosk; Phase B Sui→IKA swap (flag, default on).
-- **Gated / roadmap stubs:** **Encrypt.xyz** SPL deposit, PC-Token, PC-Swap (tRPC `not_wired` stubs).
+- **Shipped:** price waterfall + cache; NFT pipeline across chains (with API keys for some providers); Sui Kiosk; Phase B Sui→IKA swap (flag, default on); **Encrypt.xyz PC-Token** (FHE-encrypted SPL wrapper - wrap / hidden transfer / unwrap, gated on adding a market in Settings → PC-Token markets).
+- **Gated / roadmap stubs:** **Encrypt.xyz SPL ENC deposit** (notes-only stub returning user-funded path guidance + Encrypt instruction reference URL); **Encrypt.xyz PC-Swap** (phase 4 private AMM, ~3+ weeks pending program alignment).
 - **Planned (roadmap):** **multichain funding** beyond Phase B (Phases C/D); optional **ika dWallet explorer**.
 
 ### engineering / tooling (shipped)

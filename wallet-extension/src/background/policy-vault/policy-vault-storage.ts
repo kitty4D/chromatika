@@ -3,10 +3,13 @@
  *
  * two storage shapes:
  *
- * 1. **global package config** (`chromatika_policy_package_v1`): set once after the
- *    chromatika_policy::sign_gate Move package is deployed. holds the published Sui
- *    `packageId`. until set, opt-in is disabled and the UI surfaces a "deploy first"
- *    runbook (mirrors the PC-Token "self-deploy required" pattern).
+ * 1. **global package config** (`chromatika_policy_package_v1`): for the production deploy
+ *    we ship the team-deployed, UpgradeCap-burned packageIds as built-in defaults via
+ *    [`policy-vault-builtin.ts`](./policy-vault-builtin.ts). The Settings UI is read-only
+ *    here; users never paste packageIds. `setPolicyPackageConfig` still exists for team
+ *    testing flows (advanced mode only) so a non-`:final` iteration deploy can be wired in
+ *    during development. `getPolicyPackageConfig` falls back to the built-in for the active
+ *    network when no override is stored.
  *
  * 2. **per-vault link** (`chromatika_policy_vault_v1_<chromatikaVaultId>`): set when the
  *    user opts in by wrapping their dWallet cap. holds the shared `PolicyVault` object id +
@@ -19,6 +22,14 @@
  */
 
 import { STORAGE_KEYS, VAULT_SCOPED_KEYS } from '@/background/storage';
+import type { SuiNetworkId } from '@/config/sui';
+import { getSession } from '@/background/session';
+import {
+  type BuiltinPolicyPackage,
+  type SolanaCluster,
+  getBuiltinPolicyForSolana,
+  getBuiltinPolicyForSui,
+} from './policy-vault-builtin';
 
 const PACKAGE_STORAGE_KEY = STORAGE_KEYS.POLICY_PACKAGE_V1;
 
@@ -37,6 +48,33 @@ export interface PolicyPackageConfig {
    * for caller-PDA-as-authority approve_message. format: base58 Solana pubkey (32 bytes).
    */
   solanaProgramId?: string;
+  /** True when this config came from `policy-vault-builtin.ts` (the team-deployed
+   *  immutable production package) rather than a user-supplied / test override. */
+  builtin?: boolean;
+  /** SHA-256 of the deployed bytecode (matches the audited source's compiled output).
+   *  Populated only for built-in entries. Lets users verify on-chain bytecode matches
+   *  the audited source without trusting any off-chain index. */
+  auditHash?: string;
+}
+
+/**
+ * The result of resolving "what policy package should the wallet use right now?". Combines
+ * the optional stored override with the built-in defaults from `policy-vault-builtin.ts`.
+ * The Sui packageId and the Solana programId are independent (Sui-base dWallets use
+ * `packageId`; Solana-base dWallets use `solanaProgramId`), so this struct may have either
+ * or both populated (or neither, when no built-in exists for the active network and no
+ * override is stored).
+ */
+export interface ResolvedPolicyPackage {
+  packageId: string | null;
+  solanaProgramId: string | null;
+  /** Source of the Sui side: 'builtin' means it came from the team-deployed registry. */
+  packageIdSource: 'builtin' | 'override' | null;
+  solanaProgramIdSource: 'builtin' | 'override' | null;
+  /** Full built-in entry for the Sui side, when available (for showing audit hash etc). */
+  builtinSui: BuiltinPolicyPackage | null;
+  /** Full built-in entry for the Solana side. */
+  builtinSolana: BuiltinPolicyPackage | null;
 }
 
 export interface PolicyVaultLink {
@@ -96,15 +134,33 @@ export interface PolicyVaultSnapshot {
   pendingCapAtMs: number;
   pendingStageOff: boolean;
   pendingStageOffAtMs: number;
+  // unwrap two-step (user-controlled exit)
+  unwrapRequested: boolean;
+  unwrapAtMs: number;             // 0 when no pending unwrap
 }
 
-function vaultStorageKey(vaultId: string): string {
-  return VAULT_SCOPED_KEYS.policyVault(vaultId);
+function vaultStorageKey(vaultId: string, dwalletId: string): string {
+  return VAULT_SCOPED_KEYS.policyVault(vaultId, dwalletId);
 }
 
 // ─── package config (global) ───────────────────────────────────────────────────────
 
-export async function getPolicyPackageConfig(): Promise<PolicyPackageConfig | null> {
+function builtinToPackageConfig(b: BuiltinPolicyPackage): PolicyPackageConfig {
+  return {
+    packageId: b.identifier,
+    setAtMs: Date.parse(b.publishedAt) || Date.now(),
+    label: b.label,
+    builtin: true,
+    auditHash: b.bytecodeHashSha256,
+  };
+}
+
+/**
+ * Read the override stored in chrome.storage (advanced-mode team-iteration path). Returns
+ * raw storage with no built-in fallback. Most consumers should prefer `getPolicyPackageConfig`,
+ * which merges this override with the built-in for the active Sui network.
+ */
+async function getStoredPolicyPackageOverride(): Promise<PolicyPackageConfig | null> {
   return new Promise((resolve) => {
     chrome.storage.local.get([PACKAGE_STORAGE_KEY], (r) => {
       const v = r[PACKAGE_STORAGE_KEY];
@@ -117,6 +173,83 @@ export async function getPolicyPackageConfig(): Promise<PolicyPackageConfig | nu
   });
 }
 
+/**
+ * Resolve the active policy package config for the current session's Sui network. Returns
+ * the stored override when present (team-iteration path), otherwise falls back to the
+ * built-in for the active network (`policy-vault-builtin.ts`). Returns null only when
+ * neither exists.
+ *
+ * The session is read inline so all existing consumers get the merge "for free" without
+ * having to thread the network id through every call site. Tests that don't initialize a
+ * session get the override-only behavior (matching the legacy pre-built-in behavior).
+ */
+export async function getPolicyPackageConfig(): Promise<PolicyPackageConfig | null> {
+  const override = await getStoredPolicyPackageOverride();
+  if (override) return override;
+
+  const session = getSession();
+  if (!session) return null;
+  const builtin = getBuiltinPolicyForSui(session.network);
+  if (!builtin) return null;
+  return builtinToPackageConfig(builtin);
+}
+
+/**
+ * Resolve the active policy package for the given Sui network + Solana cluster. Returns
+ * the built-in by default; an override (set via the advanced-mode-gated
+ * `setPolicyPackageConfig`) takes precedence on the Sui side when present.
+ *
+ * Callers should prefer this over the raw `getPolicyPackageConfig` whenever they need
+ * "what package should this dWallet use?" - that question is network-dependent.
+ */
+export async function resolveActivePolicyPackage(
+  suiNetwork: SuiNetworkId,
+  solanaCluster: SolanaCluster,
+): Promise<ResolvedPolicyPackage> {
+  const override = await getPolicyPackageConfig();
+  const builtinSui = getBuiltinPolicyForSui(suiNetwork);
+  const builtinSolana = getBuiltinPolicyForSolana(solanaCluster);
+
+  // The override (if present) replaces the Sui side. Built-in handles Solana unless the
+  // override also specifies a solanaProgramId.
+  let packageId: string | null = null;
+  let packageIdSource: 'builtin' | 'override' | null = null;
+  let solanaProgramId: string | null = null;
+  let solanaProgramIdSource: 'builtin' | 'override' | null = null;
+
+  if (override?.packageId) {
+    packageId = override.packageId;
+    packageIdSource = override.builtin ? 'builtin' : 'override';
+  } else if (builtinSui) {
+    packageId = builtinSui.identifier;
+    packageIdSource = 'builtin';
+  }
+
+  if (override?.solanaProgramId) {
+    solanaProgramId = override.solanaProgramId;
+    solanaProgramIdSource = 'override';
+  } else if (builtinSolana) {
+    solanaProgramId = builtinSolana.identifier;
+    solanaProgramIdSource = 'builtin';
+  }
+
+  return {
+    packageId,
+    solanaProgramId,
+    packageIdSource,
+    solanaProgramIdSource,
+    builtinSui,
+    builtinSolana,
+  };
+}
+
+/**
+ * Set an override package config. Advanced-mode only at the UI layer - the Settings
+ * panel does NOT expose a paste input for this in production. Used by the team during
+ * iteration testing to point chromatika at a non-`:final` deploy. Validated to be a
+ * well-formed Sui object id; the Solana side is validated by the existing PolicyVaultLink
+ * shape check.
+ */
 export async function setPolicyPackageConfig(cfg: PolicyPackageConfig): Promise<void> {
   if (!/^0x[0-9a-fA-F]{64}$/.test(cfg.packageId)) {
     throw new Error('packageId must be a 0x-prefixed 32-byte hex Sui object id');
@@ -138,10 +271,18 @@ export async function clearPolicyPackageConfig(): Promise<void> {
   });
 }
 
-// ─── per-vault link ───────────────────────────────────────────────────────────────
+// ─── per-(vault, dwallet) link ────────────────────────────────────────────────────
+//
+// Keyed by `(vaultId, dwalletId)` so a single chromatika vault can opt-in multiple
+// dWallets (same or different curves) into independent PolicyVaults with their own
+// settings. `listPolicyVaultLinks(vaultId)` enumerates all opted-in dWallets by
+// scanning chrome.storage.local for the `policyVaultPrefix(vaultId)` family.
 
-export async function getPolicyVaultLink(chromatikaVaultId: string): Promise<PolicyVaultLink | null> {
-  const key = vaultStorageKey(chromatikaVaultId);
+export async function getPolicyVaultLink(
+  chromatikaVaultId: string,
+  dwalletId: string,
+): Promise<PolicyVaultLink | null> {
+  const key = vaultStorageKey(chromatikaVaultId, dwalletId);
   return new Promise((resolve) => {
     chrome.storage.local.get([key], (r) => {
       const v = r[key];
@@ -150,6 +291,27 @@ export async function getPolicyVaultLink(chromatikaVaultId: string): Promise<Pol
       } else {
         resolve(null);
       }
+    });
+  });
+}
+
+/** Enumerate every opted-in dWallet for a chromatika vault. Returns links in stable
+ *  insertion order (chrome.storage.local preserves object key order in practice). */
+export async function listPolicyVaultLinks(chromatikaVaultId: string): Promise<PolicyVaultLink[]> {
+  const prefix = VAULT_SCOPED_KEYS.policyVaultPrefix(chromatikaVaultId);
+  return new Promise((resolve) => {
+    // get(null) returns the entire local store; we filter to our prefix. policy-vault
+    // listing is not a hot path (panel mount + tRPC query), so the full-scan cost is fine.
+    chrome.storage.local.get(null, (r) => {
+      const out: PolicyVaultLink[] = [];
+      for (const k of Object.keys(r)) {
+        if (!k.startsWith(prefix)) continue;
+        const v = r[k];
+        if (v && typeof v === 'object' && typeof (v as PolicyVaultLink).vaultObjectId === 'string') {
+          out.push(v as PolicyVaultLink);
+        }
+      }
+      resolve(out);
     });
   });
 }
@@ -178,7 +340,7 @@ export async function setPolicyVaultLink(
       throw new Error('dwalletId must be a 0x-prefixed 32-byte hex Sui object id');
     }
   }
-  const key = vaultStorageKey(chromatikaVaultId);
+  const key = vaultStorageKey(chromatikaVaultId, link.dwalletId);
   return new Promise((resolve, reject) => {
     chrome.storage.local.set({ [key]: link }, () => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
@@ -189,16 +351,17 @@ export async function setPolicyVaultLink(
 
 export async function updatePolicyVaultSnapshot(
   chromatikaVaultId: string,
+  dwalletId: string,
   snapshot: PolicyVaultSnapshot,
 ): Promise<void> {
-  const link = await getPolicyVaultLink(chromatikaVaultId);
+  const link = await getPolicyVaultLink(chromatikaVaultId, dwalletId);
   if (!link) return;
   const next: PolicyVaultLink = {
     ...link,
     cachedSnapshot: snapshot,
     lastSyncMs: Date.now(),
   };
-  const key = vaultStorageKey(chromatikaVaultId);
+  const key = vaultStorageKey(chromatikaVaultId, dwalletId);
   return new Promise((resolve, reject) => {
     chrome.storage.local.set({ [key]: next }, () => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
@@ -207,12 +370,32 @@ export async function updatePolicyVaultSnapshot(
   });
 }
 
-export async function clearPolicyVaultLink(chromatikaVaultId: string): Promise<void> {
-  const key = vaultStorageKey(chromatikaVaultId);
+export async function clearPolicyVaultLink(
+  chromatikaVaultId: string,
+  dwalletId: string,
+): Promise<void> {
+  const key = vaultStorageKey(chromatikaVaultId, dwalletId);
   return new Promise((resolve, reject) => {
     chrome.storage.local.remove([key], () => {
       if (chrome.runtime.lastError) reject(new Error(chrome.runtime.lastError.message));
       else resolve();
+    });
+  });
+}
+
+/** Remove every policy-vault link for a chromatika vault. Called from `removeVault`
+ *  so deleting a vault doesn't leak per-dwallet rows. Scans the full local store
+ *  and removes any keys matching `policyVaultPrefix(vaultId)`. */
+export async function clearAllPolicyVaultLinksForVault(chromatikaVaultId: string): Promise<void> {
+  const prefix = VAULT_SCOPED_KEYS.policyVaultPrefix(chromatikaVaultId);
+  return new Promise((resolve) => {
+    chrome.storage.local.get(null, (r) => {
+      const keys = Object.keys(r).filter((k) => k.startsWith(prefix));
+      if (keys.length === 0) {
+        resolve();
+        return;
+      }
+      chrome.storage.local.remove(keys, () => resolve());
     });
   });
 }

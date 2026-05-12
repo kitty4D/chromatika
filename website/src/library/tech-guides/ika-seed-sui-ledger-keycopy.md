@@ -73,7 +73,6 @@ restoring requires **both** the source vault's credential **and** the same Ledge
 ## the design tradeoff
 
 key-copy means:
-
 - **pro**: Ledger user gets the security of "Sui PTBs are signed on the device" for fee-paying ops
 - **pro**: same dWallet identity across software + hardware vaults (no migration)
 - **con**: not a true "hardware-rooted" identity - the source vault's credential is still the security floor for the ika identity
@@ -84,7 +83,6 @@ contrast with Solana hardware-only vaults (Seeker / WalletConnect) where the **i
 ## future: hardware-only Sui base vault
 
 a hardware-only Sui-base vault (no source vault dependency, ika seed derived from a Ledger-signed message) is conceivable but not implemented. would require:
-
 - a stable Ledger-signable derivation message (analog to `IKA_USK_DERIVATION_MESSAGE` for Solana wallets)
 - a way to ask the Ledger Sui app to sign that message at pairing time and persist the signature
 - routing fee-payer signing for Sui PTBs through the Ledger as today

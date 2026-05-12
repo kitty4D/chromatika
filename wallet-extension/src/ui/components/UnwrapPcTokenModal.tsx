@@ -143,12 +143,46 @@ export function UnwrapPcTokenModal({
 
   const isFlowing = phase === 'burning' || phase === 'decrypting' || phase === 'completing';
 
+  // Escape-to-close for keyboard users; ignored during multi-phase flow so users can't kill mid-sign.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !isFlowing) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, isFlowing]);
+
   return (
-    <div className="sp-modalBackdrop" onClick={isFlowing ? undefined : onClose}>
-      <div className="sp-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 380 }}>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
-          <ArrowUpFromLine size={14} /> unwrap → {splSymbol}
-        </h3>
+    <div
+      className="ch-bottomSheet-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        if (isFlowing) return;
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="ch-bottomSheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="unwrap-pctoken-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="ch-bottomSheet-head">
+          <span id="unwrap-pctoken-title" className="ch-bottomSheet-title">
+            <ArrowUpFromLine size={16} /> unwrap → {splSymbol}
+          </span>
+          {!isFlowing && (
+            <button
+              type="button"
+              onClick={onClose}
+              className="ch-bottomSheet-close"
+              aria-label="close"
+            >
+              ×
+            </button>
+          )}
+        </div>
         <p className="sp-muted" style={{ fontSize: 11, lineHeight: 1.45 }}>
           Unwrapping releases {splSymbol} from {marketLabel}. Three on-chain steps: burn the
           pcToken, wait for the executor to decrypt the burn amount (3-60s on devnet), then

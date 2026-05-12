@@ -8,7 +8,7 @@ import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
 import { EncryptedNoteBadge } from '@/ui/components/EncryptedNoteBadge';
 import { NoteEditModal } from '@/ui/components/NoteEditModal';
-import { EmptyState, LoadingState } from '@/ui/components/StateViews';
+import { EmptyState, LoadingState, ErrorState } from '@/ui/components/StateViews';
 import { HiddenSendBadge } from '@/ui/components/HiddenSendBadge';
 
 const TYPE_ICON: Record<string, string> = {
@@ -64,13 +64,23 @@ export function ActivityPage({
 
   return (
     <div className="sp-page">
-      <div className="sp-pageTitle">activity</div>
+      <h2 className="sp-pageTitle">activity</h2>
 
       {!address && <EmptyState icon="🔒" title="unlock wallet to view activity" />}
 
       {address && items === null && !error && <LoadingState title="loading activity…" skeleton="rows" count={5} />}
 
-      {error && <div className="sp-error">{error}</div>}
+      {error && (
+        <ErrorState
+          title="couldn't load activity"
+          description={error}
+          action={
+            <button type="button" className="sp-btn sp-btn--xs" onClick={refresh}>
+              try again
+            </button>
+          }
+        />
+      )}
 
       {items !== null && items.length === 0 && (
         <EmptyState
@@ -131,12 +141,12 @@ export function ActivityPage({
                 ) : null}
               </div>
               {canAttachNote && (
-                <div style={{ marginTop: 6 }}>
+                <div style={{ marginTop: 8, display: 'inline-flex' }}>
                   <button
                     type="button"
                     onClick={() => setNoteEdit({ txHash: item.digest, label: item.label })}
-                    className="sp-btn sp-btn--ghost"
-                    style={{ fontSize: 11, padding: '2px 6px', display: 'inline-flex', alignItems: 'center', gap: 4 }}
+                    className="sp-btn sp-btn--ghost sp-btn--xs"
+                    style={{ display: 'inline-flex', alignItems: 'center' }}
                     aria-label={hasNote ? 'view encrypted note' : 'add encrypted note'}
                   >
                     {hasNote ? (

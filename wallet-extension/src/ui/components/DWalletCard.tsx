@@ -8,6 +8,7 @@ import { dwalletObjectExplorerHref, gasRowAddressExplorerHref, evmChainIdFromGas
 import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
 import { formatUsd } from '@/lib/sui-amount';
+import { dwalletChainPrefix, stripChainPrefix, type DwalletCurve } from '@/lib/dwallet-display-names';
 import type { Networks } from '@/ui/types';
 import type { DwalletHomeGasRow } from '@/background/chains/dwallet-home-gas';
 import type { OwnedDWalletCapView } from '@/background/ika/dwallet-discovery';
@@ -56,7 +57,7 @@ function GasLoadingEllipsis({ reducedMotion }: { reducedMotion: boolean | null }
     return () => clearInterval(t);
   }, [reducedMotion]);
   if (reducedMotion) {
-    return <span className="cd-dwGasLoadingDots">Loading…</span>;
+    return <span className="cd-dwGasLoadingDots">checking balances…</span>;
   }
   const dots = ['.', '..', '...'][phase % 3] ?? '.';
   return <span className="cd-dwGasLoadingDots">Loading{dots}</span>;
@@ -114,7 +115,6 @@ export function DWalletCard({
   networks,
   isActiveMeta,
   displayLabel,
-  customDisplayName,
   dragControls,
   onNamesChanged,
   onViewPortfolio,
@@ -124,7 +124,6 @@ export function DWalletCard({
   networks: Networks | null;
   isActiveMeta?: boolean;
   displayLabel: string;
-  customDisplayName: string;
   dragControls?: DragControls;
   onNamesChanged?: () => void;
   onViewPortfolio: (dwalletId: string) => void;
@@ -327,8 +326,7 @@ export function DWalletCard({
                 if (renaming) {
                   setRenaming(false);
                 } else {
-                  const custom = customDisplayName.trim();
-                  setNameDraft(custom.length > 0 ? custom : displayLabel);
+                  setNameDraft(stripChainPrefix(displayLabel));
                   setRenaming(true);
                 }
               }}
@@ -346,16 +344,19 @@ export function DWalletCard({
           <span id={renameMaxCharsHintId} className="ch-srOnly">
             Optional nickname shown in this list, up to 64 characters
           </span>
-          <input
-            id={renameFieldId}
-            type="text"
-            className="sp-input"
-            value={nameDraft}
-            maxLength={64}
-            autoComplete="off"
-            aria-describedby={renameMaxCharsHintId}
-            onChange={(e) => setNameDraft(e.target.value)}
-          />
+          <div className="cd-cardRenameField">
+            <span className="cd-cardRenamePrefix">{dwalletChainPrefix(cap.curve as DwalletCurve)}</span>
+            <input
+              id={renameFieldId}
+              type="text"
+              className="sp-input"
+              value={nameDraft}
+              maxLength={64}
+              autoComplete="off"
+              aria-describedby={renameMaxCharsHintId}
+              onChange={(e) => setNameDraft(e.target.value)}
+            />
+          </div>
           <div className="cd-cardRenameActions">
             <button
               type="button"

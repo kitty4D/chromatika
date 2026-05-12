@@ -15,7 +15,6 @@ const transport = await TransportWebHID.create();
 ```
 
 chromatika handles this by:
-
 1. background enqueues a hardware-sign request (`enqueueHardwareSign(...)`)
 2. background opens `chrome.windows.create({ url: 'index.html?hwsign=<id>', type: 'popup', ... })`
 3. the popup runs `TransportWebHID.create()` (window context, has access)
@@ -28,7 +27,6 @@ chromatika handles this by:
 ## the user gesture rule
 
 WebHID enforces "user gesture required" on:
-
 - `navigator.hid.requestDevice(...)` - prompt the user to pick a device
 - (subsequent calls with already-permitted devices don't require fresh gesture, but the **first** time a device is used after page load does)
 
@@ -39,7 +37,7 @@ popup is a fresh window context, so any button click in the popup counts as a us
 chromatika uses `@ledgerhq/hw-transport-webhid`:
 
 ```ts
-import TransportWebHID from "@ledgerhq/hw-transport-webhid";
+import TransportWebHID from '@ledgerhq/hw-transport-webhid';
 
 const transport = await TransportWebHID.create();
 const eth = new Eth(transport);
@@ -48,7 +46,6 @@ await transport.close();
 ```
 
 `TransportWebHID.create()`:
-
 1. opens a system dialog for the user to pick the Ledger device
 2. once selected, returns a Transport object
 3. subsequent calls (sign, derive address, etc.) reuse the transport
@@ -58,7 +55,6 @@ await transport.close();
 ## the per-chain Ledger apps
 
 Ledger devices run separate firmware "apps" per chain. user must open the right app on-device before chromatika's WebHID call:
-
 - Ethereum app for EVM (`@ledgerhq/hw-app-eth`)
 - Sui app for Sui (`@ledgerhq/hw-app-sui`)
 - Solana app for Solana (`@ledgerhq/hw-app-solana`)
@@ -69,7 +65,6 @@ if the wrong app is open, the WebHID call returns an error from the device. chro
 ## the WebHID permission model
 
 once granted, the permission **persists** for the chromatika origin:
-
 - user is prompted on first connection
 - subsequent connections from chromatika reuse the permission silently (no dialog)
 - user can revoke via chrome's `chrome://settings/content/hidDevices` (cumbersome)
@@ -86,7 +81,6 @@ so hardware-sign popups can be replaced by side-panel-driven flows in some cases
 ## the not-in-content-script note
 
 content scripts run in an isolated world but have access to the page's `navigator`. could WebHID work there? **no**:
-
 - content scripts don't have user-gesture context for the typical case (gestures are page-context, not extension-context)
 - WebHID device selection requires extension origin permissions, not page origin
 

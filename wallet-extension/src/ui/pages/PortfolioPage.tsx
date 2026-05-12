@@ -53,12 +53,12 @@ export function PortfolioPage({
         <button type="button" className="sp-backBtn" onClick={onBack}>
           ← back
         </button>
-        <div className="sp-pageTitle" style={{ marginBottom: 0 }}>
+        <h2 className="sp-pageTitle" style={{ marginBottom: 0 }}>
           portfolio
-        </div>
+        </h2>
       </div>
       {err && <div className="sp-error">{err}</div>}
-      {!cap && !err && <div className="sp-muted">loading…</div>}
+      {!cap && !err && <div className="sp-muted">loading dWallet portfolio…</div>}
       {cap && (
         <>
           <div className="cp-portfolioHero">

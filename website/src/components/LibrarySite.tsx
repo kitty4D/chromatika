@@ -1,11 +1,12 @@
 import type { ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
-import type { LibraryKind } from "../data/library-docs";
+import type { LibraryKind } from "../data/library-types";
 import {
-  getLibraryBody,
   getLibraryTitle,
   libraryDocExists,
   listLibraryNav,
+  loadLibraryBody,
 } from "../data/library-docs";
 import { useDocHead } from "../lib/use-doc-head";
 import { MarkdownDoc } from "./MarkdownDoc";
@@ -99,6 +100,11 @@ export function LibraryHome() {
   );
 }
 
+type LibraryBodyLoad =
+  | { status: "loading" }
+  | { status: "ready"; markdown: string }
+  | { status: "missing" };
+
 function LibraryDocPageInner({
   kind,
   basePath,
@@ -128,13 +134,48 @@ function LibraryDocPageInner({
       : null,
   });
 
+  const [load, setLoad] = useState<LibraryBodyLoad>(() =>
+    exists ? { status: "loading" } : { status: "missing" },
+  );
+
+  useEffect(() => {
+    if (!exists) {
+      setLoad({ status: "missing" });
+      return;
+    }
+    let cancelled = false;
+    setLoad({ status: "loading" });
+    void loadLibraryBody(kind, effective).then((markdown) => {
+      if (cancelled) return;
+      if (markdown === undefined) setLoad({ status: "missing" });
+      else setLoad({ status: "ready", markdown });
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [exists, kind, effective]);
+
   if (!exists) {
     return (
       <Navigate to={kind === "user" ? "/library/user/readme" : "/library/tech/readme"} replace />
     );
   }
+
+  if (load.status === "loading") {
+    return (
+      <div className="route-fallback" aria-busy="true" aria-live="polite">
+        loading guide...
+      </div>
+    );
+  }
+
+  if (load.status === "missing") {
+    return (
+      <Navigate to={kind === "user" ? "/library/user/readme" : "/library/tech/readme"} replace />
+    );
+  }
+
   const resolvedTitle = title!;
-  const body = getLibraryBody(kind, effective)!;
   const crumbLabel = sectionLabel;
   return (
     <article className="page-article library-article">
@@ -151,7 +192,7 @@ function LibraryDocPageInner({
         <p className="article-eyebrow">{crumbLabel}</p>
         <h1>{resolvedTitle}</h1>
       </header>
-      <MarkdownDoc markdown={body} />
+      <MarkdownDoc markdown={load.markdown} />
     </article>
   );
 }

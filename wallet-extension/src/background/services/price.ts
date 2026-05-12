@@ -21,6 +21,12 @@ type CachedPrice = { priceUsd: number; fetchedAtMs: number };
 
 const cache = new Map<string, CachedPrice>();
 const providerCache = new Map<string, JsonRpcProvider>();
+// in-flight dedupe: concurrent callers for the same symbol share one fetch
+// rather than each running the full waterfall. matters when ChromaLab's
+// leaderboard fans out N dwallets x M chains and many balance probes hit
+// `getPrice('eth')` at the same instant - without this, every caller pays
+// full waterfall latency until the first one populates `cache`.
+const inflight = new Map<string, Promise<number>>();
 const CACHE_TTL_MS = 60_000;
 const CHAINLINK_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -164,12 +170,7 @@ async function tryPyth(symbol: string): Promise<number | null> {
 
 // --- public API ---
 
-/** returns USD price for a symbol (e.g. 'ETH', 'BTC'). throws if all sources fail. */
-export async function getPrice(symbol: string): Promise<number> {
-  const key = symbol.toUpperCase();
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.fetchedAtMs < CACHE_TTL_MS) return hit.priceUsd;
-
+async function runPriceWaterfall(key: string): Promise<number> {
   const order = await loadPriceOrder();
   const runners: Record<PriceSourceId, () => Promise<number | null>> = {
     coingecko: () => tryCoingecko(key),
@@ -188,10 +189,28 @@ export async function getPrice(symbol: string): Promise<number> {
     if (price !== null) break;
   }
 
-  if (price === null) throw new Error(`No price found for ${symbol}`);
+  if (price === null) throw new Error(`No price found for ${key}`);
 
   cache.set(key, { priceUsd: price, fetchedAtMs: Date.now() });
   return price;
+}
+
+/** returns USD price for a symbol (e.g. 'ETH', 'BTC'). throws if all sources fail. */
+export async function getPrice(symbol: string): Promise<number> {
+  const key = symbol.toUpperCase();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.fetchedAtMs < CACHE_TTL_MS) return hit.priceUsd;
+
+  const pending = inflight.get(key);
+  if (pending) return pending;
+
+  // failed promises are removed in .finally so the next caller retries from scratch
+  // rather than re-resolving the cached rejection.
+  const promise = runPriceWaterfall(key).finally(() => {
+    inflight.delete(key);
+  });
+  inflight.set(key, promise);
+  return promise;
 }
 
 /** batch price fetch. missing symbols get null (no throw). */
@@ -206,4 +225,5 @@ export async function getPrices(symbols: string[]): Promise<Record<string, numbe
 export function clearPriceCache(): void {
   cache.clear();
   prefsCache = null;
+  inflight.clear();
 }

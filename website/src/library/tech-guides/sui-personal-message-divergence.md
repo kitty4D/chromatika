@@ -5,7 +5,6 @@
 ## what Mysten does
 
 Mysten's `signPersonalMessage`:
-
 ```
 intent = [0x03, 0x00, 0x00]    // [PersonalMessage, V0, Sui]
 intent_message = intent || bcs(PersonalMessage { message: bytes })
@@ -14,7 +13,6 @@ signature = ed25519_sign(digest, key)   // ed25519 sha-512s digest internally
 ```
 
 dapp verification:
-
 ```
 intent_message = intent || bcs(PersonalMessage { message: bytes })
 expected_digest = blake2b_256(intent_message)
@@ -26,7 +24,6 @@ the digest is BLAKE2b-256 of the intent-wrapped, BCS-encoded message. the signat
 ## what chromatika ika does today
 
 `sui_signPersonalMessage` in chromatika hands ika the **raw user message bytes**:
-
 ```
 signature = ed25519_sign(raw_message_bytes, key)   // ika sha-512s message internally
 ```
@@ -36,7 +33,6 @@ ika produces an ed25519 signature where the message is the **raw bytes** the use
 ## the verify mismatch
 
 when a dapp tries to verify chromatika's signature with Mysten's helper:
-
 ```
 expected_digest = blake2b_256(intent || bcs(PersonalMessage(raw)))
 ed25519_verify(expected_digest, sig, pubkey)
@@ -56,7 +52,6 @@ it's a coin flip per dapp. modern Sui dapps using the canonical Mysten verify wi
 ika's MPC protocol is curve+algorithm-driven. `(curve = ED25519, algorithm = EdDSA)` produces a standard RFC 8032 ed25519 signature where the implementation hashes with SHA-512. there's no parameter for "but first BLAKE2b the input on the client side before handing to MPC."
 
 the fix is for chromatika to do the wrapping client-side and hand ika the **digest** (32-byte BLAKE2b output) instead of the raw message:
-
 ```
 1. wrap: intent_message = [0x03, 0x00, 0x00] || bcs(PersonalMessage { message: raw })
 2. digest = blake2b_256(intent_message)
@@ -74,7 +69,6 @@ so the **fix is doable client-side**: build the BLAKE2b-of-intent digest in chro
 ## why we haven't shipped the fix yet
 
 it's straightforward to implement but requires:
-
 1. add a `wrapWithSuiPersonalMessageIntent` helper that BCS-encodes + prefixes
 2. compute the BLAKE2b digest
 3. hand the digest to ika instead of raw bytes
@@ -85,7 +79,6 @@ the gap is tracked as **future hardening** in [WALLET_SECURITY.md](/library/tech
 ## the related Sui transaction-data signing case
 
 interestingly, Sui transaction signing **already** uses the BLAKE2b-of-intent path (see [sui-tx-sign-via-ika.md](/library/tech/sui-tx-sign-via-ika)). there:
-
 - chromatika BCS-serializes the TransactionData
 - wraps with `[0x00, 0x00, 0x00]` intent
 - BLAKE2b-256s the intent message

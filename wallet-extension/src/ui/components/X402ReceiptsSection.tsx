@@ -130,7 +130,7 @@ export function X402ReceiptsSection() {
     return (
       <div className="sp-section">
         <h3>x402 receipts</h3>
-        <div className="sp-muted">loading…</div>
+        <div className="sp-muted">loading receipts…</div>
       </div>
     );
   }

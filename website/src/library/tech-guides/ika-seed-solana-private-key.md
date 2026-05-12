@@ -48,17 +48,15 @@ requires `VITE_SOLANA_IKA_BASE=true`. pre-alpha disclaimer applies (single mock 
 ## the Phantom-export equivalence
 
 `solana-keygen new -o my-keypair.json` produces a JSON array of 64 bytes:
-
 ```
 [12, 45, 233, ..., 12, 89, 76]
 ```
 
 base64-encoding that array (treating it as 64 raw bytes) gives `solanaSecretKeyB64`. Phantom's "export private key" produces base58 of the same 64 bytes - chromatika accepts b64 because it's the chrome-platform-friendly format; users coming from Phantom can convert via:
-
 ```js
-import bs58 from "bs58";
+import bs58 from 'bs58';
 const b58 = phantomExportString;
-const bytes = bs58.decode(b58); // 64 bytes
+const bytes = bs58.decode(b58);   // 64 bytes
 const b64 = btoa(String.fromCharCode(...bytes));
 ```
 
@@ -82,7 +80,6 @@ deterministic, identical to the mnemonic-Solana path from step 3 onward.
 a Solana-only onboarding flow uses this exact path: the user already has a Solana wallet (Phantom, Seeker bundled, Solflare) and exports the secret. they import into chromatika under Solana ika base and now drive ika operations with the same identity their phone wallet uses.
 
 contrast: Seeker remote MWA pairing uses **the wallet's signature**, not the secret bytes - because Seed Vault never reveals secret bytes. so:
-
 - Phantom export → import-private-key vault (this doc)
 - Seeker pairing → MWA-signature vault (see [ika-seed-solana-mwa-walletconnect.md](/library/tech/ika-seed-solana-mwa-walletconnect))
 

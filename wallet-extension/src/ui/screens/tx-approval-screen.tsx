@@ -188,7 +188,7 @@ export function ApproveTxScreen({ requestId }: { requestId: string }) {
   if (!meta) {
     return (
       <div className="wc-approvalSheet">
-        {error ? <p style={{ color: 'rgba(255,99,132,0.95)' }}>{error}</p> : <p>loading…</p>}
+        {error ? <p style={{ color: 'rgba(255,99,132,0.95)' }}>{error}</p> : <p>loading transaction details…</p>}
       </div>
     );
   }

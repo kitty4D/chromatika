@@ -4,14 +4,13 @@ several chromatika dependencies use Node's `Buffer` global, which doesn't exist 
 
 ## who needs it
 
-| dep                                | why                                                        |
-| ---------------------------------- | ---------------------------------------------------------- |
-| `@ledgerhq/devices/hid-framing.js` | uses `Buffer.from`, `Buffer.alloc` for HID frame parsing   |
-| `bitcoinjs-lib`                    | uses `Buffer` extensively for tx serialization, script ops |
-| `@solana/web3.js` 1.x              | uses `Buffer` for some serialization paths                 |
+| dep | why |
+|-----|-----|
+| `@ledgerhq/devices/hid-framing.js` | uses `Buffer.from`, `Buffer.alloc` for HID frame parsing |
+| `bitcoinjs-lib` | uses `Buffer` extensively for tx serialization, script ops |
+| `@solana/web3.js` 1.x | uses `Buffer` for some serialization paths |
 
 attempting to use these without the polyfill causes runtime errors:
-
 ```
 ReferenceError: Buffer is not defined
 ```
@@ -22,9 +21,9 @@ at the first call that references `Buffer`.
 
 ```ts
 // wallet-extension/src/buffer-polyfill.ts
-import { Buffer } from "buffer";
+import { Buffer } from 'buffer';
 
-if (typeof globalThis.Buffer === "undefined") {
+if (typeof globalThis.Buffer === 'undefined') {
   globalThis.Buffer = Buffer;
 }
 ```
@@ -35,10 +34,10 @@ if (typeof globalThis.Buffer === "undefined") {
 
 ```ts
 // popup entry point: src/popup/main.tsx
-import "../buffer-polyfill"; // FIRST LINE - before any other import
-import "./styles.css";
-import { createRoot } from "react-dom/client";
-import App from "./App";
+import '../buffer-polyfill';   // FIRST LINE - before any other import
+import './styles.css';
+import { createRoot } from 'react-dom/client';
+import App from './App';
 // ... rest
 ```
 
@@ -61,7 +60,7 @@ if you forget the polyfill on a new entry point and import a Buffer-using lib, y
 // vite.config.ts
 export default defineConfig({
   define: {
-    global: "globalThis",
+    global: 'globalThis',
   },
 });
 ```
@@ -71,7 +70,7 @@ different from Buffer - `global` is a separate Node-ism that some libs use (espe
 ## why not just use Uint8Array everywhere
 
 ```ts
-const buf = new Uint8Array([0x01, 0x02, 0x03]); // works in browsers, no polyfill
+const buf = new Uint8Array([0x01, 0x02, 0x03]);   // works in browsers, no polyfill
 ```
 
 modern crypto libs (`@noble/hashes`, `@noble/curves`, `@scure/bip39`) use `Uint8Array` natively - no Buffer dependency. chromatika's own code prefers `Uint8Array`. Buffer is only there for **transitive** deps that pre-date the modern conventions (Ledger devices, bitcoinjs-lib, older Solana SDK).

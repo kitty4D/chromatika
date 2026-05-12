@@ -13,7 +13,7 @@ async function getSuiNfts({ address }) {
     options: { showDisplay: true, showContent: true, showType: true },
   });
   // each object can have a Display::Display { name, image_url, ... } field
-  return response.data.map((obj) => ({
+  return response.data.map(obj => ({
     objectId: obj.objectId,
     name: obj.display?.data?.name,
     imageUrl: obj.display?.data?.image_url,
@@ -24,20 +24,20 @@ async function getSuiNfts({ address }) {
 
 - no API key; Sui's GraphQL is the source of truth
 - Display protocol is Sui's on-chain NFT metadata standard
-- chunked by 12 object ids per query (via the runtime `installGetObjectsChunking` wrapper at `wallet-extension/src/background/sui-client.ts`)
+- chunked by 12 object ids per query (per the `@mysten/sui` patch; see [mysten-sui-pinning-and-patches.md](/library/tech/mysten-sui-pinning-and-patches))
 
 ## EVM (Alchemy)
 
 ```ts
 async function getEvmNfts({ address, chainId }) {
   const apiKey = import.meta.env.VITE_ALCHEMY_KEY;
-  if (!apiKey) return []; // empty when not configured
-  const network = ALCHEMY_NETWORKS[chainId]; // e.g. "eth-mainnet"
+  if (!apiKey) return [];   // empty when not configured
+  const network = ALCHEMY_NETWORKS[chainId];   // e.g. "eth-mainnet"
   const resp = await fetch(
     `https://${network}.g.alchemy.com/nft/v3/${apiKey}/getNFTsForOwner?owner=${address}`
   );
   const data = await resp.json();
-  return data.ownedNfts.map((nft) => ({
+  return data.ownedNfts.map(nft => ({
     contract: nft.contract.address,
     tokenId: nft.tokenId,
     name: nft.name,
@@ -59,17 +59,17 @@ async function getSolanaNfts({ address }) {
   if (!apiKey) return [];
   const rpcUrl = `https://mainnet.helius-rpc.com/?api-key=${apiKey}`;
   const resp = await fetch(rpcUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      jsonrpc: "2.0",
-      id: "1",
-      method: "getAssetsByOwner",
+      jsonrpc: '2.0',
+      id: '1',
+      method: 'getAssetsByOwner',
       params: { ownerAddress: address, page: 1, limit: 100 },
     }),
   });
   const data = await resp.json();
-  return data.result.items.map((asset) => ({
+  return data.result.items.map(asset => ({
     id: asset.id,
     name: asset.content?.metadata?.name,
     imageUrl: asset.content?.files?.[0]?.uri,
@@ -89,7 +89,7 @@ async function getSolanaNfts({ address }) {
 async function getBtcOrdinals({ address }) {
   const resp = await fetch(`https://api.hiro.so/ordinals/v1/inscriptions?address=${address}`);
   const data = await resp.json();
-  return data.results.map((insc) => ({
+  return data.results.map(insc => ({
     inscriptionId: insc.id,
     inscriptionNumber: insc.number,
     contentType: insc.content_type,
@@ -128,7 +128,6 @@ async function getAptosNfts({ address }) {
 ## the MediaSafetyMode filter
 
 after retrieving NFT URLs, chromatika applies `MediaSafetyMode`:
-
 - `'all'`: render everything
 - `'ipfs-arweave'` (default): only render URLs whose host resolves to IPFS or Arweave gateways (includes a known-gateway allowlist)
 - `'none'`: don't load images at all (text + metadata only)
@@ -146,7 +145,6 @@ returns whether the build has the keys for Alchemy / Helius. UI surfaces use thi
 ## why no SDKs
 
 each provider has its own SDK (`alchemy-sdk-js`, `helius-sdk`, etc.). chromatika uses raw `fetch` because:
-
 - bundle size: each SDK adds ~100-500 KB; multiplied across 5 providers, that's a lot
 - features we use are tiny (one or two endpoints per provider)
 - minimal abstraction layer - direct understanding of what the wire calls look like
@@ -164,5 +162,6 @@ if a provider requires sophisticated features (websockets, complex pagination, s
 ## related
 
 - [media-safety-mode.md](/library/user/media-safety-mode) (user-guides) - the URL filtering
-- [sui-graphql-client.md](/library/tech/sui-graphql-client) - the Sui GraphQL transport + the runtime chunking wrapper
+- [sui-graphql-client.md](/library/tech/sui-graphql-client) - the Sui GraphQL transport
+- [mysten-sui-pinning-and-patches.md](/library/tech/mysten-sui-pinning-and-patches) - the 12-id chunking patch
 - [browse-nfts.md](/library/user/browse-nfts) (user-guides) - the user-facing surface

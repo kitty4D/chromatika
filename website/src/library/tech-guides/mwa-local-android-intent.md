@@ -21,7 +21,6 @@ session crypto (X25519 + AES-GCM) is the same as remote MWA (see [mwa-2-spec-and
 ## the UA gate
 
 chromatika only surfaces the local-MWA option when the user agent matches Android:
-
 ```ts
 const isAndroid = /Android/i.test(navigator.userAgent);
 const showMwaLocal = isAndroid;
@@ -33,13 +32,13 @@ on desktop / iOS, MWA local won't work (the intent dispatch has nothing to handl
 ## the lib call
 
 ```ts
-import { transact } from "@solana-mobile/mobile-wallet-adapter-protocol-web3js";
+import { transact } from '@solana-mobile/mobile-wallet-adapter-protocol-web3js';
 
 const result = await transact(async (wallet) => {
   // authorize
   const auth = await wallet.authorize({
-    cluster: "mainnet-beta",
-    identity: { name: "Chromatika", uri: "chrome-extension://<id>", icon: "..." },
+    cluster: 'mainnet-beta',
+    identity: { name: 'Chromatika', uri: 'chrome-extension://<id>', icon: '...' },
   });
   // store auth.account, auth.auth_token
   return auth;
@@ -47,7 +46,6 @@ const result = await transact(async (wallet) => {
 ```
 
 `transact()` handles:
-
 - generating the association URL with intent scheme
 - launching the intent (browser handles automatically)
 - waiting for the response intent
@@ -56,13 +54,11 @@ const result = await transact(async (wallet) => {
 ## the Android Chromium quirk
 
 on Android Chromium browsers (Chrome, Edge, Brave), web pages can dispatch intents via:
-
 ```
 window.location.href = 'solana-wallet://v1/associate/...';
 ```
 
 or via a more structured form:
-
 ```
 const link = document.createElement('a');
 link.href = 'solana-wallet://v1/associate/...';
@@ -74,7 +70,6 @@ the MWA lib internally uses one of these mechanisms. either way, chromatika does
 ## sign request flow
 
 after pairing, sign requests use the same `transact` pattern:
-
 ```ts
 const result = await transact(async (wallet) => {
   await wallet.reauthorize({ auth_token });
@@ -90,11 +85,10 @@ each `transact` call is one full intent round-trip. for batched signing (multipl
 ## the dispatch on `mwaTransport`
 
 chromatika's hardware-sign popup checks `record.mwaTransport`:
-
 ```ts
-if (record.hardwareVendor === "mwa" && record.mwaTransport === "local") {
+if (record.hardwareVendor === 'mwa' && record.mwaTransport === 'local') {
   await mwaLocalSign(record, message);
-} else if (record.hardwareVendor === "mwa" && record.mwaTransport === "remote") {
+} else if (record.hardwareVendor === 'mwa' && record.mwaTransport === 'remote') {
   await mwaRemoteSign(record, message);
 }
 ```

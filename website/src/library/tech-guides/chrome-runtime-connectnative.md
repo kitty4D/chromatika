@@ -5,7 +5,6 @@ chromatika spawns the MCP native messaging host via `chrome.runtime.connectNativ
 ## the manifest dance
 
 `connectNative` looks up a per-OS native messaging manifest (see [mcp-host-spawn-and-setup.md](/library/tech/mcp-host-spawn-and-setup)):
-
 - the manifest's `name` field must match the `connectNative` argument
 - `allowed_origins` must include the chromatika extension id
 - `path` points at the host binary
@@ -29,12 +28,12 @@ let nativePort: chrome.runtime.Port | null = null;
 let reconnectAttempt = 0;
 
 async function connectMcpHost() {
-  if (nativePort) return; // already connected
+  if (nativePort) return;   // already connected
 
-  nativePort = chrome.runtime.connectNative("com.chromatika.mcp_host");
+  nativePort = chrome.runtime.connectNative('com.chromatika.mcp_host');
 
   nativePort.onMessage.addListener((msg) => {
-    handleNativeFrame(msg); // see mcp-tool-routing for handlers
+    handleNativeFrame(msg);   // see mcp-tool-routing for handlers
   });
 
   nativePort.onDisconnect.addListener(() => {
@@ -48,8 +47,8 @@ async function connectMcpHost() {
   });
 
   // push initial config
-  const { tokenHex } = await chrome.storage.local.get("chromatika_mcp_v1");
-  nativePort.postMessage({ type: "config", tokenHex });
+  const { tokenHex } = await chrome.storage.local.get('chromatika_mcp_v1');
+  nativePort.postMessage({ type: 'config', tokenHex });
 }
 ```
 
@@ -71,11 +70,11 @@ after 5 failed attempts, give up. user has to manually re-enable MCP via `mcpEna
 
 ```ts
 type McpHostState =
-  | { kind: "disabled" }
-  | { kind: "connecting" }
-  | { kind: "connected"; port: number; host: string }
-  | { kind: "reconnecting"; attempt: number; nextRetryAtMs: number }
-  | { kind: "failed"; error: string };
+  | { kind: 'disabled' }
+  | { kind: 'connecting' }
+  | { kind: 'connected', port: number, host: string }
+  | { kind: 'reconnecting', attempt: number, nextRetryAtMs: number }
+  | { kind: 'failed', error: string };
 ```
 
 surfaced via `mcpStatus` for the agent settings UI to display.
@@ -83,7 +82,6 @@ surfaced via `mcpStatus` for the agent settings UI to display.
 ## the cold-SW restart case
 
 when the SW dies and respawns:
-
 1. SW reads `chromatika_mcp_v1.enabled`
 2. if enabled, calls `connectMcpHost()` (fresh connection)
 3. host process **also** respawns (the previous host process exited when its stdin closed)

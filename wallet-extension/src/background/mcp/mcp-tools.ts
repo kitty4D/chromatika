@@ -211,44 +211,51 @@ export async function dispatchMcpToolCall(name: string, _params: unknown): Promi
 
       case 'getActiveVault': {
         const vid = getActiveVaultId();
-        // surface policy-vault state when the active vault has opted in. lets agents pre-check
-        // cap remaining + panicked state BEFORE asking the user to approve a sign request,
-        // and route around panicked/over-cap requests with a friendly message instead of a
-        // chain abort.
-        let policyVault: {
+        // surface per-dwallet policy-vault state for every wrapped dwallet. lets agents
+        // pre-check cap remaining + panicked state BEFORE asking the user to approve a sign
+        // request, and route around panicked/over-cap with a friendly message instead of a
+        // chain abort. Empty array = no opted-in dwallets yet.
+        type PolicyVaultStateForAgent = {
+          dwalletId: string;
           vaultObjectId: string;
+          curve: number;
           panicked: boolean;
           dailyCapMicros: string;
           spentTodayMicros: string;
           remainingMicros: string;
           coolDownMs: number;
           unfreezeUnlocksAtMs: number;
-        } | null = null;
+        };
+        let policyVaults: PolicyVaultStateForAgent[] = [];
         if (vid) {
           try {
-            const { getPolicyVaultLink } = await import('@/background/policy-vault/policy-vault-storage');
-            const link = await getPolicyVaultLink(vid);
-            if (link?.cachedSnapshot) {
-              const snap = link.cachedSnapshot;
-              const cap = BigInt(snap.dailyCapMicros);
-              const spent = BigInt(snap.spentTodayMicros);
-              const remaining = cap > spent ? cap - spent : 0n;
-              policyVault = {
-                vaultObjectId: link.vaultObjectId,
-                panicked: snap.panicked,
-                dailyCapMicros: snap.dailyCapMicros,
-                spentTodayMicros: snap.spentTodayMicros,
-                remainingMicros: remaining.toString(),
-                coolDownMs: snap.coolDownMs,
-                unfreezeUnlocksAtMs: snap.unfreezeUnlocksAtMs,
-              };
-            }
+            const { listPolicyVaultLinks } = await import('@/background/policy-vault/policy-vault-storage');
+            const links = await listPolicyVaultLinks(vid);
+            policyVaults = links
+              .filter((l) => l.cachedSnapshot)
+              .map((l) => {
+                const snap = l.cachedSnapshot!;
+                const cap = BigInt(snap.dailyCapMicros);
+                const spent = BigInt(snap.spentTodayMicros);
+                const remaining = cap > spent ? cap - spent : 0n;
+                return {
+                  dwalletId: l.dwalletId,
+                  vaultObjectId: l.vaultObjectId,
+                  curve: l.curve,
+                  panicked: snap.panicked,
+                  dailyCapMicros: snap.dailyCapMicros,
+                  spentTodayMicros: snap.spentTodayMicros,
+                  remainingMicros: remaining.toString(),
+                  coolDownMs: snap.coolDownMs,
+                  unfreezeUnlocksAtMs: snap.unfreezeUnlocksAtMs,
+                };
+              });
           } catch (e) {
             // best-effort surface; never block getActiveVault on policy lookup failures.
             console.warn('[chromatika mcp] policy lookup failed for getActiveVault:', e);
           }
         }
-        return { ok: true, result: { activeVaultId: vid, policyVault } };
+        return { ok: true, result: { activeVaultId: vid, policyVaults } };
       }
 
       case 'getActiveNetworks': {

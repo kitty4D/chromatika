@@ -34,8 +34,12 @@ export type PolicyGateResult =
 export async function maybeSkipPopupForPolicy(args: {
   declaredValueMicros: bigint;
   requireUnderCap?: boolean;
+  /** Which curve's dwallet is about to sign. Picks the correct per-dwallet
+   *  PolicyVaultLink. Defaults to SECP256K1 for back-compat (EVM/BTC/DeSo). */
+  curve?: 'SECP256K1' | 'ED25519';
 }): Promise<PolicyGateResult> {
   const requireUnderCap = args.requireUnderCap !== false;
+  const curve = args.curve ?? 'SECP256K1';
   const session = getSession();
   if (!session?.activeVaultId) {
     return { skipPopup: false, reason: 'no-link' };
@@ -44,7 +48,11 @@ export async function maybeSkipPopupForPolicy(args: {
   if (!cfg) {
     return { skipPopup: false, reason: 'no-package' };
   }
-  const link = await getPolicyVaultLink(session.activeVaultId);
+  const dwalletId = session.dwalletMeta?.[curve]?.dwalletId;
+  if (!dwalletId) {
+    return { skipPopup: false, reason: 'no-link' };
+  }
+  const link = await getPolicyVaultLink(session.activeVaultId, dwalletId);
   if (!link) {
     return { skipPopup: false, reason: 'no-link' };
   }

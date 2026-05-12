@@ -18,7 +18,7 @@ export function PaymentsPage({ onBack }: { onBack: () => void }) {
         <button type="button" className="sp-backBtn" onClick={onBack}>
           ← back
         </button>
-        <div className="sp-pageTitle">payments · x402</div>
+        <h2 className="sp-pageTitle">payments · x402</h2>
       </div>
 
       <p className="sp-muted" style={{ fontSize: 11, marginTop: 0 }}>

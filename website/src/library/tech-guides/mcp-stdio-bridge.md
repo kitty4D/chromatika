@@ -6,17 +6,17 @@ Claude Desktop's default MCP transport is **stdio** - the client spawns a child 
 
 the chrome-spawned native messaging host (no flag) reads **4-byte-LE-length-prefixed** frames from stdin (chrome's wire format) and serves HTTP MCP on a localhost port. but Claude Desktop sends **line-delimited JSON** without length prefixes. we can't make one process speak both at the same time, so the same binary supports two modes:
 
-| invocation       | who spawns it                             | reads from stdin        | writes to stdout        | also serves HTTP MCP                        |
-| ---------------- | ----------------------------------------- | ----------------------- | ----------------------- | ------------------------------------------- |
-| (no flag)        | chrome via `chrome.runtime.connectNative` | 4-byte-LE-length frames | 4-byte-LE-length frames | yes, on `127.0.0.1:<port>/mcp`              |
-| `--stdio-bridge` | stdio MCP client (Claude Desktop)         | line-delimited JSON     | line-delimited JSON     | no - bridges to the existing HTTP transport |
+| invocation | who spawns it | reads from stdin | writes to stdout | also serves HTTP MCP |
+|------------|---------------|------------------|------------------|---------------------|
+| (no flag) | chrome via `chrome.runtime.connectNative` | 4-byte-LE-length frames | 4-byte-LE-length frames | yes, on `127.0.0.1:<port>/mcp` |
+| `--stdio-bridge` | stdio MCP client (Claude Desktop) | line-delimited JSON | line-delimited JSON | no - bridges to the existing HTTP transport |
 
 both modes run from the **same binary** (`chromatika-mcp-host.mjs`). the flag dispatches at startup.
 
 ## startup
 
 ```js
-const STDIO_BRIDGE_FLAG = "--stdio-bridge";
+const STDIO_BRIDGE_FLAG = '--stdio-bridge';
 const isStdioBridge = process.argv.includes(STDIO_BRIDGE_FLAG);
 
 if (isStdioBridge) {
@@ -36,7 +36,7 @@ async function runStdioBridge() {
   const url = process.env.CHROMATIKA_AGENT_URL;
   const token = process.env.CHROMATIKA_AGENT_TOKEN;
   if (!url || !token) {
-    console.error("missing CHROMATIKA_AGENT_URL or CHROMATIKA_AGENT_TOKEN env vars");
+    console.error('missing CHROMATIKA_AGENT_URL or CHROMATIKA_AGENT_TOKEN env vars');
     process.exit(1);
   }
 
@@ -46,19 +46,18 @@ async function runStdioBridge() {
     if (!line.trim()) continue;
 
     let req;
-    try {
-      req = JSON.parse(line);
-    } catch (e) {
-      stdoutWrite({ jsonrpc: "2.0", id: null, error: { code: -32700, message: "parse error" } });
+    try { req = JSON.parse(line); }
+    catch (e) {
+      stdoutWrite({ jsonrpc: '2.0', id: null, error: { code: -32700, message: 'parse error' } });
       continue;
     }
 
     try {
       const httpResp = await fetch(url, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          Authorization: `Bearer ${token}`,
-          "Content-Type": "application/json",
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify(req),
       });
@@ -66,9 +65,9 @@ async function runStdioBridge() {
       stdoutWrite(body);
     } catch (e) {
       stdoutWrite({
-        jsonrpc: "2.0",
+        jsonrpc: '2.0',
         id: req.id ?? null,
-        error: { code: -32603, message: "bridge upstream error: " + (e.message ?? String(e)) },
+        error: { code: -32603, message: 'bridge upstream error: ' + (e.message ?? String(e)) }
       });
     }
   }
@@ -77,7 +76,7 @@ async function runStdioBridge() {
 }
 
 function stdoutWrite(obj) {
-  process.stdout.write(JSON.stringify(obj) + "\n");
+  process.stdout.write(JSON.stringify(obj) + '\n');
 }
 ```
 
@@ -91,7 +90,6 @@ CHROMATIKA_AGENT_TOKEN=abcdef0123...
 ```
 
 these are baked into Claude Desktop's MCP config:
-
 ```jsonc
 {
   "mcpServers": {
@@ -100,10 +98,10 @@ these are baked into Claude Desktop's MCP config:
       "args": ["/path/to/chromatika-mcp-host.mjs", "--stdio-bridge"],
       "env": {
         "CHROMATIKA_AGENT_URL": "http://127.0.0.1:54321/mcp",
-        "CHROMATIKA_AGENT_TOKEN": "abcdef0123...",
-      },
-    },
-  },
+        "CHROMATIKA_AGENT_TOKEN": "abcdef0123..."
+      }
+    }
+  }
 }
 ```
 
@@ -127,7 +125,6 @@ bearer token similarly persists in chromatika's `chromatika_mcp_v1.tokenHex` sto
 ## why not implement MCP fully in the bridge
 
 the bridge could in principle implement MCP itself instead of forwarding. but then it'd need to:
-
 - understand chromatika's tool catalog
 - talk to the chrome extension over... some other channel
 - duplicate auth logic

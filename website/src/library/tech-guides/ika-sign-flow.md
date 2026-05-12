@@ -12,7 +12,6 @@ producing a signature with an active dWallet. combines a precomputed presign wit
 ## the call
 
 per chain / message kind:
-
 - `signEvm({ message, chainId })` - SECP256K1_ECDSA path with EIP-191 wrapping
 - `signBtc({ messageHex })` - SECP256K1_ECDSA or SECP256K1_TAPROOT depending on address kind
 - `signSol({ messageB64 })` - ED25519_EDDSA path
@@ -97,22 +96,21 @@ a recurring rule across all signing paths:
 
 > **hand ika the preimage bytes. ika hashes internally. never pre-hash.**
 
-| sign type         | preimage you pass                                    | what ika hashes                                  |
-| ----------------- | ---------------------------------------------------- | ------------------------------------------------ |
-| EVM personal_sign | `"\x19Ethereum Signed Message:\n" + len + msg`       | keccak256(preimage)                              |
-| EVM typed_data_v4 | `TypedDataEncoder.encode(...)`                       | keccak256(preimage)                              |
-| EVM tx send       | `tx.unsignedSerialized`                              | keccak256(preimage)                              |
-| Sui personal      | raw msg bytes                                        | sha-512(preimage) per RFC 8032                   |
-| Solana sign-msg   | raw msg bytes                                        | sha-512(preimage) per RFC 8032                   |
-| BTC P2WPKH        | raw msg bytes (or BIP143 sighash, depending on path) | keccak256 (then chained?)                        |
-| BTC P2TR          | BIP341 sighash                                       | tagged_hash("BIP0340/challenge", ...) per BIP340 |
+| sign type | preimage you pass | what ika hashes |
+|-----------|-------------------|-----------------|
+| EVM personal_sign | `"\x19Ethereum Signed Message:\n" + len + msg` | keccak256(preimage) |
+| EVM typed_data_v4 | `TypedDataEncoder.encode(...)` | keccak256(preimage) |
+| EVM tx send | `tx.unsignedSerialized` | keccak256(preimage) |
+| Sui personal | raw msg bytes | sha-512(preimage) per RFC 8032 |
+| Solana sign-msg | raw msg bytes | sha-512(preimage) per RFC 8032 |
+| BTC P2WPKH | raw msg bytes (or BIP143 sighash, depending on path) | keccak256 (then chained?) |
+| BTC P2TR | BIP341 sighash | tagged_hash("BIP0340/challenge", ...) per BIP340 |
 
 if you double-hash (pass already-hashed bytes), ika hashes the digest itself, the resulting signature is over the wrong digest, and verification fails (or recovers a different address).
 
 ## signature normalization helpers
 
 `parseSignatureFromSignOutput(sigBytes, curve, sigAlgorithm)` is the canonical helper. enforces:
-
 - ECDSA: 64 bytes, returns (r, s) each 32 bytes; rejects non-64-byte input
 - EdDSA: 64 bytes, returns (R, S)
 - Taproot: 64 or 65 bytes (with optional sighash byte), returns (R, S) plus optional sighash flag

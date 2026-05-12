@@ -1,6 +1,18 @@
 # Policy Vault (chromatika)
 
-> status: 2026-04-30: v0 shipped: Move package source + TS storage + tx builders + actions + tRPC + Settings UI panel + tests. **Self-deploy required**: chromatika-team or the user publishes the `chromatika_policy::sign_gate` Move package, pastes the package id into Settings, then opts in. v0 ships the panic / unfreeze / rescue / multi-actuator primitives; the EVM/BTC/Sui send-path integration that routes signing through `sign_with_policy` ships in v1.
+> status: 2026-04-30: v0 shipped: Move package source + TS storage + tx builders + actions + tRPC + Settings UI panel + tests.
+>
+> **2026-05-10 deploy model update**: chromatika ships team-deployed, immutable Policy Vault packages via the built-in registry at [`src/background/policy-vault/policy-vault-builtin.ts`](../src/background/policy-vault/policy-vault-builtin.ts). End users no longer paste packageIds. Two new deploy-script flags pick the trust posture: default (no flag) keeps the UpgradeCap on the deployer for iteration; `:final` consumes the UpgradeCap atomically (Sui) or sets upgrade authority to None (Solana) for the audited production cut. The unwrap two-step (`request_unwrap` -> wait `stage_delay_ms` -> `claim_unwrap`) gives users a sovereign exit path; the same primitive doubles as cross-version migration (claim + re-wrap into v2 in one PTB), gated by the same delay to prevent the bypass attack. See [CHANGELOG.md](CHANGELOG.md#2026-05-10) for the full design notes.
+>
+> **2026-05-11 Sui mainnet deploy**: `chromatika_policy` published to Sui mainnet at `0x8cd25cd3ae7966b61eeae97d77b7e029b29b37307b533b505c6a76b63e22d727` (2026-05-11T15:00:00Z). Build flags: `sui move build --dump-bytecode-as-base64 --no-tree-shaking` against the v2 `ika_dwallet_2pc_mpc` dep at `0x23b5bd96051923f800c3a2150aacdcdd8d39e1df2dce4dac69a00d2d8c7f7e77`. Wired in the built-in registry, so end users on Sui mainnet get the team-deployed package automatically (no paste-packageId step). Iteration deploys (no `:final`) for testnet / devnet still work and can be pasted via the Settings "chromatika team only" override input.
+>
+> **2026-05-11 per-(vault, dwallet) refactor**: storage keys re-scoped from `<vaultId>` to `<vaultId>_<dwalletId>` so one chromatika vault can wrap multiple dWallets independently (each with its own cap / cooldown / panic state). `ED25519` dWallets are now wrappable alongside `SECP256K1` (the Move package was always curve-agnostic; only the TS layer hardcoded curve=0). Post-create prompt fires after every Sui-base dWallet DKG offering a one-click wrap with documented defaults. See [CHANGELOG.md](CHANGELOG.md#2026-05-11) for the full design notes.
+>
+> **2026-05-11 scope**: Policy Vault is Sui-only today. The Anchor program at [`solana/chromatika-policy/`](../solana/chromatika-policy/) is pre-alpha scaffolding pending ika Solana Alpha-1 (CPI bodies stub to no-ops, so wrapping is meaningless until the real signer ships). Chromatika reflects this by disabling the surface for Solana-base vaults: `PolicyVaultPanel` renders "Sui-only for now" copy, `PolicyVaultBanner` does not mount on Solana sends, and `optInToPolicyVault` throws on Solana-base. No TS test harness exists for the Anchor program — `solana-bankrun` and `litesvm` both publish no Windows binary (Docker is upstream's documented workaround), and the program has no real signer to test against until Alpha-1 lands. `anchor build` still works for verifying the Rust program compiles. See [`POLICY_VAULT_SOLANA.md`](POLICY_VAULT_SOLANA.md).
+>
+> Sui `sign_gate` state-machine + bypass-attack regression tests were drafted in this session but are not in tree today (file lost to a tooling mistake; the BTC / DeSo / EVM hard-decoder tests under `move/chromatika-policy/tests/sign_gate_*_test.move` are unchanged from before this session). Reviving them requires `override = true` on Sui / MoveStdlib in [`Move.toml`](../move/chromatika-policy/Move.toml) to resolve the multi-version dep conflict ika's transitive Sui dep at a different rev triggers.
+>
+> **User-facing trust story**: [`local/wallet-special/policy-vault-deployment.md`](../../local/wallet-special/policy-vault-deployment.md) - the writeup we will pull into the website. Covers the three deploy choices honestly, the immutability verification recipe, the "you can always exit" mechanism with the why-the-delay-exists subsection, and the user-side audit checklist.
 
 ## TL;DR
 
@@ -19,31 +31,86 @@ The big wins:
 move/chromatika-policy/
 ├── Move.toml                           ika_dwallet_2pc_mpc + Sui framework deps
 └── sources/sign_gate.move              PolicyVault + wrap_dwallet_cap + sign_with_policy +
-                                        panic + unfreeze + rescue_sign + setters + events
+                                        panic + unfreeze + rescue_sign + setters + events +
+                                        request_unwrap / cancel_unwrap / claim_unwrap
 
 wallet-extension/src/background/policy-vault/
+├── policy-vault-builtin.ts             Team-deployed package registry (per network).
+│                                       Sui mainnet: 0x8cd25cd3...
 ├── policy-vault-storage.ts             chromatika_policy_package_v1 (global) +
-                                        chromatika_policy_vault_v1_<vaultId> (per-vault link)
+│                                       chromatika_policy_vault_v1_<vaultId>_<dwalletId>
+│                                       (per-(vault, dwallet) link, supports multi-wrap)
+├── policy-vault-presigns.ts            chromatika_policy_presigns_v1_<vaultId>_<dwalletId>
+│                                       presign cap id cache (LIFO; matches Move pop_back)
+├── policy-vault-audit.ts               chromatika_policy_audit_v1_<vaultId>_<dwalletId>
+│                                       200-entry FIFO audit log per wrap
 ├── policy-vault-tx.ts                  Sui PTB builders for every Move entry point +
-                                        Move abort-code decoder
+│                                       Move abort-code decoder
 ├── policy-vault-read.ts                On-chain object reader + parser
-├── policy-vault-actions.ts             High-level orchestrator: build PTB + execute via
-                                        executeSuiTransaction + persist link
+├── policy-vault-actions.ts             High-level orchestrator: every action takes
+│                                       dwalletId; loadAllPolicyVaultStates() returns
+│                                       all wraps for the active chromatika vault
+├── policy-vault-sign.ts                signBytesSecpThroughPolicy: per-curve dispatch,
+│                                       resolves dwalletId from session.dwalletMeta[curve]
+├── policy-vault-sign-solana.ts         signMessageEdThroughPolicy: ED25519 dispatch
 ├── policy-vault-storage.test.ts
+├── policy-vault-audit.test.ts
 ├── policy-vault-tx.test.ts
 └── policy-vault-read.test.ts
 
 wallet-extension/src/server/routers/policy-vault.ts
-                                        tRPC: getPolicyVaultState / setPolicyPackageId /
-                                        optInToPolicyVault / panicVault / unfreezeVault /
-                                        setPolicyDailyCap / setPolicyCoolDown /
+                                        tRPC: getPolicyVaultState (returns links array) /
+                                        setPolicyPackageId / clearPolicyPackageId /
+                                        optInToPolicyVault({ curve?, dwalletId?, ... }) /
+                                        panicVault({dwalletId}) / unfreezeVault({dwalletId}) /
+                                        setPolicyDailyCap({dwalletId, ...}) / setPolicyCoolDown /
                                         setPolicyRescueAddress / addPolicyActuator /
                                         removePolicyActuator / replenishPolicyPresign /
-                                        topUpPolicyIka / topUpPolicySui / clearLocalPolicyVaultLink
+                                        topUpPolicyIka / topUpPolicySui /
+                                        clearLocalPolicyVaultLink /
+                                        requestPolicyUnwrap / cancelPolicyUnwrap / claimPolicyUnwrap /
+                                        getPolicyAuditEntries({dwalletId}) / clearPolicyAuditEntries /
+                                        getPolicyVaultPromptState / setPolicyVaultPromptGloballyDismissed
 
+wallet-extension/src/ui/pages/PolicyVaultPage.tsx
+                                        Dedicated bottom-nav tab. Mounts PolicyVaultPanel.
 wallet-extension/src/ui/components/PolicyVaultPanel.tsx
-                                        Settings -> Security -> "On-chain spend caps + panic"
+                                        Three-state panel (deploy-runbook / opt-in form /
+                                        live state). Multi-wrap-aware: shows the first
+                                        wrapped dWallet for management + a hint banner
+                                        when state.links.length > 1.
+wallet-extension/src/ui/components/PostCreatePolicyVaultPrompt.tsx
+                                        Bottom-sheet modal that fires after every Sui-base
+                                        dWallet DKG. Curve-aware copy. One-click wrap
+                                        with documented defaults or "customize first"
+                                        deep-link to the Policy Vault tab.
+wallet-extension/src/background/policy-vault-prompt.ts
+                                        chromatika_policy_vault_prompt_globally_dismissed_v1
+                                        flag (re-enable under Settings -> Safety).
 ```
+
+### Per-(vault, dwallet) keying
+
+One chromatika vault can hold multiple ika dWallets (e.g. one SECP256K1 for EVM/BTC + one ED25519 for Sui/Solana, or several of each for compartmentalization). Each wrapped dWallet is an independent on-chain `PolicyVault` shared object with its own cap, cooldown, panic flag, actuator list, and audit trail. Storage matches that shape:
+
+- `chromatika_policy_vault_v1_<vaultId>_<dwalletId>` - link + cached snapshot per wrap
+- `chromatika_policy_audit_v1_<vaultId>_<dwalletId>` - per-wrap audit log (200-entry FIFO)
+- `chromatika_policy_presigns_v1_<vaultId>_<dwalletId>` - per-wrap presign cap id cache
+
+`listPolicyVaultLinks(vaultId)` enumerates all wraps for a chromatika vault via `chrome.storage.local.get(null)` + prefix filter. Vault removal calls `clearAllPolicy*ForVault(vaultId)` to sweep all three key families together; the on-chain `PolicyVault` objects remain (local-only forget; matches `clearLocalPolicyVaultLink` semantics).
+
+### Curve coverage
+
+Both `SECP256K1` and `ED25519` dWallets are wrappable. The Move package was curve-agnostic from day one - only the TS layer used to hardcode `curve=0`. `optInToPolicyVault({ curve })` now maps:
+
+| TS curve | Move `curve` | Move `signature_algorithm` |
+|---|---|---|
+| `SECP256K1` | 0 | 0 (ECDSA) |
+| `ED25519` | 2 | 3 (EdDSA) |
+
+The enforcement layer that applies depends on the chain the dWallet signs for:
+- **SECP-signed chains** (BTC, EVM, DeSo): hard chain-decoded caps via `sign_gate_evm` / `sign_gate_btc` / `sign_gate_deso` decoders. A lying caller cannot bypass the cap; the Move decoder is the source of truth for the USD value.
+- **ED25519-signed chains** (Sui PTB, Solana ix, Aptos move calls): caller-declared (soft) cap enforcement only, until per-format decoders ship. Panic / cooldown / unfreeze gates apply uniformly to both curves.
 
 ## Move package
 
@@ -98,46 +165,37 @@ wallet-extension/src/ui/components/PolicyVaultPanel.tsx
 
 ## Deploy runbook
 
-### 1. Build the Move package
+> **End users on Sui mainnet do NOT need to deploy.** The team-deployed package at `0x8cd25cd3ae7966b61eeae97d77b7e029b29b37307b533b505c6a76b63e22d727` is wired into the built-in registry and loaded automatically by the active network. This runbook is for chromatika team iteration deploys (testnet / devnet / mainnet rebuilds against new ika versions). See [`POLICY_DEPLOY_QUICKSTART.md`](POLICY_DEPLOY_QUICKSTART.md) for the one-page CLI quickstart.
+
+### Iteration deploy (team only)
 
 ```bash
-cd wallet-extension/move/chromatika-policy
-sui move build
+cd wallet-extension
+pnpm run deploy:sui-policy:testnet         # or :devnet / :mainnet (rebuild)
 ```
 
-Resolves the `ika_dwallet_2pc_mpc` + `ika` testnet/mainnet deps and produces bytecode. For mainnet, edit `Move.toml` and change `testnet` to `mainnet` in both git-subdir paths.
+The script wraps `sui move build` + `sui client publish` + captures the printed `packageId`. For audited production cuts, append `:final` (consumes the UpgradeCap atomically so the package is immutable forever) and paste the resulting id into [`policy-vault-builtin.ts`](../src/background/policy-vault/policy-vault-builtin.ts), then ship a chromatika release.
 
-### 2. Publish to Sui
+### Opt in (end user)
 
-```bash
-sui client publish --gas-budget 200000000
-```
-
-Capture the published package id from the output (`packageId: 0x...`). It's a 0x-prefixed 32-byte hex.
-
-### 3. Configure chromatika
-
-Open chromatika -> Settings -> "on-chain spend caps + panic button". Paste the package id into the input. Hit save.
-
-### 4. Opt in
-
-In the same panel: click "opt in: wrap dWallet cap into PolicyVault". Configure:
+Open chromatika → **Policy Vault** tab → click `opt in: wrap dwallet cap into policyvault`. Configure:
 - **Daily cap (USD)**: micro-USD enforced on-chain. 0 = no cap (still gated by panic + cool-down).
 - **Cool-down (sec)**: min seconds between sends. 0 = none.
 - **Unfreeze delay (days)**: hardcoded floor of 60s in Move; UI default = 7 days.
+- **Staged-change + unwrap delay (hours)**: also the unwrap delay. UI default = 24h.
 - **Rescue address**: optional; UTF-8 bytes of the destination string (the same form the EVM/Solana/BTC tx decoders will compare against). Recommended: your hardware wallet address.
 - **Initial IKA + SUI fund**: the vault needs IKA + SUI to pay ika protocol fees on every sign / replenish. Top up later via `topUpPolicyIka` / `topUpPolicySui`.
 
-The PTB:
+Alternative entry point: the **post-create prompt** ([`PostCreatePolicyVaultPrompt.tsx`](../src/ui/components/PostCreatePolicyVaultPrompt.tsx)) fires automatically after every Sui-base dWallet DKG with documented defaults ($1000/day cap, 60s cooldown, 7-day unfreeze delay, 1-day staged-change/unwrap delay, 0.01 IKA + 0.01 SUI seed, no rescue). "Don't ask me again on any new dWallet" suppresses it globally; re-enable under Settings → Safety → "Prompts I've dismissed".
+
+The opt-in PTB:
 1. Splits the requested IKA + SUI off your owned coins.
 2. Calls `wrap_dwallet_cap`, transferring the cap into a new shared object.
-3. Returns the new vault's object id; chromatika persists it locally.
+3. Returns the new vault's object id; chromatika persists it locally at `chromatika_policy_vault_v1_<vaultId>_<dwalletId>`.
 
-### 5. (v1, not yet shipped) Wire send paths through `sign_with_policy`
+### Send-path dispatch (shipped)
 
-The EVM / BTC / Sui send paths today call `coordinator.approve_message` directly. Post-opt-in this fails because the cap is no longer owned by the user. The v1 slice modifies `signAndBroadcastEvm` / `signBytesBitcoinNative` / `signBytesSolana` to dispatch to `sign_with_policy` when `getPolicyVaultLink(activeVaultId)` returns a link. Until v1 ships, opt-in is a one-way gate that DISABLES wallet-UI signing for the wrapped dWallet.
-
-This is intentional in v0 to land the panic primitive cleanly without rushing the send-path integration. **Only opt in on a vault you can rebuild from a backup if needed.**
+The EVM / BTC / DeSo send paths automatically dispatch through `sign_with_policy` (or the hard `sign_*_with_policy` decoder variants for EVM/BTC/DeSo) when `getPolicyVaultLink(activeVaultId, dwalletId)` returns a link for the curve being signed. Wallet-UI sends and dapp-bridge sends both work post-opt-in. ED25519 (Sui PTB / Solana ix / Aptos) routes through soft `sign_with_policy` until per-format decoders ship.
 
 ## Cap-increase staged delay (opt-in safety)
 

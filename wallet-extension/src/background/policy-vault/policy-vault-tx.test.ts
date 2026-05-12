@@ -166,8 +166,8 @@ describe('describePolicyVaultAbort', () => {
     expect(describePolicyVaultAbort(msg)).toBeNull();
   });
 
-  it('covers all 12 declared abort codes with friendly messages', () => {
-    for (let i = 1; i <= 12; i++) {
+  it('covers all 15 declared abort codes with friendly messages', () => {
+    for (let i = 1; i <= 15; i++) {
       expect(typeof POLICY_VAULT_ABORT_CODES[i]).toBe('string');
     }
   });

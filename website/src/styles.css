@@ -4589,3 +4589,694 @@ body {
   font-size: 0.95rem;
   text-align: center;
 }
+
+/* --- roadmap (bold cockpit layout) ---------------------------------------- */
+@keyframes roadmap-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes roadmap-ribbon-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  100% {
+    background-position: 100% 50%;
+  }
+}
+
+.roadmap-page {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-2) var(--space-4);
+}
+
+.roadmap-hero {
+  margin-bottom: var(--space-3);
+  padding: var(--space-3);
+  border-radius: calc(var(--radius-lg) * 1.25);
+  background:
+    radial-gradient(
+      ellipse 70% 80% at 8% -20%,
+      color-mix(in oklch, var(--ika) 42%, transparent),
+      transparent 58%
+    ),
+    linear-gradient(145deg, color-mix(in oklch, var(--surface) 94%, transparent), var(--surface-2));
+  border: 1px solid color-mix(in oklch, var(--accent) 38%, var(--border));
+  box-shadow: var(--shadow-float);
+}
+
+.roadmap-hero-eyebrow {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--accent) 70%, var(--muted));
+}
+
+.roadmap-hero-title {
+  margin: 0 0 var(--space-md);
+  font-family: var(--font-display);
+  font-size: clamp(2.2rem, 6vw, 3.75rem);
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.03em;
+  color: var(--text);
+}
+
+.roadmap-hero-lead {
+  margin: 0 0 var(--space-1);
+  max-width: 52ch;
+  font-size: 1.08rem;
+  color: color-mix(in oklch, var(--muted) 40%, var(--text));
+}
+
+.roadmap-hero-meta {
+  margin: var(--space-2) 0 0;
+  max-width: 62ch;
+  font-size: 0.92rem;
+  color: var(--muted);
+}
+
+.roadmap-hero-meta a {
+  color: var(--ika);
+  text-underline-offset: 3px;
+}
+
+.roadmap-section-title {
+  margin: var(--space-4) 0 var(--space-2);
+  font-family: var(--font-display);
+  font-size: clamp(1.35rem, 3vw, 1.85rem);
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: var(--text);
+}
+
+.roadmap-section-title--xl {
+  font-size: clamp(1.65rem, 4vw, 2.35rem);
+  margin-top: var(--space-4);
+}
+
+.roadmap-section-sub {
+  margin: 0 0 var(--space-2);
+  max-width: 48ch;
+  color: var(--muted);
+}
+
+.roadmap-legend {
+  padding: var(--space-2) 0 var(--space-1);
+}
+
+.roadmap-legend-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.roadmap-legend-item {
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--surface-2) 88%, transparent);
+  border: 1px solid var(--border);
+}
+
+.roadmap-legend-blurb {
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+.roadmap-badge {
+  display: inline-flex;
+  align-self: start;
+  padding: 0.2rem 0.55rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  border: 1px solid var(--border);
+  background: color-mix(in oklch, var(--surface) 90%, transparent);
+  color: var(--text);
+}
+
+.roadmap-badge--designed {
+  border-color: color-mix(in oklch, var(--accent-2) 55%, var(--border));
+  color: color-mix(in oklch, var(--accent-2) 88%, var(--text));
+}
+.roadmap-badge--in-progress {
+  border-color: color-mix(in oklch, var(--accent) 50%, var(--border));
+  color: color-mix(in oklch, var(--accent) 90%, var(--text));
+}
+.roadmap-badge--planned {
+  border-color: color-mix(in oklch, var(--muted) 35%, var(--border));
+  color: var(--muted);
+}
+.roadmap-badge--upstream-blocked {
+  border-color: color-mix(in oklch, var(--ika) 45%, var(--border));
+  color: color-mix(in oklch, var(--ika) 78%, var(--text));
+}
+.roadmap-badge--pre-mainnet {
+  border-color: color-mix(in oklch, oklch(0.72 0.16 145) 40%, var(--border));
+  color: color-mix(in oklch, oklch(0.78 0.14 145) 75%, var(--text));
+}
+
+.roadmap-featured-zone {
+  margin-top: var(--space-2);
+}
+
+.roadmap-featured-head {
+  margin-bottom: var(--space-2);
+}
+
+.roadmap-featured-cards {
+  display: grid;
+  gap: var(--space-3);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+}
+
+.roadmap-featured-wrap {
+  position: relative;
+  padding-top: 3px;
+  border-radius: calc(var(--radius-lg) * 1.2);
+  animation: roadmap-card-rise 0.72s cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: var(--roadmap-stagger, 0ms);
+}
+
+.roadmap-featured-ribbon {
+  position: absolute;
+  left: 8%;
+  right: 8%;
+  top: 0;
+  height: 3px;
+  border-radius: var(--radius-pill);
+  background: linear-gradient(
+    90deg,
+    oklch(0.62 0.19 22),
+    oklch(0.58 0.13 285),
+    oklch(0.7 0.14 250),
+    oklch(0.62 0.19 22)
+  );
+  background-size: 220% 100%;
+  animation: roadmap-ribbon-shift 8s ease-in-out infinite alternate;
+  opacity: 0.95;
+}
+
+.roadmap-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-3);
+  border-radius: calc(var(--radius-lg) * 1.05);
+  background: linear-gradient(
+    160deg,
+    color-mix(in oklch, var(--surface-2) 92%, oklch(0.62 0.19 22 / 0.06)),
+    color-mix(in oklch, var(--surface) 96%, transparent)
+  );
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  box-shadow: 0 10px 28px oklch(0.08 0.08 285 / 0.35);
+  transition:
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.26s ease,
+    box-shadow 0.26s ease;
+}
+
+.roadmap-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in oklch, var(--accent) 36%, var(--border));
+  box-shadow:
+    0 16px 44px oklch(0.12 0.08 285 / 0.45),
+    0 0 0 1px color-mix(in oklch, var(--ika) 16%, transparent);
+}
+
+.roadmap-card--featured {
+  padding: var(--space-3);
+  border: 1px solid color-mix(in oklch, var(--accent) 42%, var(--border));
+}
+
+.roadmap-card-top {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.roadmap-card-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 800;
+  line-height: 1.22;
+}
+
+.roadmap-card-tagline {
+  margin: 0;
+  font-size: 0.95rem;
+  font-style: italic;
+  color: color-mix(in oklch, var(--muted) 45%, var(--text));
+}
+
+.roadmap-card-body {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--muted);
+  flex-grow: 1;
+}
+
+.roadmap-card-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-1);
+}
+
+.roadmap-item-link {
+  font-size: 0.86rem;
+  font-weight: 700;
+  color: var(--ika);
+  text-decoration: none;
+  text-underline-offset: 3px;
+}
+
+.roadmap-item-link:hover {
+  text-decoration: underline;
+}
+
+.roadmap-section {
+  scroll-margin-top: calc(var(--site-header-offset) + var(--space-1));
+}
+
+.roadmap-section-grid {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17.5rem), 1fr));
+}
+
+.roadmap-shipped {
+  margin-top: var(--space-4);
+  padding: var(--space-3);
+  border-radius: calc(var(--radius-lg) * 1.05);
+  background: color-mix(in oklch, var(--surface-2) 94%, transparent);
+  border: 1px solid var(--border);
+}
+
+.roadmap-shipped-intro {
+  margin: 0 0 var(--space-2);
+  color: var(--muted);
+  font-size: 0.94rem;
+}
+
+.roadmap-shipped-intro a {
+  color: var(--ika);
+}
+
+.roadmap-shipped-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.roadmap-shipped-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--space-2);
+  align-items: start;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--surface) 90%, transparent);
+  border: 1px solid var(--border);
+}
+
+.roadmap-shipped-date {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: color-mix(in oklch, var(--accent) 72%, var(--muted));
+}
+
+.roadmap-shipped-copy {
+  display: grid;
+  gap: var(--space-xs);
+}
+
+.roadmap-shipped-title {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.98rem;
+}
+
+.roadmap-shipped-detail {
+  font-size: 0.86rem;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.roadmap-footer-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--border);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .roadmap-featured-wrap {
+    animation: none;
+  }
+  .roadmap-featured-ribbon {
+    animation: none;
+    background-position: 50% 50%;
+  }
+  .roadmap-card:hover {
+    transform: none;
+  }
+}
+
+/* --- tutorial ------------------------------------------------------------ */
+.tutorial-page {
+  max-width: 46rem;
+  margin: 0 auto;
+  padding: var(--space-2) var(--space-2) var(--space-4);
+}
+
+.tutorial-hero {
+  margin-bottom: var(--space-3);
+}
+
+.tutorial-hero-eyebrow {
+  margin: 0 0 var(--space-sm);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: color-mix(in oklch, var(--accent) 72%, var(--muted));
+}
+
+.tutorial-hero-title {
+  margin: 0 0 var(--space-md);
+  font-family: var(--font-display);
+  font-size: clamp(1.85rem, 4.5vw, 2.6rem);
+  font-weight: 800;
+}
+
+.tutorial-hero-lead {
+  margin: 0 0 var(--space-2);
+  color: color-mix(in oklch, var(--muted) 42%, var(--text));
+}
+
+.tutorial-callout {
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid color-mix(in oklch, var(--ika) 32%, var(--border));
+  background: color-mix(in oklch, var(--ika) 14%, var(--surface-2));
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.tutorial-section-title {
+  margin: var(--space-3) 0 var(--space-1);
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.tutorial-p {
+  margin: 0 0 var(--space-1);
+  color: var(--muted);
+  line-height: 1.58;
+}
+
+.tutorial-code-block {
+  margin: var(--space-2) 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: oklch(0.14 0.04 285);
+  border: 1px solid var(--border);
+  overflow-x: auto;
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
+.tutorial-toc {
+  position: sticky;
+  top: calc(var(--site-header-offset) + var(--space-sm));
+  z-index: 2;
+  margin: var(--space-3) 0;
+  padding: var(--space-2);
+  border-radius: var(--radius-lg);
+  background: color-mix(in oklch, var(--surface-2) 92%, transparent);
+  border: 1px solid var(--border);
+}
+
+.tutorial-toc-label {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.tutorial-toc-list {
+  margin: var(--space-sm) 0 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  list-style: none;
+}
+
+.tutorial-toc-list a {
+  color: var(--ika);
+  font-size: 0.84rem;
+  font-weight: 600;
+}
+
+.tutorial-step {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+  scroll-margin-top: calc(var(--site-header-offset) + var(--space-2));
+}
+
+.tutorial-step-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-2);
+}
+
+.tutorial-step-index {
+  flex-shrink: 0;
+  width: 2.25rem;
+  height: 2.25rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.65rem;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--accent) 55%, var(--surface-2)),
+    color-mix(in oklch, var(--accent-2) 38%, var(--surface-2))
+  );
+  color: var(--text);
+  box-shadow: 0 4px 14px oklch(0.1 0.08 285 / 0.35);
+}
+
+.tutorial-step-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.28rem;
+  font-weight: 800;
+}
+
+.tutorial-shot-row {
+  display: grid;
+  gap: var(--space-2);
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  margin-top: var(--space-2);
+}
+
+.tutorial-shot-row--single {
+  grid-template-columns: 1fr;
+  max-width: 22rem;
+}
+
+.tutorial-shot {
+  margin: 0;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  border: 1px solid color-mix(in oklch, var(--accent) 22%, var(--border));
+  box-shadow: 0 10px 32px oklch(0.12 0.07 285 / 0.4);
+}
+
+.tutorial-shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  vertical-align: middle;
+}
+
+.tutorial-table-wrap {
+  overflow-x: auto;
+  margin-top: var(--space-2);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+}
+
+.tutorial-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.tutorial-table th,
+.tutorial-table td {
+  padding: var(--space-sm) var(--space-2);
+  text-align: left;
+  border-bottom: 1px solid var(--border);
+}
+
+.tutorial-table th {
+  font-family: var(--font-display);
+  font-weight: 800;
+  background: color-mix(in oklch, var(--surface-2) 88%, transparent);
+}
+
+.tutorial-more-list {
+  margin: var(--space-2) 0 0;
+  padding-left: 1.2rem;
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.tutorial-more-list a {
+  color: var(--ika);
+  font-weight: 600;
+}
+
+/* --- feature doc (long-form markdown) ------------------------------------- */
+.feature-doc-page .feature-doc-header h1 {
+  font-family: var(--font-display);
+  font-size: clamp(1.65rem, 3.5vw, 2.25rem);
+}
+
+.feature-doc-intro {
+  margin: var(--space-2) 0 0;
+  font-size: 1rem;
+  line-height: 1.55;
+  color: color-mix(in oklch, var(--muted) 35%, var(--text));
+}
+
+.feature-doc-crosslinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm);
+  margin-top: var(--space-2);
+}
+
+.feature-doc-pill {
+  display: inline-flex;
+  padding: 0.38rem 0.75rem;
+  border-radius: var(--radius-pill);
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  border: 1px solid color-mix(in oklch, var(--accent) 30%, var(--border));
+  color: color-mix(in oklch, var(--accent) 86%, var(--text));
+  background: color-mix(in oklch, var(--surface-2) 85%, transparent);
+  transition:
+    transform 0.22s cubic-bezier(0.22, 1, 0.36, 1),
+    border-color 0.22s ease;
+}
+
+.feature-doc-pill:hover {
+  transform: translateY(-2px);
+  border-color: color-mix(in oklch, var(--ika) 42%, var(--border));
+}
+
+.md-doc.feature-doc-markdown {
+  margin-top: var(--space-3);
+}
+
+/* --- home shortcuts ------------------------------------------------------- */
+.home-extra-learn {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+.home-extra-learn-link {
+  flex: 1 1 auto;
+  min-width: 10rem;
+  padding: var(--space-2) var(--space-3);
+  border-radius: calc(var(--radius-lg) * 1.05);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1rem;
+  text-decoration: none;
+  border: 1px solid var(--border);
+  text-align: center;
+  transition:
+    transform 0.26s cubic-bezier(0.22, 1, 0.36, 1),
+    box-shadow 0.26s ease;
+}
+
+.tutorial-glow-link {
+  color: var(--text);
+  background:
+    radial-gradient(
+      ellipse 80% 100% at 10% -20%,
+      color-mix(in oklch, var(--accent) 52%, transparent),
+      transparent 55%
+    ),
+    linear-gradient(
+      155deg,
+      color-mix(in oklch, var(--surface-2) 92%, transparent),
+      var(--surface)
+    );
+  box-shadow: 0 12px 32px oklch(0.12 0.08 285 / 0.35);
+}
+
+.roadmap-glow-link {
+  color: var(--text);
+  background:
+    radial-gradient(
+      ellipse 80% 120% at 90% -30%,
+      color-mix(in oklch, var(--ika) 52%, transparent),
+      transparent 50%
+    ),
+    linear-gradient(165deg, var(--surface-2), color-mix(in oklch, var(--surface) 86%, transparent));
+  box-shadow: 0 12px 32px oklch(0.12 0.07 295 / 0.38);
+}
+
+.home-extra-learn-link:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 44px oklch(0.15 0.09 285 / 0.45);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-extra-learn-link:hover,
+  .feature-doc-pill:hover {
+    transform: none;
+  }
+}

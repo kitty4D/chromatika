@@ -16,7 +16,6 @@ createDWallet({ curve: 'SECP256K1' | 'ED25519' })
 ```
 
 dispatches to the right adapter via `getIkaAdapter(session, baseChain)`:
-
 - Sui base: builds a Sui PTB through `IkaTransaction`
 - Solana base: drives the protocol via `SolanaIkaGrpcClient` over gRPC
 
@@ -95,7 +94,6 @@ note: Solana ika base is pre-alpha. all signatures come from a single mock signe
 ## the multi-value return value
 
 `requestDWalletDKG` returns **multiple values** in the PTB result. chromatika reads `dkgResult[0]` (indexed access). compare:
-
 - `requestSign` and `requestReEncryptUserShareFor` return **no values** (void)
 - `requestGlobalPresign` returns **a single value with drop ability**, safe to ignore
 
@@ -104,7 +102,6 @@ if you write your own ika PTBs and forget the indexed access, you get type error
 ## dynamic pricing
 
 ika prices ika operations dynamically based on network load. **never hardcode coin split amounts** - always go through `getRequiredCoinAmounts(ikaClient)`. abort codes:
-
 - code 1 = insufficient IKA (the price you supplied was less than the current `pricing_map.ikaAmount`)
 - code 2 = insufficient SUI (same but for SUI)
 

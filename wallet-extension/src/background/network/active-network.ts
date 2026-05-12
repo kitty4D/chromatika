@@ -16,7 +16,7 @@ export type ActiveNetworks = {
 
 const DEFAULTS: ActiveNetworks = {
   evmChainId: 1,
-  solNetworkId: 'sol-devnet',
+  solNetworkId: 'sol-mainnet',
   suiNetworkId: 'sui-mainnet',
   aptNetworkId: 'apt-mainnet',
   btcNetworkId: 'btc-mainnet',

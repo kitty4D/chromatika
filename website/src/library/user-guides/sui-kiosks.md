@@ -35,4 +35,4 @@ today chromatika exposes **read** for kiosks. listing items, taking items, trans
 - kiosks are currently a panel inside the NFTs surface; promoting kiosks to a dedicated page is tracked future per architecture-final.html
 - transfer policies enforce royalty rules at the protocol level - a transfer that doesn't satisfy the policy aborts at simulation. always read the policy before crafting a transfer
 - managed kiosks (where you're the manager but not owner) have a different operations set than owned kiosks; kiosk-client surfaces both but distinguishes them in the response
-- chromatika runs `KioskClient` on chromatika's vault-shared `SuiGraphQLClient` - kiosk reads ride the same GraphQL transport as the rest of the wallet (no JSON-RPC fallback anywhere)
+- chromatika prefers `KioskClient` on GraphQL where possible; some kiosk reads still fall back to JSON-RPC for legacy fields

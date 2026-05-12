@@ -119,7 +119,7 @@ export function LedgerConnect({ onBack }: { onBack: () => void }) {
   const label: React.CSSProperties = {
     fontSize: 12,
     marginBottom: 6,
-    color: 'rgba(234, 240, 255, 0.62)',
+    color: 'var(--muted)',
   };
 
   return (
@@ -193,10 +193,10 @@ export function LedgerConnect({ onBack }: { onBack: () => void }) {
       </p>
 
       {error && (
-        <p style={{ color: 'rgba(255,99,132,0.95)', fontSize: 13, marginBottom: 12, lineHeight: 1.4 }}>{error}</p>
+        <p style={{ color: 'var(--theme-banner-error-fg, oklch(0.78 0.14 25))', fontSize: 13, marginBottom: 12, lineHeight: 1.4 }}>{error}</p>
       )}
       {status && !error && (
-        <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 13, marginBottom: 12 }}>{status}</p>
+        <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 13, marginBottom: 12 }}>{status}</p>
       )}
 
       {accounts.length === 0 && (
@@ -223,18 +223,18 @@ export function LedgerConnect({ onBack }: { onBack: () => void }) {
                 padding: '10px 12px',
                 borderRadius: 12,
                 border: '1px solid rgba(255,255,255,0.10)',
-                background: 'rgba(255,255,255,0.04)',
+                background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 50%, transparent)',
                 marginBottom: 8,
               }}
             >
-              <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'rgba(234,240,255,0.65)', marginBottom: 2 }}>
+              <div style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--muted)', marginBottom: 2 }}>
                 {acc.path}
               </div>
               <div style={{ fontSize: 13, fontWeight: 600, wordBreak: 'break-all', marginBottom: 8 }}>
                 {acc.address}
               </div>
               {saved.has(`${acc.family}:${acc.address}`) ? (
-                <span style={{ fontSize: 11, color: 'rgba(16,185,129,0.9)' }}>added</span>
+                <span style={{ fontSize: 11, color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))' }}>added</span>
               ) : (
                 <button
                   type="button"
@@ -277,7 +277,7 @@ export function LedgerConnect({ onBack }: { onBack: () => void }) {
         </button>
       </div>
 
-      <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 11, color: 'rgba(234,240,255,0.55)', lineHeight: 1.5 }}>
+      <div style={{ marginTop: 12, padding: 12, borderRadius: 12, background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 50%, transparent)', border: '1px solid rgba(255,255,255,0.08)', fontSize: 11, color: 'var(--faint)', lineHeight: 1.5 }}>
         <strong>note:</strong> ledger accounts are display-only; signing routes through the Ledger device. Bitcoin on Ledger uses the Bitcoin app with native segwit (bech32) or legacy P2PKH paths. Trezor and Solana Mobile (MWA) accounts are added via the buttons above.
       </div>
     </div>

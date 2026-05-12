@@ -6,6 +6,7 @@ import {
   validateWords,
 } from '@/background/keyring/hd';
 import { clearIkaFeeSettings } from '@/background/ika/fee-settings';
+import { clearVaultTotalCache } from '@/background/services/vault-total-cache';
 import {
   type VaultRecord,
   type VaultPayloadV3,
@@ -18,6 +19,7 @@ import {
   dwalletCountFromVaultMeta,
   type VaultSummary,
 } from '@/background/dwallet-meta-service';
+import { loadDwalletMeta } from '@/background/storage-meta';
 import {
   getVaultNetworkSettings,
   resolveSolanaRpcUrl,
@@ -150,6 +152,7 @@ export async function importVault(
   };
   const payload: VaultPayloadV3 = { v: 3, vaults: [record], activeVaultId: id };
   await createInitialVaultBlob(password, payload);
+  await clearVaultTotalCache(id).catch(() => {});
   return { vaultId: id };
 }
 
@@ -207,6 +210,7 @@ export async function addVault(
     setSession(next);
     void kickDiscoveryForVault(id);
   }
+  await clearVaultTotalCache(id).catch(() => {});
   return {
     vaultId: id,
     ...(supplied ? {} : { mnemonic: words }),
@@ -258,7 +262,11 @@ export async function listVaultSummaries(): Promise<VaultSummary[]> {
   const payload = await loadVaultPayloadWithKey(s.vaultKey);
   return Promise.all(
     payload.vaults.map(async (v) => {
-      const vaultNet = await getVaultNetworkSettings(v.id, v);
+      const [vaultNet, storedMeta] = await Promise.all([
+        getVaultNetworkSettings(v.id, v),
+        loadDwalletMeta(v.id),
+      ]);
+      const mergedMeta = mergeDwalletMeta(v.dwalletMeta, storedMeta, v.baseChain);
       const solanaLookupRpcUrl = resolveSolanaRpcUrl(vaultNet.solana);
       const row: VaultSummary = {
         id: v.id,
@@ -266,7 +274,7 @@ export async function listVaultSummaries(): Promise<VaultSummary[]> {
         baseChain: v.baseChain,
         accountKind: v.accountKind,
         createdAtMs: v.createdAtMs,
-        dwalletCount: dwalletCountFromVaultMeta(v.dwalletMeta),
+        dwalletCount: dwalletCountFromVaultMeta(mergedMeta),
         solanaLookupRpcUrl,
         suiGraphqlUrl: graphqlUrlForNetwork(registrySuiIdToSuiNetworkId(vaultNet.suiNetworkId)),
         ikaKeysReady: Boolean(v.ikaShareKeysB64.SECP256K1 && v.ikaShareKeysB64.ED25519),
@@ -331,6 +339,27 @@ export async function removeVault(password: string | undefined, vaultId: string)
   // explicitly so a future vault id collision (extremely unlikely with crypto.randomUUID, but
   // possible in tests / dev profiles) doesn't inherit stale config.
   await clearIkaFeeSettings(vaultId).catch(() => {/* best-effort */});
+  await clearVaultTotalCache(vaultId).catch(() => {});
+  {
+    const { clearTeamFundingDecisionForVault } = await import('@/background/team-funding-offer');
+    await clearTeamFundingDecisionForVault(vaultId).catch(() => {});
+  }
+  {
+    const { clearDWalletCreatePromptForVault } = await import('@/background/dwallet-create-prompt');
+    await clearDWalletCreatePromptForVault(vaultId).catch(() => {});
+  }
+  // policy-vault rows are scoped by (vaultId, dwalletId); clear every per-dWallet
+  // link / audit / presign pool stored under this chromatika vault so a future
+  // vault-id collision (or a manual re-import) doesn't inherit stale on-chain
+  // pointers. On-chain `PolicyVault` objects remain - this is local-only forget.
+  {
+    const { clearAllPolicyVaultLinksForVault } = await import('@/background/policy-vault/policy-vault-storage');
+    const { clearAllPolicyAuditForVault } = await import('@/background/policy-vault/policy-vault-audit');
+    const { clearAllPolicyPresignsForVault } = await import('@/background/policy-vault/policy-vault-presigns');
+    await clearAllPolicyVaultLinksForVault(vaultId).catch(() => {});
+    await clearAllPolicyAuditForVault(vaultId).catch(() => {});
+    await clearAllPolicyPresignsForVault(vaultId).catch(() => {});
+  }
 
   const sess = getSession();
   if (sess?.activeVaultId === vaultId) {
@@ -372,11 +401,18 @@ export async function switchVault(password: string | undefined, vaultId: string)
   let payload = await loadVaultPayloadWithKey(cred.key);
   const target = payload.vaults.find((v) => v.id === vaultId);
   if (!target) throw new Error('Vault not found');
+  const previousActiveVaultId = payload.activeVaultId;
   payload = { ...payload, activeVaultId: vaultId };
   await storeEncryptedPayloadWithKey(cred, payload);
 
   setSession(await sessionStateFromRecord(target, cred));
   void kickDiscoveryForVault(vaultId);
+  if (previousActiveVaultId) {
+    await clearVaultTotalCache(previousActiveVaultId).catch(() => {});
+  }
+  // also clear the incoming vault's cache so a >5-min-stale snapshot doesn't briefly
+  // show in the gauge before the 60s poll catches up.
+  await clearVaultTotalCache(vaultId).catch(() => {});
 }
 
 // `finalizeUnlock` moved to `wallet-service-helpers.ts`; imported below alongside the other

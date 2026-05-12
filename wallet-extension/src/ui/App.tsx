@@ -329,7 +329,7 @@ export function App() {
     }
     return (
       <WithPopupHeader ikaMode={ikaBaseDisplay} onIkaMode={handleIkaModeSelect} track="center">
-        <div className="sp-loading">Loading…</div>
+        <div className="sp-loading">waking the wallet…</div>
       </WithPopupHeader>
     );
   }
@@ -341,7 +341,7 @@ export function App() {
         onIkaMode={handleIkaModeSelect}
         track="center"
       >
-        <div className="sp-loading">Loading…</div>
+        <div className="sp-loading">checking unlock state…</div>
       </WithPopupHeader>
     );
   }
@@ -554,6 +554,7 @@ export function App() {
         setBalances(null);
         setUnlocked(false);
       }}
+      onAddVaultForBase={(c) => setIkaGateMissingChain(c)}
     />
   );
 }

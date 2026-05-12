@@ -41,7 +41,6 @@ step 7 is the v-recovery dance. ECDSA's recovery byte distinguishes between the 
 ## `personal_sign` vs typed-data v4
 
 `personal_sign` per EIP-191:
-
 ```
 preimage_msg = "\x19Ethereum Signed Message:\n" + len(message) + message
 preimage_to_sign = preimage_msg
@@ -51,7 +50,6 @@ sig = ecdsa_sign(keccak256(preimage_msg), key)
 chromatika builds `preimage_msg` (the EIP-191 wrapped form), hands it to ika as the preimage, ika keccak256s + signs.
 
 typed-data v4 per EIP-712:
-
 ```
 preimage_typed = TypedDataEncoder.encode(domain, types, value)
                  = 0x1901 || domainSeparator || hashStruct(message)
@@ -69,7 +67,6 @@ P2WPKH signing uses ECDSA-secp256k1 against the segwit transaction sighash (BIP1
 wait - if EVM passes preimage and bitcoin passes digest, what's the rule?
 
 the rule is: ika hashes its input **once with KECCAK256** before signing for SECP256K1_ECDSA. so:
-
 - for EVM, the natural digest is keccak256(preimage) → pass preimage, let ika hash
 - for Bitcoin BIP143 sighash, the natural digest is `SHA256(SHA256(preimage))` (NOT keccak256) → there's no way to pre-keccak the input to land on the right sha256 digest, so chromatika passes the **already-double-sha256'd** digest as the "preimage" (which ika will then keccak256 a third time) - or more practically, chromatika uses the SECP256K1_ECDSA path for EVM only and SECP256K1_TAPROOT for Bitcoin where the hash function differs (see [taproot-schnorr.md](/library/tech/taproot-schnorr)).
 
@@ -85,7 +82,6 @@ actually, for Bitcoin P2WPKH chromatika still uses SECP256K1_ECDSA but with a wr
 ## the v=0/1 vs 27/28 convention
 
 different sources serialize `v` differently:
-
 - raw ECDSA recovery: `v ∈ {0, 1}` (which y candidate)
 - ethereum classic / EIP-155 transactions: `v = 35 + chainId * 2 + (0 or 1)`
 - ethereum personal sign: `v ∈ {27, 28}` (the historical bitcoin-message-signing offset)

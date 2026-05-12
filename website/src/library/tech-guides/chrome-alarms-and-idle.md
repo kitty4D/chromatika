@@ -5,19 +5,18 @@ two MV3 primitives chromatika uses for the auto-lock and presign-pool timers. `c
 ## chrome.alarms
 
 ```ts
-chrome.alarms.create("chromatika-presign-refill", { periodInMinutes: 5 });
-chrome.alarms.create("chromatika-autolock", { when: lockAtMs });
-chrome.alarms.create("chromatika-phishing-refresh", { periodInMinutes: 24 * 60 });
+chrome.alarms.create('chromatika-presign-refill', { periodInMinutes: 5 });
+chrome.alarms.create('chromatika-autolock', { when: lockAtMs });
+chrome.alarms.create('chromatika-phishing-refresh', { periodInMinutes: 24 * 60 });
 
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "chromatika-presign-refill") void runPresignRefill();
-  if (alarm.name === "chromatika-autolock") void lock();
-  if (alarm.name === "chromatika-phishing-refresh") void syncPhishingRules();
+  if (alarm.name === 'chromatika-presign-refill') void runPresignRefill();
+  if (alarm.name === 'chromatika-autolock') void lock();
+  if (alarm.name === 'chromatika-phishing-refresh') void syncPhishingRules();
 });
 ```
 
 key behaviors:
-
 - alarms persist across SW unloads (chrome stores them in extension state)
 - when an alarm fires, chrome wakes the SW if it's idle - this is the only reliable way to schedule background work in MV3
 - minimum interval is 30 seconds in production builds. dev builds allow 1 second
@@ -25,20 +24,20 @@ key behaviors:
 
 ## chromatika's alarms
 
-| name                          | period   | purpose                               |
-| ----------------------------- | -------- | ------------------------------------- |
-| `chromatika-presign-refill`   | 5 min    | top up presign pools for active vault |
-| `chromatika-autolock`         | one-shot | lock the wallet at `lockAtMs`         |
-| `chromatika-phishing-refresh` | 24 hr    | refetch MetaMask phishing config.json |
+| name | period | purpose |
+|------|--------|---------|
+| `chromatika-presign-refill` | 5 min | top up presign pools for active vault |
+| `chromatika-autolock` | one-shot | lock the wallet at `lockAtMs` |
+| `chromatika-phishing-refresh` | 24 hr | refetch MetaMask phishing config.json |
 
 ## the autolock alarm
 
 ```ts
 async function setAutolockTimer(autolockMinutes: number) {
-  await chrome.alarms.clear("chromatika-autolock"); // cancel any pending
+  await chrome.alarms.clear('chromatika-autolock');   // cancel any pending
   if (autolockMinutes > 0) {
     const lockAtMs = Date.now() + autolockMinutes * 60_000;
-    await chrome.alarms.create("chromatika-autolock", { when: lockAtMs });
+    await chrome.alarms.create('chromatika-autolock', { when: lockAtMs });
     await chrome.storage.session.set({
       chromatika_unlock_cache_v1: { ...currentCache, lockAtMs },
     });
@@ -57,11 +56,11 @@ every tRPC call from a UI page counts as user activity → reset timer. user idl
 ## chrome.idle
 
 ```ts
-chrome.idle.setDetectionInterval(60); // seconds of no input before going 'idle'
+chrome.idle.setDetectionInterval(60);   // seconds of no input before going 'idle'
 chrome.idle.onStateChanged.addListener((state) => {
-  if (state === "locked") {
-    void lock(); // OS screen-lock = wallet lock
-  } else if (state === "idle") {
+  if (state === 'locked') {
+    void lock();   // OS screen-lock = wallet lock
+  } else if (state === 'idle') {
     // 60s of no input - could shorten autolock here if user wants
   }
   // 'active' transitions don't trigger anything special
@@ -69,7 +68,6 @@ chrome.idle.onStateChanged.addListener((state) => {
 ```
 
 `chrome.idle` reports three states:
-
 - `'active'` - user is using the device
 - `'idle'` - no input for `setDetectionInterval(seconds)` (default 60s, can set 15-3600s)
 - `'locked'` - OS screen is locked (Windows lock screen, macOS lock, Linux screensaver, etc.)
@@ -79,7 +77,6 @@ chromatika treats `'locked'` as an immediate trigger to lock the wallet, regardl
 ## the SW wakeup behavior
 
 alarms are the **canonical way to wake a sleeping SW**. when an alarm fires:
-
 1. chrome spins up the SW if needed
 2. fires `chrome.alarms.onAlarm` listener
 3. SW does its work
@@ -98,7 +95,6 @@ chromatika's 5-minute presign refill is well above either limit.
 ## the once-per-SW-startup pattern
 
 some setup work needs to run on **every** SW startup (cold or restart):
-
 - restore unlock cache from `chrome.storage.session`
 - reconnect MCP host if enabled
 - restore active vault id

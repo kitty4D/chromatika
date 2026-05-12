@@ -155,19 +155,28 @@ export function createSuiGraphQLClient(network: SuiNetworkId): SuiGraphQLClient 
 }
 
 // ---------------------------------------------------------------------------
-// transactionBlocks GraphQL helper
+// transactions GraphQL helper
 // ---------------------------------------------------------------------------
 // `@mysten/sui@2.13.2`'s `client.core.*` only has `getTransaction(digest)` - no
-// filtered `transactionBlocks` wrapper. until Mysten ships one, hit Sui GraphQL
+// filtered transactions wrapper. until Mysten ships one, hit Sui GraphQL
 // directly with a small hand-rolled document. two call sites consume this:
 // the user activity feed (affectedAddress filter) and the chroma lab explorer
-// (changedObject + sentAddress parallel queries).
+// (affectedObject + sentAddress parallel queries).
+//
+// schema migration (2026-05): the Sui GraphQL schema renamed `transactionBlocks`
+// → `transactions` and `TransactionBlockFilter` → `TransactionFilter`. the
+// per-tx node shape also flattened: `kind` and `sender` are now top-level on
+// `Transaction` rather than nested inside `effects.transaction`, and `events`
+// moved from the top-level `Transaction` into `effects.events`. `objectChanges`
+// stayed but `ObjectChange.address` is now the object's address directly
+// (no `outputState.address` indirection).
 
 /** GraphQL filter shape - superset of the subset we actually use. */
 export type SuiTxBlocksFilter = {
   affectedAddress?: string;
   sentAddress?: string;
-  changedObject?: string;
+  /** new schema name for the old `changedObject` filter - object the tx touched. */
+  affectedObject?: string;
 };
 
 export type SuiTxSummary = {
@@ -175,7 +184,7 @@ export type SuiTxSummary = {
   timestampMs: number | null;
   status: 'success' | 'failure';
   sender: string | null;
-  /** transaction kind `__typename`, e.g. `ProgrammableTransactionBlock`. */
+  /** transaction kind `__typename`, e.g. `ProgrammableTransaction`. */
   kind: string | null;
   /** object ids the tx created (from `objectChanges` where `idCreated`). */
   createdObjectIds: string[];
@@ -185,28 +194,26 @@ export type SuiTxSummary = {
 
 type GqlTxNode = {
   digest: string;
+  kind?: { __typename?: string } | null;
+  sender?: { address?: string | null } | null;
   effects?: {
     timestamp?: string | null;
     status?: string | null;
-    transaction?: {
-      kind?: { __typename?: string } | null;
-      sender?: { address?: string | null } | null;
-    } | null;
     objectChanges?: {
       nodes?: Array<{
         idCreated?: boolean | null;
-        outputState?: { address?: string | null } | null;
+        address?: string | null;
       }> | null;
     } | null;
-  } | null;
-  events?: {
-    nodes?: Array<{ contents?: { json?: unknown } | null }> | null;
+    events?: {
+      nodes?: Array<{ contents?: { json?: unknown } | null }> | null;
+    } | null;
   } | null;
 };
 
 type GqlTxBlocksResponse = {
   data?: {
-    transactionBlocks?: {
+    transactions?: {
       nodes?: GqlTxNode[] | null;
     } | null;
   };
@@ -214,38 +221,34 @@ type GqlTxBlocksResponse = {
 };
 
 const TX_BLOCKS_QUERY = /* GraphQL */ `
-  query ChromatikaTxBlocks(
-    $filter: TransactionBlockFilter
+  query ChromatikaTransactions(
+    $filter: TransactionFilter
     $first: Int
     $includeEvents: Boolean!
   ) {
-    transactionBlocks(filter: $filter, first: $first) {
+    transactions(filter: $filter, first: $first) {
       nodes {
         digest
+        kind {
+          __typename
+        }
+        sender {
+          address
+        }
         effects {
           timestamp
           status
-          transaction {
-            kind {
-              __typename
-            }
-            sender {
-              address
-            }
-          }
           objectChanges(first: 50) {
             nodes {
               idCreated
-              outputState {
-                address
-              }
+              address
             }
           }
-        }
-        events @include(if: $includeEvents) {
-          nodes {
-            contents {
-              json
+          events @include(if: $includeEvents) {
+            nodes {
+              contents {
+                json
+              }
             }
           }
         }
@@ -271,16 +274,16 @@ function normalizeSuiTxNode(node: GqlTxNode): SuiTxSummary {
   }
   const status: 'success' | 'failure' =
     (effects?.status ?? '').toUpperCase() === 'SUCCESS' ? 'success' : 'failure';
-  const sender = effects?.transaction?.sender?.address ?? null;
-  const kind = effects?.transaction?.kind?.__typename ?? null;
+  const sender = node.sender?.address ?? null;
+  const kind = node.kind?.__typename ?? null;
   const createdObjectIds: string[] = [];
   for (const row of effects?.objectChanges?.nodes ?? []) {
-    const id = row?.outputState?.address;
+    const id = row?.address;
     if (row?.idCreated && typeof id === 'string' && id.startsWith('0x') && id.length === 66) {
       createdObjectIds.push(id);
     }
   }
-  const eventJsons: unknown[] = (node.events?.nodes ?? [])
+  const eventJsons: unknown[] = (effects?.events?.nodes ?? [])
     .map((n) => n?.contents?.json)
     .filter((v): v is unknown => v !== undefined && v !== null);
   return { digest: node.digest, timestampMs, status, sender, kind, createdObjectIds, eventJsons };
@@ -310,10 +313,149 @@ export async function queryTransactionBlocksGraphQL(
   })) as GqlTxBlocksResponse;
   if (res.errors?.length) {
     const msg = res.errors.map((e) => e?.message).filter(Boolean).join('; ');
-    throw new Error(`Sui GraphQL transactionBlocks: ${msg}`);
+    throw new Error(`Sui GraphQL transactions: ${msg}`);
   }
-  const nodes = res.data?.transactionBlocks?.nodes ?? [];
+  const nodes = res.data?.transactions?.nodes ?? [];
   const rows = nodes.map(normalizeSuiTxNode);
   rows.sort((a, b) => (b.timestampMs ?? 0) - (a.timestampMs ?? 0));
   return rows;
+}
+
+// ---------------------------------------------------------------------------
+// objects-by-type GraphQL helper
+// ---------------------------------------------------------------------------
+// no `client.core.listObjectsByType` wrapper exists on `SuiGraphQLClient`
+// today; the only typed enumeration helper is `listOwnedObjects(owner, ...)`.
+// for ChromaLab's dWallet leaderboard we need to walk ALL objects of a given
+// Move type across the whole network (e.g. every `coordinator_inner::DWalletCap`)
+// regardless of who owns the cap. fall back to hand-rolled GraphQL, same shape
+// as `queryTransactionBlocksGraphQL` above.
+
+/** GraphQL `objects` filter shape - superset of what we actually wire today. */
+export type SuiObjectsFilter = {
+  /** fully qualified Move type, e.g. `0xPKG::coordinator_inner::DWalletCap`. */
+  type?: string;
+  /** restrict by owner address. omit for network-wide enumeration. */
+  owner?: string;
+};
+
+export type SuiObjectNode = {
+  /** sui object address / id (always `0x` + 64 hex chars when present). */
+  address: string;
+  /** raw `contents.json` payload (Move struct fields). */
+  json: unknown;
+  /** Move type string (e.g. `0xPKG::module::Type`). */
+  type: string | null;
+};
+
+export type SuiObjectsPage = {
+  nodes: SuiObjectNode[];
+  hasNextPage: boolean;
+  endCursor: string | null;
+};
+
+// `Object` in the new schema exposes the address directly, plus optional
+// `asMoveObject.contents.json` / `.type.repr` for Move struct details. matches
+// the doc shape used by `objects.graphql` upstream in `@mysten/sui`.
+type GqlObjectsNode = {
+  address?: string | null;
+  version?: number | null;
+  asMoveObject?: {
+    contents?: {
+      json?: unknown;
+      type?: { repr?: string | null } | null;
+    } | null;
+  } | null;
+};
+
+type GqlObjectsResponse = {
+  data?: {
+    objects?: {
+      nodes?: GqlObjectsNode[] | null;
+      pageInfo?: {
+        hasNextPage?: boolean | null;
+        endCursor?: string | null;
+      } | null;
+    } | null;
+  };
+  errors?: Array<{ message?: string }>;
+};
+
+const OBJECTS_BY_TYPE_QUERY = /* GraphQL */ `
+  query ChromatikaObjectsByType(
+    $filter: ObjectFilter!
+    $first: Int
+    $after: String
+  ) {
+    objects(filter: $filter, first: $first, after: $after) {
+      nodes {
+        address
+        version
+        asMoveObject {
+          contents {
+            json
+            type {
+              repr
+            }
+          }
+        }
+      }
+      pageInfo {
+        hasNextPage
+        endCursor
+      }
+    }
+  }
+`;
+
+function normalizeObjectNode(node: GqlObjectsNode): SuiObjectNode | null {
+  const addr = node?.address;
+  if (typeof addr !== 'string' || !addr.startsWith('0x')) return null;
+  const contents = node.asMoveObject?.contents ?? null;
+  return {
+    address: addr,
+    json: contents?.json ?? null,
+    type: contents?.type?.repr ?? null,
+  };
+}
+
+/**
+ * run `objects(filter: { type | owner })` with a cursor + limit. returns one page
+ * of normalized nodes plus `hasNextPage` + `endCursor` so the caller can loop
+ * `for(;;)` until `hasNextPage === false` (same shape as the rest of the codebase's
+ * cursor loops - never `do/while`, see CLAUDE.md).
+ */
+export async function queryObjectsByTypeGraphQL(
+  client: SuiGraphQLClient,
+  opts: {
+    filter: SuiObjectsFilter;
+    first?: number;
+    after?: string | null;
+  },
+): Promise<SuiObjectsPage> {
+  const first = opts.first ?? 50;
+  const res = (await client.query({
+    query: OBJECTS_BY_TYPE_QUERY,
+    variables: {
+      filter: opts.filter,
+      first,
+      after: opts.after ?? null,
+    },
+  })) as GqlObjectsResponse;
+  if (res.errors?.length) {
+    const msg = res.errors.map((e) => e?.message).filter(Boolean).join('; ');
+    throw new Error(`Sui GraphQL objects: ${msg}`);
+  }
+  const rawNodes = res.data?.objects?.nodes ?? [];
+  const nodes: SuiObjectNode[] = [];
+  for (const n of rawNodes) {
+    const norm = normalizeObjectNode(n);
+    if (norm) nodes.push(norm);
+  }
+  const page = res.data?.objects?.pageInfo;
+  return {
+    nodes,
+    hasNextPage: Boolean(page?.hasNextPage),
+    endCursor: typeof page?.endCursor === 'string' ? page.endCursor : null,
+  };
 }

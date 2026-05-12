@@ -93,7 +93,6 @@ step 6 hands ika `txObj.unsignedSerialized` - the RLP-encoded unsigned tx bytes.
 step 7 tries `v=27` and `v=28`. EVM's recovery byte distinguishes between the two y-candidates that satisfy `r`. ECDSA produces an ambiguous signature without v; we resolve by checking which candidate recovers to our known address.
 
 if neither matches, something is wrong:
-
 - preimage was double-hashed somewhere (bug)
 - dWallet pubkey doesn't match the signature (network issue)
 - ika returned malformed sig (rare)
@@ -103,7 +102,6 @@ we throw rather than guess.
 ## type 2 (EIP-1559) by default
 
 post-London (Aug 2021), all major EVM chains support EIP-1559. chromatika defaults to type 2 transactions:
-
 - `maxFeePerGas` (cap on total per-gas cost)
 - `maxPriorityFeePerGas` (tip to validator)
 - `chainId` baked into the tx (no EIP-155 v offset; the parity bit in v handles it instead)
@@ -138,12 +136,12 @@ both paths converge at `signAndBroadcastEvm`. the dapp path adds the popup gate;
 async function getTxGasOptions({ id }) {
   const pending = await getPendingTx(id);
   const provider = await getRpcProviderForChain(pending.chainId);
-  const feeData = await provider.getFeeData(); // current network fees
+  const feeData = await provider.getFeeData();   // current network fees
 
   return {
     slow: {
-      maxFeePerGas: (feeData.maxFeePerGas * 80n) / 100n, // 80% of network estimate
-      maxPriorityFeePerGas: (feeData.maxPriorityFeePerGas * 80n) / 100n,
+      maxFeePerGas: feeData.maxFeePerGas * 80n / 100n,        // 80% of network estimate
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas * 80n / 100n,
       estimatedSeconds: 60,
     },
     normal: {
@@ -152,11 +150,11 @@ async function getTxGasOptions({ id }) {
       estimatedSeconds: 30,
     },
     fast: {
-      maxFeePerGas: (feeData.maxFeePerGas * 130n) / 100n,
-      maxPriorityFeePerGas: (feeData.maxPriorityFeePerGas * 130n) / 100n,
+      maxFeePerGas: feeData.maxFeePerGas * 130n / 100n,
+      maxPriorityFeePerGas: feeData.maxPriorityFeePerGas * 130n / 100n,
       estimatedSeconds: 12,
     },
-    custom: null, // user supplies
+    custom: null,   // user supplies
   };
 }
 ```

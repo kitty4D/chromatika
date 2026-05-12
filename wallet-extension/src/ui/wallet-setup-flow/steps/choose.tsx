@@ -106,9 +106,8 @@ export function ChooseStep({
       </div>
       {mode !== 'addVault' && (
         <p className="ws-choose-lead">
-          Pick how you want to sign in. Each option creates a <strong>dWallet Vault</strong> with addresses on every
-          supported chain — passkey + waap anchor on <strong>Sui</strong>, lazor + seeker anchor on{' '}
-          <strong>Solana</strong>.
+          Pick how you want to sign in. Each option creates a <strong>dWallet Vault</strong>: the container you'll
+          use to create dWallets across the chains Chromatika supports.
         </p>
       )}
 

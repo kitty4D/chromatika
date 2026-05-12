@@ -4,7 +4,7 @@
  * the user's pcToken account via `pcTokenWrap` (one tx, two ix).
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Lock, Loader2, ArrowDownToLine } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
@@ -65,12 +65,43 @@ export function WrapPcTokenModal({
     }
   }
 
+  // Escape-to-close for keyboard users (skip during wrap to avoid killing the tx mid-sign).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, busy]);
+
   return (
-    <div className="sp-modalBackdrop" onClick={onClose}>
-      <div className="sp-modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: 360 }}>
-        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 0 }}>
-          <ArrowDownToLine size={14} /> wrap → {marketLabel}
-        </h3>
+    <div
+      className="ch-bottomSheet-backdrop"
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="ch-bottomSheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="wrap-pctoken-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="ch-bottomSheet-head">
+          <span id="wrap-pctoken-title" className="ch-bottomSheet-title">
+            <ArrowDownToLine size={16} /> wrap → {marketLabel}
+          </span>
+          <button
+            type="button"
+            onClick={onClose}
+            className="ch-bottomSheet-close"
+            aria-label="close"
+          >
+            ×
+          </button>
+        </div>
         <p className="sp-muted" style={{ fontSize: 11, lineHeight: 1.45 }}>
           Wrapping moves {splSymbol} into the encrypted pc-token balance. The deposit leg is
           visible on-chain; only the post-wrap pcToken balance is hidden. First wrap auto-opens

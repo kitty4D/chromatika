@@ -180,6 +180,58 @@ export function buildCommitPendingStageOffTx(args: {
   return tx;
 }
 
+/** build a `request_unwrap` PTB. opens the staged exit window: after `stage_delay_ms`
+ *  has elapsed, the same actuator (or any other actuator) may call `claim_unwrap` to
+ *  retrieve the wrapped DWalletCap. Until then, the legitimate user can call `panic`
+ *  to block the claim. */
+export function buildRequestUnwrapTx(args: {
+  packageId: string;
+  vaultObjectId: string;
+}): Transaction {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${args.packageId}::${MODULE_NAME}::request_unwrap`,
+    arguments: [tx.object(args.vaultObjectId), tx.object('0x6')],
+  });
+  return tx;
+}
+
+/** build a `cancel_unwrap` PTB. idempotent; safe even while panicked. */
+export function buildCancelUnwrapTx(args: {
+  packageId: string;
+  vaultObjectId: string;
+}): Transaction {
+  const tx = new Transaction();
+  tx.moveCall({
+    target: `${args.packageId}::${MODULE_NAME}::cancel_unwrap`,
+    arguments: [tx.object(args.vaultObjectId), tx.object('0x6')],
+  });
+  return tx;
+}
+
+/** build a `claim_unwrap` PTB. Consumes the shared PolicyVault and returns the
+ *  DWalletCap by value. Also transfers leftover presigns + ika + sui balances to the
+ *  caller. The returned cap can be transferred to the caller in the same PTB (default)
+ *  or composed with `chromatika_policy_v2::wrap_dwallet_cap` to migrate into a newer
+ *  audited package version. Aborts if the unwrap delay has not elapsed, the unwrap was
+ *  not requested, the caller is not an actuator, or the vault is panicked. */
+export function buildClaimUnwrapTx(args: {
+  packageId: string;
+  vaultObjectId: string;
+  /** address that receives the returned DWalletCap. Most often the same address that
+   *  invoked `request_unwrap`. The function transfers the cap automatically in the same
+   *  PTB so the caller doesn't need a follow-up tx. */
+  recipientAddress: string;
+}): Transaction {
+  const tx = new Transaction();
+  const cap = tx.moveCall({
+    target: `${args.packageId}::${MODULE_NAME}::claim_unwrap`,
+    arguments: [tx.object(args.vaultObjectId), tx.object('0x6')],
+  });
+  tx.transferObjects([cap], tx.pure.address(args.recipientAddress));
+  return tx;
+}
+
 /** build a `set_cool_down` PTB. */
 export function buildSetCoolDownTx(args: {
   packageId: string;
@@ -379,6 +431,9 @@ export const POLICY_VAULT_ABORT_CODES: Record<number, string> = {
   10: 'actuator not found',
   11: 'presign pool is empty; replenish first',
   12: 'unfreeze delay below the protocol floor',
+  13: 'no unwrap has been requested',
+  14: 'unwrap delay still active; wait before claiming',
+  15: 'an unwrap is already pending; cancel it before requesting again',
   // sign_gate_evm.move: 100-199
   100: 'malformed RLP: bad prefix byte',
   101: 'unsupported EVM tx type (only legacy + EIP-2930 + EIP-1559)',

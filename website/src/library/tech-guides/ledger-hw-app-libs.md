@@ -4,20 +4,20 @@ chromatika supports Ledger devices for EVM, Sui, Solana, and Bitcoin signing via
 
 ## the library set
 
-| package                            | version      | chain                     |
-| ---------------------------------- | ------------ | ------------------------- |
-| `@ledgerhq/hw-transport-webhid`    | ^6.35.1      | transport (USB HID)       |
-| `@ledgerhq/hw-transport`           | 6.35.1       | base transport types      |
-| `@ledgerhq/hw-app-eth`             | ^7.8.0       | EVM (eth, polygon, etc.)  |
-| `@ledgerhq/hw-app-sui`             | 1.9.0        | Sui                       |
-| `@ledgerhq/hw-app-solana`          | 7.10.1       | Solana                    |
-| `@ledgerhq/hw-app-btc`             | ^10.21.1     | Bitcoin (segwit + legacy) |
-| `@ledgerhq/devices/hid-framing.js` | (transitive) | HID frame protocol        |
+| package | version | chain |
+|---------|---------|-------|
+| `@ledgerhq/hw-transport-webhid` | ^6.35.1 | transport (USB HID) |
+| `@ledgerhq/hw-transport` | 6.35.1 | base transport types |
+| `@ledgerhq/hw-app-eth` | ^7.8.0 | EVM (eth, polygon, etc.) |
+| `@ledgerhq/hw-app-sui` | 1.9.0 | Sui |
+| `@ledgerhq/hw-app-solana` | 7.10.1 | Solana |
+| `@ledgerhq/hw-app-btc` | ^10.21.1 | Bitcoin (segwit + legacy) |
+| `@ledgerhq/devices/hid-framing.js` | (transitive) | HID frame protocol |
 
 ## the transport pattern
 
 ```ts
-import TransportWebHID from "@ledgerhq/hw-transport-webhid";
+import TransportWebHID from '@ledgerhq/hw-transport-webhid';
 
 async function withTransport<T>(fn: (transport: Transport) => Promise<T>): Promise<T> {
   const transport = await TransportWebHID.create();
@@ -30,7 +30,6 @@ async function withTransport<T>(fn: (transport: Transport) => Promise<T>): Promi
 ```
 
 `TransportWebHID.create()`:
-
 - prompts user via WebHID dialog (first time only; subsequent connections silent if permission persists)
 - requires user gesture (button click in popup)
 - returns a `Transport` instance
@@ -40,7 +39,7 @@ async function withTransport<T>(fn: (transport: Transport) => Promise<T>): Promi
 ## EVM signing
 
 ```ts
-import Eth from "@ledgerhq/hw-app-eth";
+import Eth from '@ledgerhq/hw-app-eth';
 
 await withTransport(async (transport) => {
   const eth = new Eth(transport);
@@ -59,7 +58,7 @@ await withTransport(async (transport) => {
   const sigTyped = await eth.signEIP712HashedMessage(
     "44'/60'/0'/0/0",
     domainSeparatorHex,
-    hashStructMessageHex
+    hashStructMessageHex,
   );
 });
 ```
@@ -71,7 +70,7 @@ Ledger displays the tx / message contents on the device for user confirmation. u
 ## Sui signing
 
 ```ts
-import Sui from "@ledgerhq/hw-app-sui";
+import Sui from '@ledgerhq/hw-app-sui';
 
 await withTransport(async (transport) => {
   const sui = new Sui(transport);
@@ -80,7 +79,7 @@ await withTransport(async (transport) => {
 
   const sig = await sui.signTransaction(
     "44'/784'/0'/0'/0'",
-    txBytesWithIntent // 0x000000 || bcs(tx)
+    txBytesWithIntent,   // 0x000000 || bcs(tx)
   );
   // sig = { signature: '<64-byte hex>' }
 });
@@ -91,7 +90,7 @@ Sui Ledger app limitations are documented in `wallet-extension/docs/LEDGER_SUI_L
 ## Solana signing
 
 ```ts
-import Solana from "@ledgerhq/hw-app-solana";
+import Solana from '@ledgerhq/hw-app-solana';
 
 await withTransport(async (transport) => {
   const solana = new Solana(transport);
@@ -108,16 +107,19 @@ note Solana derivation path is **4 segments** (`44'/501'/0'/0'`), all hardened.
 ## Bitcoin signing (PSBT)
 
 ```ts
-import AppBtc from "@ledgerhq/hw-app-btc";
+import AppBtc from '@ledgerhq/hw-app-btc';
 
 await withTransport(async (transport) => {
-  const btc = new AppBtc({ transport, scrambleKey: "BTC" });
+  const btc = new AppBtc({ transport, scrambleKey: 'BTC' });
 
   // segwit address
-  const { address } = await btc.getWalletPublicKey("84'/0'/0'/0/0", { format: "bech32" });
+  const { address } = await btc.getWalletPublicKey("84'/0'/0'/0/0", { format: 'bech32' });
 
   // sign PSBT (segwit)
-  const signedPsbt = await btc.signPsbtBuffer(psbtBufferIn, { startAt: 0, finalize: true });
+  const signedPsbt = await btc.signPsbtBuffer(
+    psbtBufferIn,
+    { startAt: 0, finalize: true },
+  );
 });
 ```
 
@@ -126,7 +128,6 @@ await withTransport(async (transport) => {
 ## the per-chain app on-device
 
 Ledger devices run separate firmware "apps" per chain. user must open the right one before chromatika's `hw-app-*` calls succeed:
-
 - "Ethereum" app for EVM
 - "Sui" app for Sui
 - "Solana" app for Solana
@@ -134,9 +135,11 @@ Ledger devices run separate firmware "apps" per chain. user must open the right 
 
 if the wrong app is open, chromatika gets an "app not open" error from the device. surface "open the Ethereum app on your Ledger" with retry.
 
-## the live-network stub
+## the dual-version live-network workaround
 
-`@ledgerhq/live-network` ships a top-level `require("https")` that crashes inside the MV3 service worker (no Node `https` in the worker realm). chromatika replaces it with a local stub at `wallet-extension/stubs/ledger-live-network/` via `pnpm.overrides`. the stub provides default + `/cache` exports as no-ops since chromatika never invokes any of its functions (it's pulled in transitively by `@ledgerhq/hw-app-sui` -> `@mysten/ledgerjs-hw-app-sui` -> `ledger-trust-service` / `ledger-cal-service`, neither of which we call). the override is version-agnostic, so future Ledger lib bumps don't need a refresh.
+per CLAUDE.md non-obvious bullet: two `@ledgerhq/live-network` versions are pinned + patched today (`2.0.19` + `2.4.3`). reconciling to one is tracked. blocks Ledger `hw-app-*` and `hw-transport` bumps because newer versions pull `hw-transport@6.34+` which splits into two resolved versions vs the direct `6.31.0` pin.
+
+practical: don't bump Ledger libs without checking the live-network resolution.
 
 ## the buffer polyfill connection
 

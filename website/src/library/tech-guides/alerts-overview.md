@@ -2,40 +2,38 @@
 
 chromatika polls a signed JSON feed for in-the-wild attack reports (phishing, drainers, scam dapps), verifies each alert's ed25519 signature against a bundled publisher allowlist, and surfaces verified alerts via three layers: in-app banner, chrome notifications (critical), and chrome's `declarativeNetRequest` URL-blocking layer (critical with affected domains). complementary to the existing `eth-phishing-detect` MetaMask blocklist; non-overlapping rule ID range so the two coexist.
 
-shipped per `wallet-extension/docs/STATUS.md` lines 91-101 with one remaining pre-mainnet step: replace the placeholder dev publisher pubkey with the production key (see [alerts-publisher-allowlist.md](/library/tech/alerts-publisher-allowlist)).
+shipped per `wallet-extension/docs/STATUS.md` lines 91-101 with a pre-launch TODO to replace the placeholder dev publisher pubkey with the production key.
 
 ## the three severity levels
 
-| severity   | banner | chrome notification | dNR redirect rule          |
-| ---------- | ------ | ------------------- | -------------------------- |
-| `critical` | ✓      | ✓ (unless muted)    | ✓ for each affected domain |
-| `warning`  | ✓      | ✓ (unless muted)    | ✗                          |
-| `info`     | ✓      | ✗                   | ✗                          |
+| severity | banner | chrome notification | dNR redirect rule |
+|----------|--------|---------------------|-------------------|
+| `critical` | ✓ | ✓ (unless muted) | ✓ for each affected domain |
+| `warning` | ✓ | ✓ (unless muted) | ✗ |
+| `info` | ✓ | ✗ | ✗ |
 
 example uses:
-
 - **critical**: phishing Uniswap clone with approval-draining contracts; token-account drain vector on Solana
 - **warning**: sketchy NFT mint sites; suspicious DeFi protocols
 - **info**: educational reminders ("revoke unused approvals periodically")
 
 ## the file layout
 
-| file                                          | role                                                           |
-| --------------------------------------------- | -------------------------------------------------------------- |
-| `src/background/alerts/alerts-types.ts`       | `SignedAlertV1` type + canonical JSON serializer               |
-| `src/background/alerts/alerts-store.ts`       | persistence to `chromatika_alerts_v1`, dedup, dismiss          |
-| `src/background/alerts/alerts-fetch.ts`       | HTTP fetch + per-alert verification pipeline                   |
-| `src/background/alerts/alerts-verify.ts`      | ed25519 signature verify + time-bounds + publisher allowlist   |
-| `src/background/alerts/alerts-actions.ts`     | chrome.notifications + dNR rule append + per-rule TTL alarms   |
-| `src/background/alerts/alerts-poller.ts`      | 5-min alarm + manual trigger                                   |
-| `src/background/alerts/alerts-publishers.ts`  | bundled allowlist (`BUNDLED_PUBLISHERS`) + revision number     |
-| `src/server/routers/alerts.ts`                | tRPC procedures (list / dismiss / settings / trigger / inject) |
-| `src/ui/components/AlertBanner.tsx`           | persistent banner in `MainWalletShell`                         |
-| `src/ui/components/AlertsSettingsSection.tsx` | settings UI (mute / opt-out / custom feed / history)           |
-| `scripts/publish-alert.mjs`                   | CLI for generating keys, signing alerts, building feeds        |
+| file | role |
+|------|------|
+| `src/background/alerts/alerts-types.ts` | `SignedAlertV1` type + canonical JSON serializer |
+| `src/background/alerts/alerts-store.ts` | persistence to `chromatika_alerts_v1`, dedup, dismiss |
+| `src/background/alerts/alerts-fetch.ts` | HTTP fetch + per-alert verification pipeline |
+| `src/background/alerts/alerts-verify.ts` | ed25519 signature verify + time-bounds + publisher allowlist |
+| `src/background/alerts/alerts-actions.ts` | chrome.notifications + dNR rule append + per-rule TTL alarms |
+| `src/background/alerts/alerts-poller.ts` | 5-min alarm + manual trigger |
+| `src/background/alerts/alerts-publishers.ts` | bundled allowlist (`BUNDLED_PUBLISHERS`) + revision number |
+| `src/server/routers/alerts.ts` | tRPC procedures (list / dismiss / settings / trigger / inject) |
+| `src/ui/components/AlertBanner.tsx` | persistent banner in `MainWalletShell` |
+| `src/ui/components/AlertsSettingsSection.tsx` | settings UI (mute / opt-out / custom feed / history) |
+| `scripts/publish-alert.mjs` | CLI for generating keys, signing alerts, building feeds |
 
 mount points:
-
 - `src/server/router.ts` line 38: `...alertsProcedures` joins the tRPC root
 - `src/background/index.ts` lines 113-185: alarm dispatchers + bootstrap
 
@@ -43,17 +41,17 @@ mount points:
 
 ```ts
 interface AlertsState {
-  v: 1;
-  knownAlerts: SignedAlertV1[]; // verified alerts ever seen, capped 200, FIFO by timestamp
-  dismissedIds: string[]; // user-dismissed alert ids
+  v: 1,
+  knownAlerts: SignedAlertV1[],           // verified alerts ever seen, capped 200, FIFO by timestamp
+  dismissedIds: string[],                 // user-dismissed alert ids
   settings: {
-    muted: boolean; // suppress notifications + banner (NOT dNR rules)
-    customFeedUrl: string; // empty = default
-    optedOut: boolean; // poller stops; dNR rules clear on TTL
-  };
-  lastPolledAtMs: number;
-  lastPollError: string | null;
-  publishersRevision: number; // bumped on allowlist rotation; triggers re-verify
+    muted: boolean,                       // suppress notifications + banner (NOT dNR rules)
+    customFeedUrl: string,                // empty = default
+    optedOut: boolean,                    // poller stops; dNR rules clear on TTL
+  },
+  lastPolledAtMs: number,
+  lastPollError: string | null,
+  publishersRevision: number,             // bumped on allowlist rotation; triggers re-verify
 }
 ```
 
@@ -71,7 +69,7 @@ note: a separate `chromatika_alerts_applied_rules_v1` storage tracks `{ alarmToR
    publish-alert.mjs feed --in signed-array.json --out feed.json
    - wraps as { v: 1, generatedAtMs, alerts: [...] }
 
-3. publisher hosts feed at https://www.chromatika.xyz/safety-alerts.json (or wherever)
+3. publisher hosts feed at https://chromatika.dev/safety-alerts.json (or wherever)
 
 4. chromatika polls every 5 min:
    chrome.alarms 'chromatika-alerts-poll'
@@ -98,23 +96,23 @@ note: a separate `chromatika_alerts_applied_rules_v1` storage tracks `{ alarmToR
 
 - feed fetch is anonymous HTTP GET. no cookies, no auth headers, no wallet-specific params
 - the feed is **static JSON** - same URL for all users, same content regardless of who's polling. no per-user response variation possible
-- ISP / DNS resolvers can see "this user polls www.chromatika.xyz every 5 min" but not what's in the wallet
+- ISP / DNS resolvers can see "this user polls chromatika.dev every 5 min" but not what's in the wallet
 - dNR rules are local; no phone-home on navigation to flagged domains
 
 ## composition with eth-phishing-detect
 
-|                | eth-phishing-detect                          | chromatika alerts                   |
-| -------------- | -------------------------------------------- | ----------------------------------- |
-| source         | bundled list + daily MetaMask config refresh | signed feed, 5-min poll             |
-| signing        | none (trust upstream maintainer)             | ed25519 per alert                   |
-| dNR rule IDs   | 1-4900                                       | 10000-19999                         |
-| severity       | one tier (block)                             | three tiers (critical/warning/info) |
-| in-app surface | none                                         | banner + settings + notifications   |
-| TTL            | full sync each refresh                       | per-alert `expiresAtMs`             |
+| | eth-phishing-detect | chromatika alerts |
+|--|---------------------|-------------------|
+| source | bundled list + daily MetaMask config refresh | signed feed, 5-min poll |
+| signing | none (trust upstream maintainer) | ed25519 per alert |
+| dNR rule IDs | 1-4900 | 10000-19999 |
+| severity | one tier (block) | three tiers (critical/warning/info) |
+| in-app surface | none | banner + settings + notifications |
+| TTL | full sync each refresh | per-alert `expiresAtMs` |
 
 both layers operate in parallel without collision. eth-phishing-detect catches the long-tail of known-bad domains; chromatika alerts catch zero-day campaigns or chromatika-specific threats.
 
-## pre-mainnet steps (gated on chromatika launch)
+## todo before launch
 
 per STATUS.md:
 
@@ -123,7 +121,6 @@ per STATUS.md:
 - bump `BUNDLED_PUBLISHERS_REVISION` so cached alerts re-verify against the new allowlist
 
 future hardening:
-
 - on-chain Sui Move `BroadcastChannel` object + `PublisherCap` registry (decentralize allowlist)
 - Walrus body storage for long-form alerts
 - soft-block dapp-bridge `window.ethereum` connect on flagged sites (complementary to dNR)

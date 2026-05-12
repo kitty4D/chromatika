@@ -2,7 +2,7 @@
 
 chromatika's `PolicyVault` is the on-chain enforcement layer for "the wallet should not be allowed to sign whatever it wants." it ships as parallel implementations on **Sui base** (Move package `chromatika_policy`) and **Solana base** (Anchor program `chromatika-policy`). same struct shape, same error semantics, same TS dispatch shape. the user picks one based on their dWallet's `BaseChain`, opt-in is per dWallet.
 
-deployment status as of this write-up: **neither package is deployed**. the Move package is built + tested at [`wallet-extension/move/chromatika-policy/`](../../wallet-extension/move/chromatika-policy/). the Anchor program is built locally at [`wallet-extension/solana/chromatika-policy/`](../../wallet-extension/solana/chromatika-policy/) but its `do_approve_message_cpi` is a `Ok(())` stub awaiting ika Solana **Alpha-1**. opt-in is gated on a configured package id / program id (see `Settings -> Security`). this guide describes the intended runtime behavior + the architecture as it stands locally.
+deployment status (2026-05-11): **Sui mainnet is shipped at `0x8cd25cd3ae7966b61eeae97d77b7e029b29b37307b533b505c6a76b63e22d727`** (built-in registry at [`policy-vault-builtin.ts`](../../wallet-extension/src/background/policy-vault/policy-vault-builtin.ts), end users get it automatically). The Move package source is at [`wallet-extension/move/chromatika-policy/`](../../wallet-extension/move/chromatika-policy/). The Solana Anchor program is built locally at [`wallet-extension/solana/chromatika-policy/`](../../wallet-extension/solana/chromatika-policy/) but its `do_approve_message_cpi` is a `Ok(())` stub awaiting ika Solana **Alpha-1** — chromatika disables the surface for Solana-base vaults today. UI lives at the **Policy Vault tab** (own bottom-nav entry), opt-in fires automatically via the post-create prompt after every Sui-base dWallet DKG. Both `SECP256K1` and `ED25519` dWallets are wrappable. This guide describes the intended runtime behavior + the architecture as it stands locally.
 
 ## what the vault does
 
@@ -16,27 +16,27 @@ deployment status as of this write-up: **neither package is deployed**. the Move
 
 ## struct shape (parity Sui + Solana)
 
-| field                                                             | type                                     | meaning                                                                     |
-| ----------------------------------------------------------------- | ---------------------------------------- | --------------------------------------------------------------------------- |
-| `dwallet_cap` (Sui) / `dwallet_pubkey_hash` (Solana)              | `DWalletCap` / `[u8; 32]`                | wrapped cap (Sui) or PDA seed component (Solana)                            |
-| `presigns` (Sui only)                                             | `vector<UnverifiedPresignCap>`           | per-vault presign pool                                                      |
-| `dwallet_network_encryption_key_id` / `network_encryption_key_id` | `ID` / `Pubkey`                          | needed for global presign requests                                          |
-| `curve` + `signature_algorithm`                                   | `u32` / `u16`                            | pinned at opt-in; one PolicyVault per `(curve, sig_algo)`                   |
-| `daily_cap_micros`                                                | `u64`                                    | rolling 24h ceiling, micro-USD. `0` = no cap                                |
-| `spent_today_micros`                                              | `u64`                                    | sum of declared / decoded values today                                      |
-| `epoch_day`                                                       | `u64`                                    | day index (timestamp_ms / 86_400_000); rollover resets `spent_today_micros` |
-| `cool_down_ms`                                                    | `u64`                                    | min ms between successive signs                                             |
-| `last_sign_at_ms`                                                 | `u64`                                    | wall-clock anchor for cool-down                                             |
-| `panicked`                                                        | `bool`                                   | freeze flag                                                                 |
-| `panic_at_ms`                                                     | `u64`                                    | wall-clock of the panic. `unfreeze` is gated until `+ unfreeze_delay_ms`    |
-| `unfreeze_delay_ms`                                               | `u64`                                    | UI default 7 days; floor `0` so the user has full control                   |
-| `actuators`                                                       | `vector<address>` / `Vec<Pubkey>`        | authorized addresses (max 16 on Solana)                                     |
-| `rescue_address_bytes`                                            | `Option<vector<u8>>` / `Option<Vec<u8>>` | optional pre-registered drain destination                                   |
-| `stage_cap_raises`                                                | `bool`                                   | opt-in: cap raises wait `stage_delay_ms`                                    |
-| `pending_cap_micros` + `pending_cap_at_ms`                        | staged cap raise + commit time           |
-| `pending_stage_off` + `pending_stage_off_at_ms`                   | staged "turn staging off" toggle         |
-| `stage_delay_ms`                                                  | `u64`                                    | configurable (default 24h via TS); the staging delay                        |
-| `ika_balance` + `sui_balance` (Sui only)                          | `Balance<IKA>` / `Balance<SUI>`          | fee storage for sign + presign + rescue                                     |
+| field | type | meaning |
+|-------|------|---------|
+| `dwallet_cap` (Sui) / `dwallet_pubkey_hash` (Solana) | `DWalletCap` / `[u8; 32]` | wrapped cap (Sui) or PDA seed component (Solana) |
+| `presigns` (Sui only) | `vector<UnverifiedPresignCap>` | per-vault presign pool |
+| `dwallet_network_encryption_key_id` / `network_encryption_key_id` | `ID` / `Pubkey` | needed for global presign requests |
+| `curve` + `signature_algorithm` | `u32` / `u16` | pinned at opt-in; one PolicyVault per `(curve, sig_algo)` |
+| `daily_cap_micros` | `u64` | rolling 24h ceiling, micro-USD. `0` = no cap |
+| `spent_today_micros` | `u64` | sum of declared / decoded values today |
+| `epoch_day` | `u64` | day index (timestamp_ms / 86_400_000); rollover resets `spent_today_micros` |
+| `cool_down_ms` | `u64` | min ms between successive signs |
+| `last_sign_at_ms` | `u64` | wall-clock anchor for cool-down |
+| `panicked` | `bool` | freeze flag |
+| `panic_at_ms` | `u64` | wall-clock of the panic. `unfreeze` is gated until `+ unfreeze_delay_ms` |
+| `unfreeze_delay_ms` | `u64` | UI default 7 days; floor `0` so the user has full control |
+| `actuators` | `vector<address>` / `Vec<Pubkey>` | authorized addresses (max 16 on Solana) |
+| `rescue_address_bytes` | `Option<vector<u8>>` / `Option<Vec<u8>>` | optional pre-registered drain destination |
+| `stage_cap_raises` | `bool` | opt-in: cap raises wait `stage_delay_ms` |
+| `pending_cap_micros` + `pending_cap_at_ms` | staged cap raise + commit time |
+| `pending_stage_off` + `pending_stage_off_at_ms` | staged "turn staging off" toggle |
+| `stage_delay_ms` | `u64` | configurable (default 24h via TS); the staging delay |
+| `ika_balance` + `sui_balance` (Sui only) | `Balance<IKA>` / `Balance<SUI>` | fee storage for sign + presign + rescue |
 
 Solana side adds `bump: u8` for PDA address re-derivation, lacks `presigns` (each Solana sign requests presign per-call, see [`ika-presign-pool-impl.md`](/library/tech/ika-presign-pool-impl)) and lacks the `ika_balance / sui_balance` fields (the actuator pays SOL rent + ika fees per the Solana ika gRPC fee-payer mechanism).
 
@@ -180,7 +180,6 @@ Solana base has the same `set_rescue_address` shape but the matching `rescue_sig
 design intent: the user can wire several independent panic triggers - chromatika UI, friend-and-family social recovery, chromatika-team auto-panic in response to safety alerts, SMS / email relayers. losing access to any one address still leaves panic + recovery available.
 
 cross-feature notes:
-
 - the **safety-alerts feed** uses the actuator slot: a chromatika-team Sui address is one of the user's actuators; a signed alert with `panicTargets` triggers an on-chain `panic` call
 - on Sui, panic emits an event that chromatika's background worker watches to submit the matching DeSo `AuthorizeDerivedKey { OperationType: NotValid }` (revoking the derived key on the DeSo node)
 
@@ -211,7 +210,6 @@ set_daily_cap(self, new_cap_micros, clock, ctx):
 `set_stage_delay_ms` v0: increases (more conservative) immediate; decreases when staging is on are emit-only - the user must explicitly toggle staging off to lower the delay (avoids an unbounded "queue several smaller delays then race them" attack). v1 may add a dedicated `pending_delay_ms` slot.
 
 events for staging:
-
 - `StageCapRaisesToggled { prev, next, staged_until_ms }` - on-toggle (`staged_until_ms = 0`) or off-toggle (= 0, off-toggle staging uses `PendingStageOffStaged` instead)
 - `PendingCapStaged { prev, pending, commits_at_ms }`, `PendingCapCommitted { prev, next }`
 - `PendingStageOffStaged { commits_at_ms }`, `PendingStageOffCommitted`
@@ -219,8 +217,7 @@ events for staging:
 
 ## the pre-alpha CPI gap (Solana)
 
-per the Solana ika pre-alpha disclaimer:
-
+per CLAUDE.md "ika solana pre-alpha":
 - Solana ika today uses a **single mock signer** (not distributed MPC); signatures are not real custody
 - the Solana ika program + on-chain data **WILL BE WIPED** on Alpha-1
 - the chromatika-policy program's `do_approve_message_cpi` is a `Ok(())` stub:
@@ -233,14 +230,12 @@ fn do_approve_message_cpi(_ctx, _args) -> Result<()> {
 ```
 
 what's still useful pre-Alpha-1:
-
 - the full `PolicyVault` PDA shape mirroring the Sui Move struct
 - all instructions (`wrap_authority`, `panic`, `unfreeze`, setters, staging entries) work + emit events + persist state
 - pre-CPI policy enforcement (cap, cool-down, panic, actuator) runs identically
 - storage-shape parity with the Sui side, so the chromatika TS dispatch can branch on `getDwalletMeta(activeVault).baseChain` and call the same logical setters with the same micro-USD / ms semantics
 
 what changes when Alpha-1 lands:
-
 - ika Solana exposes a CPI target (instruction discriminator + account list) for "approve message under caller-PDA-as-authority"
 - replace the stub body with `invoke_signed(...)` against that target, passing the policy vault PDA's bump as the seed
 - chromatika TS dispatcher in `wallet-extension/src/background/policy-vault/policy-vault-sign-solana.ts` flips from `throw PolicyVaultSolanaSignError('pre-alpha-cpi-stub')` to "build + send + parse signature"
@@ -257,7 +252,7 @@ chrome.storage.local["chromatika_policy_package_v1"]: {
   solanaProgramId?: "..." (base58 Solana program id, optional)
 }
 
-chrome.storage.local["chromatika_policy_vault_v1_<vaultId>"]: {
+chrome.storage.local["chromatika_policy_vault_v1_<vaultId>_<dwalletId>"]: {
   vaultObjectId: string,           // 0x... on Sui base, base58 PDA on Solana base
   dwalletId: string,               // same shape gating
   primaryActuator: string,         // Sui address or Solana pubkey
@@ -273,7 +268,6 @@ chrome.storage.local["chromatika_policy_vault_v1_<vaultId>"]: {
 the chain is the source of truth. the local link record holds **only the pointer** (vault object id / PDA address) plus a write-time snapshot for offline UI rendering. unlocked + online, every read is a fresh chain query via `readPolicyVaultSnapshot` (Sui: `SuiGraphQLClient.core.getObject`; Solana: would be `connection.getAccountInfo` + Anchor account decoder once the program is deployed).
 
 `setPolicyVaultLink` validates the `vaultObjectId` + `dwalletId` shape per `baseChain`:
-
 - Sui: `^0x[0-9a-fA-F]{64}$`
 - Solana: `^[1-9A-HJ-NP-Za-km-z]{32,44}$` (loose base58)
 
@@ -290,7 +284,6 @@ soft signing entry point on Solana: `signBytesThroughPolicySolana` in [`policy-v
 ## audit log
 
 `appendPolicyAuditEntry` writes to a per-vault audit log on every:
-
 - `sign-cap-applied` (sign attempted; chain-decoded value substituted in for declared)
 - `sign-aborted-panicked` (sign refused due to panic, pre-flight or chain-side)
 - `sign-aborted-over-cap` (sign refused due to cap, pre-flight or chain-side)
@@ -302,26 +295,28 @@ read via `listPolicyAuditEntries`; clear via `clearPolicyAuditEntries`. designed
 
 ### Sui base
 
-1. `cd wallet-extension/move/chromatika-policy && sui move build && sui move test` (passes locally)
-2. publish via `sui client publish` against the target network (devnet / testnet / mainnet). save the package id from the output
-3. open chromatika `Settings -> Security -> "On-chain spend caps + panic"` and paste the package id
-4. opt in a SECP256K1 dWallet via the panel. wallet builds + sends `wrap_dwallet_cap` PTB, persists the link
+End users on mainnet: nothing to do, the package at `0x8cd25cd3ae7966b61eeae97d77b7e029b29b37307b533b505c6a76b63e22d727` is already wired into the built-in registry; opt-in is one click via the post-create prompt or the Policy Vault tab. Iteration deploys (team only):
+
+1. `pnpm run deploy:sui-policy:testnet` (or `:devnet` / `:mainnet`) wraps `sui move build` + `sui client publish`. The script prints the new packageId.
+2. open the Policy Vault tab → expand "chromatika team only: point at an iteration deploy" → paste the packageId. Production cuts use `:final` and ship via the built-in registry instead.
+3. opt in a SECP256K1 or ED25519 dWallet via the panel. Wallet builds + sends `wrap_dwallet_cap` PTB, persists the link at `chromatika_policy_vault_v1_<vaultId>_<dwalletId>`.
 
 ### Solana base (pre-alpha)
 
 1. `node wallet-extension/scripts/deploy-solana-policy.mjs --cluster devnet --sync-program-id` builds + syncs `declare_id!` in `lib.rs` + `[programs.devnet]` in `Anchor.toml` + deploys
-2. paste the program id into `Settings -> Security -> "On-chain spend caps + panic"` (Solana program id field)
-3. opt in a Solana-base dWallet. Anchor `wrap_authority` instruction creates the PDA. **note**: on-chain authority transfer is deferred to Alpha-1; today the policy state is recorded but the dWallet's ika-side authority is unchanged
-4. attempts to sign through the Solana policy throw `pre-alpha-cpi-stub` until ika Solana Alpha-1. devnet only; do NOT submit real-value transactions
+2. **disabled in UI today**: `PolicyVaultPanel` shows "Sui-only for now" when the active vault is Solana-base, `PolicyVaultBanner` does not mount on Solana sends, and `optInToPolicyVault` throws as defense-in-depth
+3. when ika Solana Alpha-1 ships, the CPI stubs flip to real `invoke_signed` and the UI gates flip in one coordinated change
+4. devnet only; do NOT submit real-value transactions
 
 ## library + file pointers
 
 - Sui Move: [`wallet-extension/move/chromatika-policy/sources/sign_gate.move`](../../wallet-extension/move/chromatika-policy/sources/sign_gate.move) (core), [`sign_gate_evm.move`](../../wallet-extension/move/chromatika-policy/sources/sign_gate_evm.move), [`sign_gate_btc.move`](../../wallet-extension/move/chromatika-policy/sources/sign_gate_btc.move), [`sign_gate_deso.move`](../../wallet-extension/move/chromatika-policy/sources/sign_gate_deso.move)
 - Solana Anchor: [`wallet-extension/solana/chromatika-policy/programs/chromatika-policy/src/lib.rs`](../../wallet-extension/solana/chromatika-policy/programs/chromatika-policy/src/lib.rs)
-- TS dispatch: [`wallet-extension/src/background/policy-vault/`](../../wallet-extension/src/background/policy-vault/) - `policy-vault-actions.ts` (high-level flows), `policy-vault-sign.ts` (Sui sign dispatch), `policy-vault-sign-solana.ts` (Solana sign dispatch + pre-alpha throw), `policy-vault-tx.ts` (PTB builders), `policy-vault-storage.ts` (link + package config), `policy-vault-read.ts` (chain snapshot reader), `policy-vault-audit.ts` (log)
-- tRPC router: [`wallet-extension/src/server/routers/policy-vault.ts`](../../wallet-extension/src/server/routers/policy-vault.ts)
-- UI: [`wallet-extension/src/ui/components/PolicyVaultPanel.tsx`](../../wallet-extension/src/ui/components/PolicyVaultPanel.tsx) (Settings -> Security), [`PolicyVaultBanner.tsx`](../../wallet-extension/src/ui/components/PolicyVaultBanner.tsx) (panicked banner)
-- deploy script (Solana): [`wallet-extension/scripts/deploy-solana-policy.mjs`](../../wallet-extension/scripts/deploy-solana-policy.mjs)
+- Built-in registry: [`wallet-extension/src/background/policy-vault/policy-vault-builtin.ts`](../../wallet-extension/src/background/policy-vault/policy-vault-builtin.ts) (Sui mainnet entry populated 2026-05-11)
+- TS dispatch: [`wallet-extension/src/background/policy-vault/`](../../wallet-extension/src/background/policy-vault/) - `policy-vault-actions.ts` (high-level flows, all take `dwalletId`), `policy-vault-sign.ts` (Sui SECP sign dispatch, resolves dwalletId from `session.dwalletMeta.SECP256K1`), `policy-vault-sign-solana.ts` (ED25519 sign dispatch), `policy-vault-tx.ts` (PTB builders), `policy-vault-storage.ts` (per-(vault, dwallet) link + package config), `policy-vault-presigns.ts` (per-(vault, dwallet) presign cap id cache), `policy-vault-read.ts` (chain snapshot reader), `policy-vault-audit.ts` (per-(vault, dwallet) audit log)
+- tRPC router: [`wallet-extension/src/server/routers/policy-vault.ts`](../../wallet-extension/src/server/routers/policy-vault.ts) — every mutation takes `dwalletId`; `getPolicyVaultState` returns `links: Array<{ link, snapshot }>`
+- UI: [`wallet-extension/src/ui/pages/PolicyVaultPage.tsx`](../../wallet-extension/src/ui/pages/PolicyVaultPage.tsx) (dedicated tab), [`PolicyVaultPanel.tsx`](../../wallet-extension/src/ui/components/PolicyVaultPanel.tsx) (three-state panel), [`PostCreatePolicyVaultPrompt.tsx`](../../wallet-extension/src/ui/components/PostCreatePolicyVaultPrompt.tsx) (post-DKG bottom sheet), [`PolicyVaultBanner.tsx`](../../wallet-extension/src/ui/components/PolicyVaultBanner.tsx) (panicked banner)
+- deploy scripts: [`deploy-sui-policy.mjs`](../../wallet-extension/scripts/deploy-sui-policy.mjs), [`deploy-solana-policy.mjs`](../../wallet-extension/scripts/deploy-solana-policy.mjs)
 
 ## related guides
 

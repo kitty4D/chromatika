@@ -1,8 +1,18 @@
 export type DwalletCurve = 'SECP256K1' | 'ED25519';
 
+/**
+ * automatic, non-user-editable chain prefix on every dWallet label. SECP256K1 dWallets
+ * sign for evm + btc, ED25519 dWallets sign for sol + sui + apt - the prefix is a curve
+ * fact, not a user-controlled string. `resolveDwalletLabel` ALWAYS prepends this even
+ * when the user has set a custom suffix; any prefix typed into the rename field is
+ * stripped so we don't double-prefix on display.
+ */
+export function dwalletChainPrefix(curve: DwalletCurve): string {
+  return curve === 'SECP256K1' ? '[BTC.EVM]' : '[SOL.SUI.APT]';
+}
+
 export function defaultDwalletTitle(curve: DwalletCurve, index1Based: number): string {
-  if (curve === 'SECP256K1') return `[BTC.EVM] Wallet #${index1Based}`;
-  return `[SOL.SUI.APT] Wallet #${index1Based}`;
+  return `${dwalletChainPrefix(curve)} Wallet #${index1Based}`;
 }
 
 /** stable 1-based index per curve from caps (sorted `dwalletId`). */
@@ -18,14 +28,24 @@ export function buildDwalletIndexMap(
   return m;
 }
 
+/** strip a leading [BTC.EVM] or [SOL.SUI.APT] (case-insensitive) so we can re-add the
+ *  canonical prefix without doubling up when a user typed it into the rename field. */
+export function stripChainPrefix(name: string): string {
+  return name.replace(/^\[(BTC\.EVM|SOL\.SUI\.APT)\]\s*/i, '').trim();
+}
+
 export function resolveDwalletLabel(
   dwalletId: string,
   curve: DwalletCurve,
   customNames: Readonly<Record<string, string>>,
   indexMap: Map<string, number>,
 ): string {
+  const prefix = dwalletChainPrefix(curve);
   const raw = customNames[dwalletId]?.trim();
-  if (raw) return raw;
+  if (raw) {
+    const cleaned = stripChainPrefix(raw);
+    if (cleaned) return `${prefix} ${cleaned}`;
+  }
   const idx = indexMap.get(dwalletId) ?? 1;
-  return defaultDwalletTitle(curve, idx);
+  return `${prefix} Wallet #${idx}`;
 }

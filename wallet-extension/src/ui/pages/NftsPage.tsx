@@ -4,6 +4,7 @@ import type { MediaSafetyMode } from '@/background/services/media-safety';
 import type { NftItem } from '@/background/services/nft';
 import type { Balances } from '@/ui/types';
 import { EmptyState, LoadingState } from '@/ui/components/StateViews';
+import { NftImage } from '@/ui/components/NftImage';
 
 type NftView = 'nfts' | 'kiosks';
 
@@ -111,11 +112,7 @@ function NftCard({ nft }: { nft: NftItem }) {
   return (
     <div className="sp-nftCard">
       <div className="sp-nftImg">
-        {nft.imageUrl ? (
-          <img src={nft.imageUrl} alt={nft.name} loading="lazy" />
-        ) : (
-          <div className="sp-nftImgPlaceholder">🖼</div>
-        )}
+        <NftImage src={nft.imageUrl} alt={nft.name} loading="lazy" />
       </div>
       <div className="sp-nftName">{nft.name}</div>
       {nft.collectionName && <div className="sp-nftCollection">{nft.collectionName}</div>}
@@ -241,7 +238,7 @@ export function NftsPage({ balances }: { balances: Balances | null }) {
 
   return (
     <div className="sp-page">
-      <div className="sp-pageTitle">collectibles</div>
+      <h2 className="sp-pageTitle">collectibles</h2>
 
       <div className="sp-chipRow" style={{ marginBottom: 14 }}>
         {(['nfts', 'kiosks'] as const).map((v) => (

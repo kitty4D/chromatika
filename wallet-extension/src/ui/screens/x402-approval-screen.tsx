@@ -112,7 +112,7 @@ export function X402ApprovalScreen({ requestId }: { requestId: string }) {
         onApprove={() => {}}
         onReject={() => window.close()}
       >
-        <div style={mutedStyle}>loading…</div>
+        <div style={mutedStyle}>loading payment request…</div>
       </ApprovalShell>
     );
   }

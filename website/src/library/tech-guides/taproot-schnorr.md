@@ -5,7 +5,6 @@ BIP340 Schnorr signatures over secp256k1 are what bitcoin taproot (P2TR) outputs
 ## why a separate pool
 
 ECDSA and Schnorr produce different signature shapes from the same secp256k1 key:
-
 - ECDSA: `(r, s)` where `r` is x-coordinate of `k*G mod n`, `s = k^(-1)(z + r*d) mod n`
 - Schnorr (BIP340): `(R, s)` where `R = k*G` is a 32-byte x-only point, `s = k + e*d mod n`, `e = tagged_hash("BIP0340/challenge", R || P || m)`
 
@@ -14,13 +13,11 @@ ika MPC has different presign material per algorithm because the math during the
 ## tagged hash
 
 BIP340 introduced "tagged hashes" to give domain separation:
-
 ```
 tagged_hash(tag, x) = SHA-256(SHA-256(tag) || SHA-256(tag) || x)
 ```
 
 specific tags used in taproot:
-
 - `"BIP0340/challenge"` for `e` in signing
 - `"BIP0340/aux"` for the auxiliary RNG input
 - `"TapLeaf"`, `"TapBranch"`, `"TapTweak"` for the script tree commitment / output-key tweak
@@ -30,7 +27,6 @@ ika handles the BIP340 challenge hash internally during taproot signing. chromat
 ## BIP341 sighash
 
 BIP341 defines the message format that taproot signs over:
-
 ```
 sighash = tagged_hash("TapSighash", 0x00 || sighash_data)
 sighash_data = (
@@ -52,7 +48,6 @@ bitcoinjs-lib computes this via `tx.hashForWitnessV1(...)` per input. chromatika
 ## key tweaking (BIP341 output key)
 
 a P2TR output key is **tweaked** from the internal key:
-
 ```
 P_internal = derive_secp256k1_pubkey(secret)
 t = tagged_hash("TapTweak", P_internal_x_only || merkle_root_of_script_tree)
@@ -83,8 +78,7 @@ if `hash_type` is non-default (e.g. SIGHASH_ALL with anyonecanpay), the sighash 
 
 ## the SECP256K1_TAPROOT presign pool
 
-chromatika maintains three ika presign pools per active dWallet Vault:
-
+per CLAUDE.md, chromatika maintains three ika presign pools per active dWallet Vault:
 - `SECP256K1_ECDSA` (EVM, generic ECDSA)
 - `SECP256K1_TAPROOT` (BTC P2TR)
 - `ED25519_EDDSA` (Sui, Solana, Aptos)

@@ -37,7 +37,7 @@ export type DWalletNetworkSettings = {
 };
 
 export const DEFAULT_SOLANA_CONNECTION_SETTINGS: SolanaConnectionSettings = {
-  solNetworkId: 'sol-devnet',
+  solNetworkId: 'sol-mainnet',
   customRpcUrl: null,
   priorityFeeMicroLamportsPerCu: 0,
   commitment: 'confirmed',
@@ -74,7 +74,7 @@ function defaultDwalletNetworkFromRecord(record: SeedVault): DWalletNetworkSetti
   return {
     evmChainId: 1,
     suiNetworkId,
-    solana: solanaTierDefaultsForVault(record.baseChain),
+    solana: { ...DEFAULT_SOLANA_CONNECTION_SETTINGS },
     aptNetworkId: 'apt-mainnet',
     btcNetworkId: 'btc-mainnet',
   };
@@ -158,7 +158,7 @@ export async function getDwalletNetworkSettings(
         resolve({
           evmChainId: typeof raw.evmChainId === 'number' ? raw.evmChainId : 1,
           suiNetworkId: typeof raw.suiNetworkId === 'string' ? raw.suiNetworkId : 'sui-mainnet',
-          solana: mergeSolana(solanaTierDefaultsForVault(fallbackSeed?.baseChain), raw.solana),
+          solana: mergeSolana(DEFAULT_SOLANA_CONNECTION_SETTINGS, raw.solana),
           aptNetworkId: typeof raw.aptNetworkId === 'string' ? raw.aptNetworkId : 'apt-mainnet',
           btcNetworkId: typeof raw.btcNetworkId === 'string' ? raw.btcNetworkId : 'btc-mainnet',
         });
@@ -258,23 +258,18 @@ export async function ensureTierNetworkSettingsForVault(record: SeedVault & { id
 
 /**
  * pre-release: Solana ika vaults defaulted to public mainnet RPC (403 from extensions).
- * move built-in mainnet -> devnet when user has no custom Solana RPC.
+ * move vault-tier built-in mainnet -> devnet when user has no custom Solana RPC.
+ * dWallet tier stays mainnet (destination chain SOL addresses are mainnet).
  */
 export async function normalizeSolanaIkaVaultNetworksIfNeeded(
   record: SeedVault & { id: string; baseChain: BaseChain },
 ): Promise<void> {
   if (record.baseChain !== 'solana') return;
   const seed = { network: record.network, baseChain: record.baseChain };
-  const [v, d] = await Promise.all([
-    getVaultNetworkSettings(record.id, seed),
-    getDwalletNetworkSettings(record.id, seed),
-  ]);
+  const v = await getVaultNetworkSettings(record.id, seed);
   const stuckOnPublicMainnet = (s: SolanaConnectionSettings) =>
     s.solNetworkId === 'sol-mainnet' && !s.customRpcUrl?.trim();
   if (stuckOnPublicMainnet(v.solana)) {
     await setVaultNetworkSettings(record.id, { solana: { solNetworkId: 'sol-devnet' } });
-  }
-  if (stuckOnPublicMainnet(d.solana)) {
-    await setDwalletNetworkSettings(record.id, { solana: { solNetworkId: 'sol-devnet' } });
   }
 }

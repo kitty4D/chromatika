@@ -8,7 +8,7 @@ x402 is an HTTP-native micropayment protocol: server returns `HTTP 402 Payment R
 - scheme: `exact` (precise USDC amount per request, no price negotiation)
 - chain: Solana
 - token: USDC mint `EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v` (SPL token)
-- per-scheme reference: [scheme_exact_svm (upstream spec)](https://github.com/x402-foundation/x402/blob/main/specs/schemes/exact/scheme_exact_svm.md)
+- per-scheme reference: [`scheme_exact_svm.md`](https://github.com/x402-foundation/x402/blob/main/specs/schemes/exact/scheme_exact_svm.md)
 
 ## what we don't implement
 
@@ -60,7 +60,6 @@ a base64-encoded JSON envelope with these fields (per `exact` SVM scheme):
 ```
 
 key fields chromatika checks:
-
 - `scheme === "exact"` (reject otherwise)
 - `chain === "solana"` (reject otherwise)
 - `asset === USDC_MINT` (reject otherwise)
@@ -79,12 +78,11 @@ what chromatika produces and the client retries with:
   "transaction": "<base64 serialized Solana versioned transaction>",
   "signature": "<base64 ed25519 signature on the transaction>",
   "signer": "<base58 signer address>",
-  "nonce": "<echoed from PaymentRequirements>",
+  "nonce": "<echoed from PaymentRequirements>"
 }
 ```
 
 the **transaction** is a Solana versioned tx that:
-
 1. transfers `amount` USDC from `signer`'s ATA to `payTo`'s ATA (creating destination ATA if needed)
 2. includes a Memo v2 instruction with the nonce + optional memo
 3. has the right blockhash + fee payer
@@ -101,7 +99,7 @@ after settlement, server returns:
   "chain": "solana",
   "txHash": "<base58 transaction signature>",
   "settledAt": 1700000123,
-  "amountSettled": "100000",
+  "amountSettled": "100000"
 }
 ```
 
@@ -110,13 +108,11 @@ chromatika reads this in `recordX402Settlement` to flip the receipt status from 
 ## why this design
 
 x402 is "Stripe for HTTP, no Stripe". instead of:
-
 - API keys (manual issuance, manual rotation, server has to issue + track)
 - monthly subscriptions (per-user account creation)
 - ad-supported (privacy-hostile, low margin)
 
 x402 lets:
-
 - API providers gate any endpoint on a per-request payment
 - API consumers (especially AI agents) pay micropayments per call without prior signup
 - the facilitator settles on-chain so neither party needs trust
@@ -126,7 +122,6 @@ USDC on Solana is the natural choice: cheap fees (~$0.0001/tx), fast finality (~
 ## the ed25519 deterministic-sig advantage
 
 because Solana ed25519 is deterministic per RFC 8032, the same inputs (USDC amount, recipient ATA, blockhash, fee payer, memo) **always produce the same signature**. this matters for two reasons:
-
 1. the WalletConnect path (`x402-walletconnect-signer.ts`) where the signature comes from a Seeker / Phantom phone over the WC relay - the ed25519 key never leaves the phone, so determinism makes the wallet's signature predictable / verifiable
 2. replay protection comes from `nonce` + `deadline` rather than from "the same tx can't be signed twice"; otherwise determinism would let an attacker re-submit the same tx multiple times. servers MUST validate nonce uniqueness
 

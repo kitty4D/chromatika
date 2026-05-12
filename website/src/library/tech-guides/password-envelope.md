@@ -7,17 +7,17 @@ the most common chromatika unlock path: enter the app password, argon2id derives
 ```jsonc
 {
   "kind": "password",
-  "label": "primary password", // human-readable, optional
+  "label": "primary password",   // human-readable, optional
   "kdfMeta": {
     "kind": "argon2id",
     "tCost": 3,
     "mCostKiB": 65536,
     "parallelism": 4,
     "saltB64": "<16 random bytes>",
-    "outputLength": 32,
+    "outputLength": 32
   },
   "wrappedMasterKeyB64": "<AES-GCM ciphertext + tag>",
-  "envIvB64": "<12 random bytes>",
+  "envIvB64": "<12 random bytes>"
 }
 ```
 

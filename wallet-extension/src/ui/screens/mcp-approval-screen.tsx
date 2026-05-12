@@ -111,7 +111,7 @@ export function McpApprovalScreen({ requestId }: { requestId: string }) {
         onApprove={() => {}}
         onReject={() => window.close()}
       >
-        <div style={mutedStyle}>loading…</div>
+        <div style={mutedStyle}>loading sign request…</div>
       </ApprovalShell>
     );
   }

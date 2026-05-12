@@ -70,12 +70,28 @@ export const STORAGE_KEYS = {
 
   // policy vault (global rows; per-vault rows live in VAULT_SCOPED_KEYS)
   POLICY_PACKAGE_V1: 'chromatika_policy_package_v1',
+  /** Global "don't ask me again" flag for the post-dWallet-creation Policy Vault prompt.
+   *  When true, `PostCreatePolicyVaultPrompt` does not surface after any future dWallet creation
+   *  on any vault. Toggleable in Settings -> Safety -> "Prompts I've dismissed". */
+  POLICY_VAULT_PROMPT_GLOBALLY_DISMISSED_V1: 'chromatika_policy_vault_prompt_globally_dismissed_v1',
+  /** Global "don't ask me again" flag for the empty-state `CreateDwalletPrompt`. Additive to the
+   *  per-vault flag at `VAULT_SCOPED_KEYS.dwalletCreatePromptDismissed`; either being true hides
+   *  the prompt. Toggleable in Settings -> Safety -> "Prompts I've dismissed". */
+  DWALLET_CREATE_PROMPT_GLOBALLY_DISMISSED_V1: 'chromatika_dwallet_create_prompt_globally_dismissed_v1',
 
   // deso
   DESO_NODE_V1: 'chromatika_deso_node_v1',
 
   // operation progress (session-scoped, single-slot)
   OP_PROGRESS_V1: 'chromatika_op_progress_v1',
+
+  // team funding consent decisions per vault id ('accepted' | 'declined').
+  // gates the TeamFundingOfferBanner so a vault that has already answered never re-prompts.
+  TEAM_FUNDING_DECISIONS_V1: 'chromatika_team_funding_decisions_v1',
+
+  // dwallet leaderboard (ChromaLab) - cross-owner index + per-dwallet portfolio cache + prefs
+  DWALLET_INDEX_V1: 'chromatika_dwallet_index_v1',
+  LEADERBOARD_PREFS_V1: 'chromatika_leaderboard_prefs_v1',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
@@ -100,15 +116,44 @@ export const VAULT_SCOPED_KEYS = {
   presignPools: (vaultId: string) => `chromatika_presign_pools_v3_${vaultId}` as const,
   /** ika protocol fee payment mode + thresholds. */
   ikaFeeSettings: (vaultId: string) => `chromatika_ika_fee_settings_v1_${vaultId}` as const,
-  /** policy vault link + dwallet binding. */
-  policyVault: (vaultId: string) => `chromatika_policy_vault_v1_${vaultId}` as const,
-  /** policy vault presign cap object ids (set when the vault is linked). */
-  policyPresigns: (vaultId: string) => `chromatika_policy_presigns_v1_${vaultId}` as const,
-  /** policy vault audit log (FIFO, capped at 200 entries). */
-  policyAudit: (vaultId: string) => `chromatika_policy_audit_v1_${vaultId}` as const,
+  /** policy vault link + dwallet binding. **Per-dwallet** since a vault can have
+   *  multiple dwallets (same or different curves) and each one can be wrapped
+   *  independently with its own settings. Use `policyVaultPrefix(vaultId)` to scan
+   *  all opted-in dwallets for a vault. */
+  policyVault: (vaultId: string, dwalletId: string) =>
+    `chromatika_policy_vault_v1_${vaultId}_${dwalletId}` as const,
+  /** Scan prefix for `policyVault` keys belonging to a single chromatika vault.
+   *  Trailing underscore prevents `vault_<vaultId>_` from matching `<vaultId>X`. */
+  policyVaultPrefix: (vaultId: string) => `chromatika_policy_vault_v1_${vaultId}_` as const,
+  /** policy vault presign cap object ids per opted-in dwallet. */
+  policyPresigns: (vaultId: string, dwalletId: string) =>
+    `chromatika_policy_presigns_v1_${vaultId}_${dwalletId}` as const,
+  policyPresignsPrefix: (vaultId: string) => `chromatika_policy_presigns_v1_${vaultId}_` as const,
+  /** policy vault audit log per opted-in dwallet (FIFO, capped at 200 entries). */
+  policyAudit: (vaultId: string, dwalletId: string) =>
+    `chromatika_policy_audit_v1_${vaultId}_${dwalletId}` as const,
+  policyAuditPrefix: (vaultId: string) => `chromatika_policy_audit_v1_${vaultId}_` as const,
   /** deso owner public key link for a vault. */
   desoOwnerLink: (vaultId: string) => `chromatika_deso_owner_link_v1_${vaultId}` as const,
+  /** per-vault USD aggregate snapshot for the rocket-gauge total + VaultPicker rows. session-scoped, 5-min TTL. */
+  vaultTotal: (vaultId: string) => `chromatika_vault_total_v1_${vaultId}` as const,
+  /** per-vault flag: user dismissed the Home-screen "create your first dWallets" prompt. */
+  dwalletCreatePromptDismissed: (vaultId: string) =>
+    `chromatika_dwallet_create_prompt_dismissed_v1_${vaultId}` as const,
 } as const;
+
+/**
+ * per-dwallet keys. unlike `VAULT_SCOPED_KEYS`, these are NOT tied to the user's vaults;
+ * they are keyed by an on-chain dWallet object id (any owner) so the ChromaLab leaderboard
+ * can stash a USD snapshot per observed dWallet without colliding with the user's own state.
+ */
+export const DWALLET_SCOPED_KEYS = {
+  /** per-dWallet USD aggregate snapshot for the leaderboard. session-scoped, 5-min TTL. */
+  dwalletPortfolio: (dwalletId: string) => `chromatika_dwallet_portfolio_v1_${dwalletId}` as const,
+} as const;
+
+/** literal prefix for the per-dwallet portfolio key family (use with `chrome.storage.onChanged` filters). */
+export const DWALLET_PORTFOLIO_KEY_PREFIX = 'chromatika_dwallet_portfolio_v1_';
 
 /**
  * legacy / removed key prefixes. kept for documentation + sweepers; never write.

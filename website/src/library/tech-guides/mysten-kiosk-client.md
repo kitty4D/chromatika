@@ -5,11 +5,11 @@ Sui Kiosks are on-chain object containers that hold tradeable items (often NFTs)
 ## construction
 
 ```ts
-import { KioskClient, Network } from "@mysten/kiosk";
+import { KioskClient, Network } from '@mysten/kiosk';
 
 const kioskClient = new KioskClient({
-  client: suiGraphQLClient, // shares the vault SuiGraphQLClient
-  network: activeNetwork === "mainnet" ? Network.MAINNET : Network.TESTNET,
+  client: suiGraphQLClient,                                 // shares the vault SuiGraphQLClient
+  network: activeNetwork === 'mainnet' ? Network.MAINNET : Network.TESTNET,
 });
 ```
 
@@ -45,12 +45,12 @@ async function getKioskData({ kioskId }) {
   });
   return {
     kioskId,
-    items: data.items.map((item) => ({
+    items: data.items.map(item => ({
       objectId: item.objectId,
       type: item.type,
-      display: item.display, // Display protocol metadata
+      display: item.display,                                // Display protocol metadata
       isLocked: item.isLocked,
-      listing: item.listing, // null if not listed
+      listing: item.listing,                                // null if not listed
     })),
     transferPolicies: data.transferPolicies,
   };
@@ -58,7 +58,6 @@ async function getKioskData({ kioskId }) {
 ```
 
 each item carries:
-
 - object id + type
 - Display protocol metadata (name, image, description from on-chain Display::Display)
 - locked status (locked items can't be taken without satisfying transfer policy)
@@ -67,7 +66,6 @@ each item carries:
 ## transfer policies + royalties
 
 a transfer policy is a Move object that defines rules for transferring items of a specific type out of a kiosk. typical rules:
-
 - royalty (e.g. 5% of sale price to a designated address)
 - floor price (refuse listings below a min)
 - cooldown (refuse re-listings within N hours of last sale)
@@ -83,9 +81,9 @@ chromatika exposes the policy info so the UI can display "this NFT has a 5% roya
 
 these are read-only kiosk ops in the current chromatika surface. write ops are in the kiosk product surface roadmap; the calls go through the kiosk client + an `IkaTransaction` PTB (or the dWallet sign path).
 
-## the runtime chunking wrapper
+## the patched chunking
 
-chromatika installs a runtime wrapper at every `new SuiGraphQLClient(...)` site (`installGetObjectsChunking` in `wallet-extension/src/background/sui-client.ts`) that batches `getObjects` / `multiGetObjects` 12 ids at a time with a 100ms gap. this affects KioskClient indirectly because Kiosk reads do a lot of multi-object lookups (items + listings + display) - the chunking keeps each GraphQL POST body under common ~5000-byte edge-proxy limits and avoids burst rate-limit hits.
+per [mysten-sui-pinning-and-patches.md](/library/tech/mysten-sui-pinning-and-patches), `@mysten/sui` GraphQL `getObjects` / `multiGetObjects` chunks object ids by 12 (not 50). this affects KioskClient indirectly because Kiosk reads do a lot of multi-object lookups (items + listings + display) - the chunking smooths over GraphQL body-size limits.
 
 ## the future "dedicated page" intent
 

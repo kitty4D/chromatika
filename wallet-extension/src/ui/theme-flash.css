@@ -44,8 +44,10 @@ html.ch-theme-flash::after {
 
 html.ch-theme-flash.ch-theme-flash--on::after {
   opacity: 1;
-  backdrop-filter: blur(22px) saturate(1.15);
-  -webkit-backdrop-filter: blur(22px) saturate(1.15);
+  /* perf (i-optimize P1 round 2): blur 22->10. flash overlay is brief (theme swap, ~220ms)
+   * but the heavier blur was disproportionate to its tiny visual contribution. */
+  backdrop-filter: blur(10px) saturate(1.1);
+  -webkit-backdrop-filter: blur(10px) saturate(1.1);
   background: rgba(6, 8, 18, 0.62);
 }
 

@@ -83,9 +83,9 @@ function SubScreenHeader({ title, onBack }: { title: string; onBack: () => void 
       <button type="button" className="sp-backBtn" onClick={onBack}>
         ← back
       </button>
-      <div className="sp-pageTitle" style={{ marginBottom: 0 }}>
+      <h2 className="sp-pageTitle" style={{ marginBottom: 0 }}>
         {title}
-      </div>
+      </h2>
     </div>
   );
 }
@@ -407,6 +407,8 @@ export function SettingsPage({
             {safetyMode === 'all' && 'all image sources - trust everything, yolo'}
           </div>
         </div>
+
+        <DismissedPromptsSection />
       </div>
     );
   }
@@ -727,7 +729,7 @@ export function SettingsPage({
 
   return (
     <div className="sp-page">
-      <div className="sp-pageTitle">settings</div>
+      <h2 className="sp-pageTitle">settings</h2>
 
       <div className="sp-menuList">
         <div className="sp-menuGroupLabel">wallet</div>
@@ -870,5 +872,131 @@ export function SettingsPage({
         </div>
       </div>
     </div>
+  );
+}
+
+/**
+ * "Prompts I've dismissed" subsection of the Safety tab. Reads + toggles the two
+ * global "don't ask again" flags (`POLICY_VAULT_PROMPT_GLOBALLY_DISMISSED_V1` +
+ * `DWALLET_CREATE_PROMPT_GLOBALLY_DISMISSED_V1`). Per-vault dismissal of
+ * `CreateDwalletPrompt` is intentionally not exposed here; it auto-clears when the
+ * vault gains a dWallet and is reset by `removeVault`.
+ */
+function DismissedPromptsSection() {
+  const [policyVaultDismissed, setPolicyVaultDismissed] = useState<boolean | null>(null);
+  const [createDwalletDismissed, setCreateDwalletDismissed] = useState<boolean | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const [pv, cd] = await Promise.all([
+          trpc.getPolicyVaultPromptState.query(),
+          trpc.getDWalletCreatePromptState.query(),
+        ]);
+        if (cancelled) return;
+        setPolicyVaultDismissed(pv.globallyDismissed);
+        // We expose the GLOBAL flag here, not the OR'd "dismissed". A per-vault
+        // dismissal is local to that vault and not the user's intent for this control.
+        setCreateDwalletDismissed(cd.global ?? false);
+      } catch (e) {
+        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function togglePolicyVault(next: boolean) {
+    setPolicyVaultDismissed(next);
+    try {
+      await trpc.setPolicyVaultPromptGloballyDismissed.mutate({ dismissed: next });
+    } catch (e) {
+      setPolicyVaultDismissed(!next);
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  async function toggleCreateDwallet(next: boolean) {
+    setCreateDwalletDismissed(next);
+    try {
+      await trpc.setDwalletCreatePromptGloballyDismissed.mutate({ dismissed: next });
+    } catch (e) {
+      setCreateDwalletDismissed(!next);
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  return (
+    <div className="sp-section">
+      <div className="sp-sectionTitle">prompts I've dismissed</div>
+      <p className="sp-muted" style={{ fontSize: 11, lineHeight: 1.45, margin: '0 0 8px 0' }}>
+        toggling a row off restores the prompt on the next eligible event. per-vault
+        dismissals (set on a specific vault) aren't shown here.
+      </p>
+
+      <PromptToggleRow
+        label="post-creation Policy Vault wrap prompt"
+        desc="surfaces after a new SECP256K1 dWallet is created on a Sui-base vault"
+        checked={policyVaultDismissed}
+        onChange={togglePolicyVault}
+      />
+      <PromptToggleRow
+        label='"Create your first dWallets" prompt'
+        desc="surfaces on the home screen when a funded vault has zero dWallets"
+        checked={createDwalletDismissed}
+        onChange={toggleCreateDwallet}
+      />
+
+      {err && (
+        <div className="sp-error" style={{ marginTop: 6, fontSize: 11 }}>
+          {err}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function PromptToggleRow({
+  label,
+  desc,
+  checked,
+  onChange,
+}: {
+  label: string;
+  desc: string;
+  checked: boolean | null;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <label
+      style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: 8,
+        padding: '6px 0',
+        cursor: checked === null ? 'wait' : 'pointer',
+        opacity: checked === null ? 0.5 : 1,
+      }}
+    >
+      <input
+        type="checkbox"
+        checked={checked === true}
+        disabled={checked === null}
+        onChange={(e) => onChange(e.target.checked)}
+        style={{ marginTop: 2, flexShrink: 0 }}
+      />
+      <span style={{ flex: 1, fontSize: 12 }}>
+        <span>{label}</span>
+        <span className="sp-muted" style={{ display: 'block', fontSize: 10, marginTop: 2, lineHeight: 1.45 }}>
+          {desc}
+        </span>
+        <span className="sp-muted" style={{ display: 'block', fontSize: 10, marginTop: 4, opacity: 0.6 }}>
+          {checked === true ? 'dismissed (prompt suppressed)' : 'will show on next eligible event'}
+        </span>
+      </span>
+    </label>
   );
 }

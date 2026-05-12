@@ -25,10 +25,38 @@ send native ETH or any other EVM-native asset (and run any contract call you sup
 3. background runs `signAndBroadcastEvm` directly - no popup, signs via ika MPC against the SECP256K1 dWallet, broadcasts on the active EVM RPC
 4. tx hash returns synchronously (subject to RPC latency)
 
-## how to send a contract call (e.g. ERC20 transfer)
+## how to send ERC20 tokens
 
-1. craft calldata for the function you want (e.g. ERC20 `transfer(address,uint256)`)
-2. submit `sendEvmTx` with: `to` (the contract address), `value` (`0x0` for non-payable calls), `data` (the calldata hex), optional `chainId`
+transfer any ERC20 token (USDC, USDT, WETH, ARB, etc.) from the active dWallet's EVM address.
+
+### prerequisites (in addition to the general prerequisites above)
+
+- the active dWallet's EVM address holds a balance of the ERC20 token
+- the address has enough native ETH (or chain-native gas token) to cover gas for the contract call
+
+### from the wallet UI
+
+1. from the send page, select the ERC20 token from the token dropdown (the wallet fetches token balances via `getEvmTokenBalances` - includes Alchemy shortcut, curated lists, and watched tokens)
+2. enter the recipient address and amount in human-readable units (decimal handling uses the token's `decimals` value, e.g. 6 for USDC, 18 for WETH)
+3. the wallet constructs the ERC20 `transfer(address,uint256)` calldata internally and submits via `sendEvmTx` with `to` set to the contract address and `value` set to `0x0`
+
+### manually (agent / programmatic)
+
+1. encode the ERC20 `transfer(address,uint256)` calldata: selector `0xa9059cbb` + ABI-encoded `(recipient, amountInBaseUnits)`
+2. submit `sendEvmTx` with: `to` (the **token contract** address, not the recipient), `value` (`0x0`), `data` (the calldata hex), optional `chainId`
+3. same direct sign + broadcast path as native sends
+
+### notes on ERC20 sends
+
+- token balances are cached per address + chainId with a 60-second TTL
+- Arbitrum has a curated token list (WETH, USDC, USDT, ARB) that shows balances even without Alchemy
+- Alchemy `DEFAULT_TOKENS` integration provides broader token discovery when `VITE_ALCHEMY_KEY` is set
+- `approve` / `transferFrom` patterns (e.g. for dapp allowances) go through the dapp bridge, not the wallet UI send flow
+
+## how to send an arbitrary contract call
+
+1. craft calldata for the function you want
+2. submit `sendEvmTx` with: `to` (the contract address), `value` (`0x0` for non-payable calls, or hex wei for payable), `data` (the calldata hex), optional `chainId`
 3. same direct sign + broadcast path
 
 ## how to use a different EVM chain than the active one

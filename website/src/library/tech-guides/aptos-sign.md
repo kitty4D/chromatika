@@ -5,7 +5,6 @@ Aptos transactions and messages signed via ika MPC ED25519 EDDSA. less surface t
 ## the address
 
 Aptos addresses are 32 bytes. derived from the public key:
-
 ```
 auth_key = SHA-3-256(pubkey || 0x00)   // 0x00 scheme byte for single-key Ed25519
 address = auth_key   // 32 bytes
@@ -22,13 +21,13 @@ multi-key (multi-sig, multi-curve) layouts use a different scheme byte and diffe
 ```ts
 async function signAptosMessage({ messageB64 }) {
   const messageBytes = base64Decode(messageB64);
-  const presignId = takePresign("ED25519_EDDSA");
+  const presignId = takePresign('ED25519_EDDSA');
 
   const sigBytes = await ikaSign({
     dwalletId: activeEd25519DwalletId,
     curve: Curve.ED25519,
     algorithm: SignatureAlgorithm.EdDSA,
-    message: messageBytes, // raw bytes, ika sha-512s
+    message: messageBytes,                            // raw bytes, ika sha-512s
     presignId,
   });
 
@@ -58,12 +57,12 @@ async function signAptosTx(rawTransaction: RawTransaction) {
   signingMessage.set(txBytes, tag.length);
 
   // 3. sign via ika
-  const presignId = takePresign("ED25519_EDDSA");
+  const presignId = takePresign('ED25519_EDDSA');
   const sigBytes = await ikaSign({
     dwalletId: activeEd25519DwalletId,
     curve: Curve.ED25519,
     algorithm: SignatureAlgorithm.EdDSA,
-    message: signingMessage, // include the tag prefix
+    message: signingMessage,                          // include the tag prefix
     presignId,
   });
 
@@ -73,14 +72,11 @@ async function signAptosTx(rawTransaction: RawTransaction) {
   // 4. wrap as Aptos AccountAuthenticatorEd25519
   const auth = new AccountAuthenticatorEd25519(
     new Ed25519PublicKey(getDwalletEd25519PublicKey()),
-    new Ed25519Signature(sig64)
+    new Ed25519Signature(sig64),
   );
 
   // 5. submit via SDK
-  return aptos.transaction.submit.simple({
-    transaction: rawTransaction,
-    senderAuthenticator: auth,
-  });
+  return aptos.transaction.submit.simple({ transaction: rawTransaction, senderAuthenticator: auth });
 }
 ```
 
@@ -89,7 +85,6 @@ key Aptos-specific bit: the **signing-message tag** (`sha3-256("APTOS::RawTransa
 ## hardware wallets
 
 Aptos signing on Ledger / Trezor:
-
 - Ledger: `@ledgerhq/hw-app-aptos` (if it exists - Aptos Ledger app is community-maintained; check current support)
 - Trezor: not supported in `@trezor/connect-web` today
 

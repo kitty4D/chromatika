@@ -32,11 +32,14 @@
     "deploy:sui-policy:testnet": "node scripts/deploy-sui-policy.mjs --network testnet",
     "deploy:sui-policy:mainnet": "node scripts/deploy-sui-policy.mjs --network mainnet",
     "deploy:sui-policy:devnet": "node scripts/deploy-sui-policy.mjs --network devnet",
+    "deploy:sui-policy:testnet:final": "node scripts/deploy-sui-policy.mjs --network testnet --burn-upgrade-cap",
+    "deploy:sui-policy:mainnet:final": "node scripts/deploy-sui-policy.mjs --network mainnet --burn-upgrade-cap",
+    "deploy:sui-policy:devnet:final": "node scripts/deploy-sui-policy.mjs --network devnet --burn-upgrade-cap",
     "deploy:sui-policy:dry-run": "node scripts/deploy-sui-policy.mjs --dry-run",
     "build:solana-policy": "node scripts/deploy-solana-policy.mjs --build-only",
-    "test:solana-policy": "anchor test --skip-local-validator --provider.cluster devnet",
     "deploy:solana-policy": "node scripts/deploy-solana-policy.mjs",
     "deploy:solana-policy:devnet": "node scripts/deploy-solana-policy.mjs --cluster devnet --sync-program-id",
+    "deploy:solana-policy:devnet:final": "node scripts/deploy-solana-policy.mjs --cluster devnet --sync-program-id --final",
     "deploy:solana-policy:dry-run": "node scripts/deploy-solana-policy.mjs --dry-run"
   },
   "dependencies": {
@@ -46,17 +49,17 @@
     "@encrypt.xyz/pre-alpha-solana-client": "0.1.1",
     "@human.tech/waap-sdk": "^2.0.0",
     "@ika.xyz/pre-alpha-solana-client": "^0.1.1",
-    "@ika.xyz/sdk": "0.4.0",
+    "@ika.xyz/sdk": "0.4.1",
     "@lazorkit/wallet": "^2.0.1",
-    "@ledgerhq/hw-app-btc": "^10.21.1",
-    "@ledgerhq/hw-app-eth": "^7.8.0",
-    "@ledgerhq/hw-app-solana": "7.10.1",
-    "@ledgerhq/hw-app-sui": "1.9.0",
-    "@ledgerhq/hw-transport": "6.35.1",
-    "@ledgerhq/hw-transport-webhid": "^6.35.1",
-    "@mysten/kiosk": "^1.2.3",
-    "@mysten/sui": "2.16.0",
-    "@mysten/wallet-standard": "0.20.1",
+    "@ledgerhq/hw-app-btc": "^10.22.1",
+    "@ledgerhq/hw-app-eth": "^7.8.2",
+    "@ledgerhq/hw-app-solana": "7.10.2",
+    "@ledgerhq/hw-app-sui": "1.10.1",
+    "@ledgerhq/hw-transport": "6.35.2",
+    "@ledgerhq/hw-transport-webhid": "^6.35.2",
+    "@mysten/kiosk": "^1.2.6",
+    "@mysten/sui": "2.16.2",
+    "@mysten/wallet-standard": "0.20.3",
     "@noble/curves": "^2.2.0",
     "@noble/ed25519": "^3.1.0",
     "@noble/hashes": "^2.2.0",
@@ -71,7 +74,7 @@
     "@solana/kit": "^5.5.1",
     "@solana/wallet-standard-features": "1.3.0",
     "@solana/web3.js": "^1.98.4",
-    "@tanstack/react-query": "^5.100.6",
+    "@tanstack/react-query": "^5.100.9",
     "@trezor/connect-web": "^9.7.3",
     "@trpc/client": "^11.17.0",
     "@trpc/server": "^11.17.0",
@@ -90,18 +93,18 @@
     "framer-motion": "^12.38.0",
     "lucide-react": "^1.14.0",
     "qrcode": "^1.5.4",
-    "react": "^19.2.5",
-    "react-dom": "^19.2.5",
+    "react": "^19.2.6",
+    "react-dom": "^19.2.6",
     "superjson": "^2.2.6",
     "uint8array-tools": "^0.0.9",
     "varuint-bitcoin": "^2.0.0",
     "webextension-polyfill": "^0.12.0",
-    "zod": "^4.3.6"
+    "zod": "^4.4.3"
   },
   "overrides": {
-    "@mysten/sui": "2.16.0",
+    "@mysten/sui": "2.16.2",
     "@ika.xyz/sdk": {
-      "@mysten/sui": "2.16.0"
+      "@mysten/sui": "2.16.2"
     },
     "@ledgerhq/live-network": "2.4.3"
   },
@@ -118,13 +121,14 @@
     ],
     "overrides": {
       "@ledgerhq/live-network": "link:./stubs/ledger-live-network",
-      "@types/node": "^22"
+      "@types/node": "^22",
+      "@mysten/bcs": "2.0.5"
     }
   },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@playwright/test": "^1.59.1",
-    "@types/chrome": "^0.1.40",
+    "@types/chrome": "^0.1.42",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -135,8 +139,8 @@
     "globals": "^15.15.0",
     "sharp": "^0.34.5",
     "typescript": "^6.0.3",
-    "typescript-eslint": "^8.59.1",
-    "vite": "8.0.3",
+    "typescript-eslint": "^8.59.2",
+    "vite": "8.0.12",
     "vite-plugin-web-extension": "^4.5.1",
     "vitest": "^4.1.5"
   }

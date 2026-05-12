@@ -45,7 +45,6 @@ so chromatika takes the BIP39 phrase route: deterministic from typed words, no n
 ```
 
 step 4 and step 5 use **the same BIP39 seed**:
-
 - step 4: feeds SLIP10 derivation to produce a Solana keypair (for paying ika gRPC fees and as a known Solana address for funding)
 - step 5: feeds keccak directly (no SLIP10) to produce the ika user-share encryption keys seed
 

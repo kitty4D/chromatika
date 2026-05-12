@@ -3,6 +3,7 @@ import { getSession } from '@/background/session';
 import { getDwalletNetworkSettings, resolveSolanaRpcUrl } from '@/background/network/tier-network-settings';
 import {
   createSuiGraphQLClientFromRegistryNetworkId,
+  queryObjectsByTypeGraphQL,
   queryTransactionBlocksGraphQL,
   type SuiTxSummary,
 } from '@/background/sui-client';
@@ -296,7 +297,8 @@ async function buildSuiSample(limit = SAMPLE_LIMIT_DEFAULT): Promise<SuiExplorer
   const half = Math.max(12, Math.ceil(limit / 2));
   const [changedRows, fromRows] = await Promise.all([
     queryTransactionBlocksGraphQL(client, {
-      filter: { changedObject: coordinatorId },
+      // schema rename 2026-05: `changedObject` -> `affectedObject` on TransactionFilter.
+      filter: { affectedObject: coordinatorId },
       limit: half,
       includeEvents: true,
     }),
@@ -517,4 +519,126 @@ export async function getSolanaDwalletDetail(dwalletId: string): Promise<SolanaD
       status: sig.err === null ? 'success' : 'failure',
     })),
   };
+}
+
+// ---------------------------------------------------------------------------
+// UnverifiedPresignCap sample
+// ---------------------------------------------------------------------------
+// network-wide hint of in-flight presign requests. these caps are produced
+// when the coordinator hands back a presign session id but the network
+// hasn't verified the output yet; once verified, the cap converts to a
+// `VerifiedPresignCap`. high counts hint that the network is currently
+// processing many presigns (or that someone has a lot queued).
+//
+// per `UnverifiedPresignCap` in `coordinator_inner` (ika sdk):
+//   { id, dwallet_id: Option<bytes32>, presign_id: bytes32 }
+// - dwallet_id is `Some` for dWallet-bound presigns (ECDSA), `None` for
+//   global presigns (Schnorr / EdDSA).
+
+export type UnverifiedPresignCapRow = {
+  /** the UnverifiedPresignCap object id itself. */
+  id: string;
+  /** target dWallet, if the presign is bound to one (ECDSA). null for global presigns. */
+  dwalletId: string | null;
+  /** the in-flight presign session id this cap controls. */
+  presignId: string | null;
+};
+
+export type UnverifiedPresignCapSample = {
+  /** total caps observed in this sample window. capped by `maxPages * 50`. */
+  observed: number;
+  /** true if we hit the page cap before the network ran out of caps - real total is unknown. */
+  truncated: boolean;
+  /** most recent caps in the sample, ordered by GraphQL response order. */
+  recent: UnverifiedPresignCapRow[];
+  /** fully qualified Move type we queried (uses the original package, which is the canonical name). */
+  capType: string;
+  /** direct link to suiscan's collection-items view for this type. empty string if non-mainnet. */
+  suiscanCollectionUrl: string;
+};
+
+function extractOptionalIdField(json: unknown, key: string): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const v = (json as Record<string, unknown>)[key];
+  // BCS `Option<bytes32>` deserializes as either the bare id string or `{ id: '0x...' }` /
+  // `{ vec: ['0x...'] }` depending on the field schema. accept all three shapes.
+  if (typeof v === 'string' && v.startsWith('0x')) return v;
+  if (v && typeof v === 'object') {
+    const inner = (v as { id?: unknown }).id;
+    if (typeof inner === 'string' && inner.startsWith('0x')) return inner;
+    const vec = (v as { vec?: unknown }).vec;
+    if (Array.isArray(vec) && typeof vec[0] === 'string' && (vec[0] as string).startsWith('0x')) {
+      return vec[0] as string;
+    }
+  }
+  return null;
+}
+
+function extractRequiredIdField(json: unknown, key: string): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const v = (json as Record<string, unknown>)[key];
+  if (typeof v === 'string' && v.startsWith('0x')) return v;
+  if (v && typeof v === 'object') {
+    const inner = (v as { id?: unknown }).id;
+    if (typeof inner === 'string' && inner.startsWith('0x')) return inner;
+  }
+  return null;
+}
+
+/**
+ * walk one or more pages of `UnverifiedPresignCap` objects on Sui and return a sample.
+ *
+ * defaults to 2 pages (100 caps) - enough to give a sense of the in-flight queue without
+ * pinning the SW on a long walk. raise the limit if a caller wants exhaustive enumeration.
+ */
+export async function getUnverifiedPresignCapSample(
+  opts: { recentLimit?: number; maxPages?: number } = {},
+): Promise<UnverifiedPresignCapSample> {
+  const recentLimit = opts.recentLimit ?? 5;
+  const maxPages = opts.maxPages ?? 2;
+
+  const s = getSession();
+  if (!s) throw new Error('Wallet locked');
+  const { networkId, client } = await getSuiExplorerClient();
+
+  // use the original package because that's where the type's identity lives. an upgrade
+  // can replace the current package address; the type's canonical name still resolves via
+  // `ikaDwallet2pcMpcOriginalPackage`.
+  const originalPkg = s.ikaClient.ikaConfig.packages.ikaDwallet2pcMpcOriginalPackage;
+  const capType = `${originalPkg}::coordinator_inner::UnverifiedPresignCap`;
+
+  let observed = 0;
+  const recent: UnverifiedPresignCapRow[] = [];
+  let cursor: string | null = null;
+  let truncated = false;
+  for (let i = 0; i < maxPages; i++) {
+    const page = await queryObjectsByTypeGraphQL(client, {
+      filter: { type: capType },
+      first: 50,
+      after: cursor,
+    });
+    observed += page.nodes.length;
+    for (const node of page.nodes) {
+      if (recent.length < recentLimit) {
+        recent.push({
+          id: node.address,
+          dwalletId: extractOptionalIdField(node.json, 'dwallet_id'),
+          presignId: extractRequiredIdField(node.json, 'presign_id'),
+        });
+      }
+    }
+    if (!page.hasNextPage) break;
+    cursor = page.endCursor;
+    if (i === maxPages - 1) truncated = true;
+  }
+
+  // suiscan collection items url. only emitted for sui-mainnet because suiscan doesn't host
+  // collection-by-type pages on testnet/devnet; the UI falls back to a plain type label when
+  // this is empty.
+  const suiscanCollectionUrl =
+    networkId === 'sui-mainnet'
+      ? `https://suiscan.xyz/mainnet/collection/${capType}/items`
+      : '';
+
+  return { observed, truncated, recent, capType, suiscanCollectionUrl };
 }

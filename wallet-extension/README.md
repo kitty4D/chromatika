@@ -211,7 +211,7 @@ authoritative diagram: [`docs/architecture-final.html`](docs/architecture-final.
 - `ipfs / arweave` - **default**, hijack-safer loading.
 - `none` - no remote images.
 
-offscreen media cache is an architectural target only; no `chrome.offscreen` document yet, no `offscreen` manifest permission requested.
+**offscreen media cache shipped 2026-05-10**: third-party NFT/Ordinals imagery now fetches through a `chrome.offscreen` document (`offscreen.html` + `src/offscreen/media-cache.ts`) backed by an IndexedDB store with LRU eviction at 100 MB and 7-day TTL. UI surfaces the cache via `<NftImage>` (mints per-instance blob URLs from cached bytes; revokes on unmount). See [`docs/OFFSCREEN_MEDIA_CACHE.md`](docs/OFFSCREEN_MEDIA_CACHE.md).
 
 ### content script + injection
 

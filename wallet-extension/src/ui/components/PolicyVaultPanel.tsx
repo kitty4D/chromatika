@@ -1,12 +1,18 @@
 /**
- * policy vault settings panel: on-chain spend caps + panic button + rescue address.
+ * policy vault settings panel: on-chain spend caps + panic button + rescue address + the
+ * two-step unwrap exit path.
  *
  * three states:
- *   1. **not configured**: chromatika_policy package id is missing. surface a runbook +
- *      input for the user (or chromatika-team) to paste the deployed package id.
- *   2. **configured, not opted in**: explainer + "Opt in" button which opens a config modal.
+ *   1. **not configured**: no built-in Policy Vault package is available for the active
+ *      network (and no iteration override is set). End users see an informational message
+ *      pointing at the trust writeup; chromatika team during testing can expand the
+ *      "team only" details to point at a non-`:final` iteration deploy.
+ *   2. **configured, not opted in**: package details (id, audit hash, "upgrade authority
+ *      burned" badge) + "Opt in" button which opens a config modal.
  *   3. **opted in**: status (panicked / active), daily cap + spent today, actuators,
- *      rescue address, settings, big PANIC button.
+ *      rescue address, tune settings, big PANIC button, and the two-step unwrap section
+ *      (request -> wait stage delay -> claim) that returns the dWallet cap to the user
+ *      and consumes the on-chain vault.
  *
  * mounted under SettingsPage. settings -> security -> "On-chain spend caps + panic".
  */
@@ -30,6 +36,7 @@ import {
   Users,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
+import { microsToUsd, fmtMs, fmtMist } from './policy-vault-format';
 
 type PolicyState = Awaited<ReturnType<typeof trpc.getPolicyVaultState.query>>;
 type AuditEntry = Awaited<ReturnType<typeof trpc.getPolicyAuditEntries.query>>['entries'][number];
@@ -58,10 +65,14 @@ const AUDIT_KIND_LABELS: Record<AuditEntry['kind'], string> = {
   'pending-stage-off-staged': 'staging-off STAGED',
   'pending-stage-off-committed': 'staging-off COMMITTED',
   'set-stage-delay': 'set stage delay',
+  // unwrap two-step
+  'unwrap-requested': 'unwrap requested',
+  'unwrap-cancelled': 'unwrap cancelled',
+  'vault-unwrapped': 'vault UNWRAPPED',
 };
 
 const DEFAULT_OPTIN = {
-  dailyCapUsd: '50',
+  dailyCapUsd: '1000',
   coolDownSec: '60',
   unfreezeDelayDays: '7',
   stageDelayHours: '24', // default stage delay (24h); only matters once staging is opted in
@@ -69,35 +80,6 @@ const DEFAULT_OPTIN = {
   initialIkaMist: '10000000', // 0.01 IKA
   initialSuiMist: '10000000', // 0.01 SUI
 };
-
-function microsToUsd(microsStr: string): string {
-  try {
-    const n = BigInt(microsStr);
-    if (n === 0n) return '0';
-    const whole = n / 1_000_000n;
-    const frac = (n % 1_000_000n).toString().padStart(6, '0').replace(/0+$/, '');
-    return `${whole.toString()}${frac ? '.' + frac : ''}`;
-  } catch {
-    return microsStr;
-  }
-}
-
-function fmtMs(ms: number): string {
-  if (ms <= 0) return 'now';
-  if (ms < 60_000) return `${Math.ceil(ms / 1000)}s`;
-  if (ms < 3_600_000) return `${Math.ceil(ms / 60_000)}m`;
-  if (ms < 86_400_000) return `${(ms / 3_600_000).toFixed(1)}h`;
-  return `${(ms / 86_400_000).toFixed(1)}d`;
-}
-
-function fmtMist(mistStr: string): string {
-  try {
-    const n = BigInt(mistStr);
-    return `${(Number(n) / 1e9).toFixed(4)}`;
-  } catch {
-    return mistStr;
-  }
-}
 
 export function PolicyVaultPanel() {
   const [state, setState] = useState<PolicyState | null>(null);
@@ -120,24 +102,27 @@ export function PolicyVaultPanel() {
     try {
       const s = await trpc.getPolicyVaultState.query();
       setState(s);
+      // refresh audit for the primary wrapped dwallet (first link) since the panel
+      // currently surfaces it.
+      const primaryDwallet = s?.links?.[0]?.link?.dwalletId ?? null;
+      if (primaryDwallet) {
+        try {
+          const r = await trpc.getPolicyAuditEntries.query({ dwalletId: primaryDwallet, limit: 50 });
+          setAuditEntries(r.entries);
+        } catch {
+          /* best-effort */
+        }
+      } else {
+        setAuditEntries([]);
+      }
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
     }
   }, []);
 
-  const refreshAudit = useCallback(async () => {
-    try {
-      const r = await trpc.getPolicyAuditEntries.query({ limit: 50 });
-      setAuditEntries(r.entries);
-    } catch {
-      // best-effort; missing audit log shouldn't break the panel
-    }
-  }, []);
-
   useEffect(() => {
     void refresh();
-    void refreshAudit();
-  }, [refresh, refreshAudit]);
+  }, [refresh]);
 
   // live tick for the unfreeze countdown.
   useEffect(() => {
@@ -154,14 +139,13 @@ export function PolicyVaultPanel() {
         await fn();
         if (successMsg) setMsg(successMsg);
         await refresh();
-        await refreshAudit();
       } catch (e) {
         setErr(e instanceof Error ? e.message : String(e));
       } finally {
         setBusy(null);
       }
     },
-    [refresh, refreshAudit],
+    [refresh],
   );
 
   if (!state) {
@@ -177,9 +161,40 @@ export function PolicyVaultPanel() {
     );
   }
 
+  // Policy Vault is Sui-only today. The Solana Anchor program at
+  // `solana/chromatika-policy/` is pre-alpha scaffolding (CPI bodies stub to
+  // no-ops pending ika Solana Alpha-1), so the panel reads as disabled when the
+  // active vault is Solana-base instead of offering an opt-in we can't honor.
+  if (state.activeVaultBaseChain === 'solana') {
+    return (
+      <section className="sp-settingsSection">
+        <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <ShieldOff size={14} /> on-chain spend caps + panic button
+        </h3>
+        <div style={{ padding: 8, background: 'var(--theme-banner-warn-bg, rgba(251, 191, 36, 0.18))', borderRadius: 4 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+            Policy Vault is Sui-only for now
+          </div>
+          <p className="sp-muted" style={{ fontSize: 11, margin: 0 }}>
+            The Solana-base policy module is pre-alpha scaffolding pending the ika Solana
+            Alpha-1 CPI surface (today it would be a no-op signer). Switch to a Sui-base
+            vault to opt in to on-chain spend caps + panic + rescue. See{' '}
+            <code>wallet-extension/docs/POLICY_VAULT.md</code>.
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   const cfg = state.packageConfig;
-  const link = state.link;
-  const snap = state.snapshot;
+  // Multi-dwallet wraps are supported by the storage + action layer; the panel
+  // currently surfaces the first wrapped dwallet for management. A per-dwallet
+  // selector lands in a follow-up. Other wraps stay manageable via their own
+  // post-create prompts; the on-chain state is independent per dwallet.
+  const primary = state.links?.[0];
+  const link = primary?.link ?? null;
+  const snap = primary?.snapshot ?? null;
+  const additionalWrapCount = Math.max(0, (state.links?.length ?? 0) - 1);
 
   return (
     <section className="sp-settingsSection">
@@ -189,7 +204,7 @@ export function PolicyVaultPanel() {
       </h3>
 
       <p className="sp-muted" style={{ fontSize: 12, margin: '0 0 8px 0' }}>
-        Wraps the active vault's SECP dWallet cap in a Sui Move policy module. After opt-in,
+        Wraps a dWallet cap (SECP256K1 or ED25519) in a Sui Move policy module. After opt-in,
         every signature must pass the on-chain cap, cool-down, and non-panicked check before
         the ika MPC network issues it. The popup stops being your only line of defense.
       </p>
@@ -200,50 +215,65 @@ export function PolicyVaultPanel() {
         </div>
       )}
       {msg && (
-        <div className="sp-muted" style={{ fontSize: 11, color: '#86efac', marginBottom: 6 }}>
+        <div className="sp-muted" style={{ fontSize: 11, color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))', marginBottom: 6 }}>
           {msg}
         </div>
       )}
 
-      {/* state 1: package not configured */}
+      {/* state 1: no built-in package available for this network (or team override unset) */}
       {!cfg && (
-        <div style={{ padding: 8, background: 'rgba(255,196,77,0.08)', borderRadius: 4, marginBottom: 8 }}>
-          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>Deploy first</div>
-          <p className="sp-muted" style={{ fontSize: 11, margin: '0 0 6px 0' }}>
-            Build + deploy the chromatika_policy::sign_gate Move package to Sui (testnet or
-            mainnet), then paste the published package id here. Runbook: see
-            wallet-extension/docs/POLICY_VAULT.md.
-          </p>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input
-              type="text"
-              className="sp-input"
-              value={packageInput}
-              onChange={(e) => setPackageInput(e.target.value)}
-              placeholder="0x... (32-byte hex Sui package id)"
-              style={{ flex: 1, fontSize: 11, fontFamily: 'monospace' }}
-            />
-            <button
-              type="button"
-              className="sp-btn sp-btn--primary"
-              onClick={() =>
-                void run(
-                  'set-package',
-                  () => trpc.setPolicyPackageId.mutate({ packageId: packageInput.trim() }),
-                  'package id saved',
-                )
-              }
-              disabled={busy !== null || !/^0x[0-9a-fA-F]{64}$/.test(packageInput.trim())}
-            >
-              {busy === 'set-package' ? <Loader2 size={11} className="sp-spin" /> : 'save'}
-            </button>
+        <div style={{ padding: 8, background: 'var(--theme-banner-warn-bg, rgba(251, 191, 36, 0.18))', borderRadius: 4, marginBottom: 8 }}>
+          <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4 }}>
+            Policy package not available on this network
           </div>
+          <p className="sp-muted" style={{ fontSize: 11, margin: '0 0 6px 0' }}>
+            Chromatika ships built-in, audited, immutable Policy Vault packages per network.
+            None is available for your active network yet. The team will publish the production
+            cut alongside the next chromatika release. Once shipped, the panel here will show
+            the active package id, audit hash, and audit report link automatically. Read the
+            trust story at <code>local/wallet-special/policy-vault-deployment.md</code>.
+          </p>
+          <details style={{ marginTop: 6 }}>
+            <summary style={{ fontSize: 10, cursor: 'pointer', color: 'var(--faint)' }}>
+              chromatika team only: point at an iteration deploy
+            </summary>
+            <p className="sp-muted" style={{ fontSize: 10, margin: '6px 0 4px 0' }}>
+              During testing, the team can run <code>pnpm run deploy:sui-policy:&lt;env&gt;</code>
+              (without <code>:final</code>) to get a mutable iteration package, then paste the
+              printed id here. Production cuts use <code>:final</code> and ship via the built-in
+              registry instead. End users never see this input.
+            </p>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <input
+                type="text"
+                className="sp-input"
+                value={packageInput}
+                onChange={(e) => setPackageInput(e.target.value)}
+                placeholder="0x... (32-byte hex Sui package id, iteration deploy only)"
+                style={{ flex: 1, fontSize: 11, fontFamily: 'monospace' }}
+              />
+              <button
+                type="button"
+                className="sp-btn sp-btn--primary"
+                onClick={() =>
+                  void run(
+                    'set-package',
+                    () => trpc.setPolicyPackageId.mutate({ packageId: packageInput.trim() }),
+                    'package id saved (iteration override)',
+                  )
+                }
+                disabled={busy !== null || !/^0x[0-9a-fA-F]{64}$/.test(packageInput.trim())}
+              >
+                {busy === 'set-package' ? <Loader2 size={11} className="sp-spin" /> : 'save'}
+              </button>
+            </div>
+          </details>
         </div>
       )}
 
       {/* state 2: configured but not opted in */}
       {cfg && !link && (
-        <div style={{ padding: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 4, marginBottom: 8 }}>
+        <div style={{ padding: 8, background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 45%, transparent)', borderRadius: 4, marginBottom: 8 }}>
           <div style={{ fontSize: 11, marginBottom: 4 }}>
             package: <code style={{ fontFamily: 'monospace' }}>{cfg.packageId.slice(0, 14)}...</code>
             <button
@@ -269,17 +299,23 @@ export function PolicyVaultPanel() {
           ) : (
             <div>
               <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 6 }}>configure policy</div>
-              <Field label="daily cap (USD)">
+              <Field
+                label="daily cap (USD)"
+                hint="Most USD this dWallet can authorize in any rolling 24h. Lower = safer. Raises wait the staged-change delay (below); decreases apply immediately. 0 disables the cap entirely (panic + cool-down still apply)."
+              >
                 <input
                   type="text"
                   className="sp-input"
                   value={optIn.dailyCapUsd}
                   onChange={(e) => setOptIn({ ...optIn, dailyCapUsd: e.target.value })}
-                  placeholder="50 (0 = no cap)"
+                  placeholder="1000 (0 = no cap)"
                   style={{ fontSize: 11 }}
                 />
               </Field>
-              <Field label="cool-down between sends (sec)">
+              <Field
+                label="cool-down between sends (sec)"
+                hint="Minimum gap between two successful signatures. Slows a stolen key from burst-draining the cap. 60 seconds is a comfortable floor; 0 disables."
+              >
                 <input
                   type="text"
                   className="sp-input"
@@ -289,7 +325,10 @@ export function PolicyVaultPanel() {
                   style={{ fontSize: 11 }}
                 />
               </Field>
-              <Field label="unfreeze delay after panic (days)">
+              <Field
+                label="unfreeze delay after panic (days)"
+                hint="After hitting panic, how long signing stays blocked. The wait is the security feature: time for you to rotate compromised keys and for watchers to react. Any actuator can re-panic before the delay elapses to extend the freeze."
+              >
                 <input
                   type="text"
                   className="sp-input"
@@ -299,7 +338,10 @@ export function PolicyVaultPanel() {
                   style={{ fontSize: 11 }}
                 />
               </Field>
-              <Field label="stage-cap-raises delay (hours)">
+              <Field
+                label="stage-cap-raises delay (hours)"
+                hint="Also the unwrap delay. Used by the optional cap-staging safety net (OFF by default; toggle on under 'tune' once opted in). Cap raises then wait this long before taking effect; cap decreases stay immediate. Unwrap (turning the policy off) always waits this duration."
+              >
                 <input
                   type="text"
                   className="sp-input"
@@ -308,13 +350,11 @@ export function PolicyVaultPanel() {
                   placeholder="24"
                   style={{ fontSize: 11 }}
                 />
-                <div className="sp-muted" style={{ fontSize: 9, marginTop: 2 }}>
-                  Sets the delay used by the optional cap-staging safety net. Staging is OFF
-                  by default; toggle it on under "tune" once opted in. Cap raises will then
-                  wait this long before taking effect; cap decreases stay immediate.
-                </div>
               </Field>
-              <Field label="rescue address (drain dest while panicked) (optional)">
+              <Field
+                label="rescue address (drain dest while panicked) (optional)"
+                hint="Where leftover IKA + SUI inside the vault gets drained if you hit panic and want to evacuate. Use a hardware wallet or cold storage address. Leave blank to set later from the live panel."
+              >
                 <input
                   type="text"
                   className="sp-input"
@@ -324,7 +364,10 @@ export function PolicyVaultPanel() {
                   style={{ fontSize: 11, fontFamily: 'monospace' }}
                 />
               </Field>
-              <Field label="initial IKA fund (mist)">
+              <Field
+                label="initial IKA fund (mist)"
+                hint="Seed IKA the vault uses to pay ika protocol fees for its own signing tx. Topped up later from this panel. 10_000_000 mist = 0.01 IKA = plenty for hundreds of signs."
+              >
                 <input
                   type="text"
                   className="sp-input"
@@ -333,7 +376,10 @@ export function PolicyVaultPanel() {
                   style={{ fontSize: 11 }}
                 />
               </Field>
-              <Field label="initial SUI fund (mist)">
+              <Field
+                label="initial SUI fund (mist)"
+                hint="Seed SUI the vault uses to pay Sui gas for its own signing tx. Topped up later from this panel. 10_000_000 mist = 0.01 SUI = plenty for hundreds of signs."
+              >
                 <input
                   type="text"
                   className="sp-input"
@@ -425,6 +471,24 @@ export function PolicyVaultPanel() {
             )}
           </div>
 
+          {additionalWrapCount > 0 && (
+            <div
+              className="sp-muted"
+              style={{
+                fontSize: 10,
+                marginBottom: 6,
+                padding: '4px 6px',
+                background: 'rgba(255,255,255,0.04)',
+                borderRadius: 3,
+              }}
+            >
+              Showing the first wrapped dWallet ({curveLabel(link.curve)}).{' '}
+              {additionalWrapCount} other
+              {additionalWrapCount === 1 ? ' dWallet is' : ' dWallets are'} also wrapped on this
+              vault; per-dWallet selector is a follow-up. On-chain state is independent per wrap.
+            </div>
+          )}
+
           {/* vault id + refresh */}
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, marginBottom: 6, flexWrap: 'wrap' }}>
             <span className="sp-muted">vault:</span>
@@ -477,7 +541,7 @@ export function PolicyVaultPanel() {
                   <strong>${microsToUsd(snap.pendingCapMicros)}</strong>
                   {' · '}
                   {tickMs >= snap.pendingCapAtMs ? (
-                    <span style={{ color: '#86efac' }}>delay elapsed — commit available</span>
+                    <span style={{ color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))' }}>delay elapsed — commit available</span>
                   ) : (
                     <span className="sp-muted">commits in {fmtMs(snap.pendingCapAtMs - tickMs)}</span>
                   )}
@@ -488,7 +552,7 @@ export function PolicyVaultPanel() {
                       onClick={() =>
                         void run(
                           'commit-cap',
-                          () => trpc.commitPendingPolicyCap.mutate(),
+                          () => trpc.commitPendingPolicyCap.mutate({ dwalletId: link.dwalletId }),
                           'pending cap committed',
                         )
                       }
@@ -504,7 +568,7 @@ export function PolicyVaultPanel() {
                 <div style={{ fontSize: 11 }}>
                   staging-off:{' '}
                   {tickMs >= snap.pendingStageOffAtMs ? (
-                    <span style={{ color: '#86efac' }}>delay elapsed — commit available</span>
+                    <span style={{ color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))' }}>delay elapsed — commit available</span>
                   ) : (
                     <span className="sp-muted">
                       commits in {fmtMs(snap.pendingStageOffAtMs - tickMs)}
@@ -517,7 +581,7 @@ export function PolicyVaultPanel() {
                       onClick={() =>
                         void run(
                           'commit-stage-off',
-                          () => trpc.commitPendingPolicyStageOff.mutate(),
+                          () => trpc.commitPendingPolicyStageOff.mutate({ dwalletId: link.dwalletId }),
                           'staging-off committed',
                         )
                       }
@@ -621,7 +685,7 @@ export function PolicyVaultPanel() {
                         onClick={() =>
                           void run(
                             'remove-actuator',
-                            () => trpc.removePolicyActuator.mutate({ target: a }),
+                            () => trpc.removePolicyActuator.mutate({ dwalletId: link.dwalletId, target: a }),
                             'actuator removed',
                           )
                         }
@@ -649,7 +713,7 @@ export function PolicyVaultPanel() {
                       onClick={() =>
                         void run(
                           'add-actuator',
-                          () => trpc.addPolicyActuator.mutate({ newActuator: actuatorInput.trim() }),
+                          () => trpc.addPolicyActuator.mutate({ dwalletId: link.dwalletId, newActuator: actuatorInput.trim() }),
                           'actuator added',
                         ).then(() => setActuatorInput(''))
                       }
@@ -693,6 +757,7 @@ export function PolicyVaultPanel() {
                           'set-cap',
                           () =>
                             trpc.setPolicyDailyCap.mutate({
+                              dwalletId: link.dwalletId,
                               newCapMicros: String(BigInt(Math.round(parseFloat(capDraftUsd || '0') * 1_000_000))),
                             }),
                           'cap updated',
@@ -723,6 +788,7 @@ export function PolicyVaultPanel() {
                           'set-cool',
                           () =>
                             trpc.setPolicyCoolDown.mutate({
+                              dwalletId: link.dwalletId,
                               newCoolDownMs: String(
                                 BigInt(Math.round(parseFloat(coolDraftSec || '0') * 1000)),
                               ),
@@ -755,6 +821,7 @@ export function PolicyVaultPanel() {
                           'set-rescue',
                           () =>
                             trpc.setPolicyRescueAddress.mutate({
+                              dwalletId: link.dwalletId,
                               rescueAddress: rescueDraft.trim() || undefined,
                             }),
                           'rescue address updated',
@@ -798,7 +865,7 @@ export function PolicyVaultPanel() {
                         void run(
                           'toggle-stage',
                           () =>
-                            trpc.setPolicyStageCapRaises.mutate({ next: !snap.stageCapRaises }),
+                            trpc.setPolicyStageCapRaises.mutate({ dwalletId: link.dwalletId, next: !snap.stageCapRaises }),
                           snap.stageCapRaises
                             ? 'staging-off requested (will stage for delay)'
                             : 'staging is now ON',
@@ -839,6 +906,7 @@ export function PolicyVaultPanel() {
                             'set-stage-delay',
                             () =>
                               trpc.setPolicyStageDelayMs.mutate({
+                                dwalletId: link.dwalletId,
                                 newDelayMs: String(
                                   BigInt(
                                     Math.round(parseFloat(stageDelayDraftHours || '0') * 3_600_000),
@@ -868,7 +936,7 @@ export function PolicyVaultPanel() {
               onClick={() =>
                 void run(
                   'replenish',
-                  () => trpc.replenishPolicyPresign.mutate(),
+                  () => trpc.replenishPolicyPresign.mutate({ dwalletId: link.dwalletId }),
                   'presign added',
                 )
               }
@@ -882,7 +950,7 @@ export function PolicyVaultPanel() {
 
           {/* PANIC */}
           {snap && !snap.panicked && (
-            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+            <div style={{ marginTop: 12, paddingTop: 10, borderTop: '1px solid var(--border, rgba(255,255,255,0.08))' }}>
               {!confirmPanic ? (
                 <button
                   type="button"
@@ -890,7 +958,7 @@ export function PolicyVaultPanel() {
                   onClick={() => setConfirmPanic(true)}
                   style={{
                     background: 'rgba(239,68,68,0.15)',
-                    color: '#ef4444',
+                    color: 'oklch(0.6 0.22 25)',
                     border: '1px solid rgba(239,68,68,0.4)',
                     width: '100%',
                     fontSize: 13,
@@ -912,7 +980,7 @@ export function PolicyVaultPanel() {
                     border: '1px solid rgba(239,68,68,0.4)',
                   }}
                 >
-                  <div style={{ fontSize: 12, fontWeight: 600, color: '#ef4444', marginBottom: 4 }}>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'oklch(0.6 0.22 25)', marginBottom: 4 }}>
                     confirm: this freezes ALL chromatika signing for this dWallet on-chain
                   </div>
                   <div className="sp-muted" style={{ fontSize: 10, marginBottom: 6 }}>
@@ -925,12 +993,12 @@ export function PolicyVaultPanel() {
                       type="button"
                       className="sp-btn"
                       onClick={() =>
-                        void run('panic', () => trpc.panicVault.mutate(), 'panic active').then(() =>
+                        void run('panic', () => trpc.panicVault.mutate({ dwalletId: link.dwalletId }), 'panic active').then(() =>
                           setConfirmPanic(false),
                         )
                       }
                       disabled={busy !== null}
-                      style={{ background: '#ef4444', color: 'white', flex: 1 }}
+                      style={{ background: 'oklch(0.6 0.22 25)', color: 'white', flex: 1 }}
                     >
                       {busy === 'panic' ? <Loader2 size={11} className="sp-spin" /> : 'YES, PANIC NOW'}
                     </button>
@@ -954,7 +1022,7 @@ export function PolicyVaultPanel() {
               <button
                 type="button"
                 className="sp-btn"
-                onClick={() => void run('unfreeze', () => trpc.unfreezeVault.mutate(), 'unfrozen')}
+                onClick={() => void run('unfreeze', () => trpc.unfreezeVault.mutate({ dwalletId: link.dwalletId }), 'unfrozen')}
                 disabled={busy !== null || tickMs < snap.unfreezeUnlocksAtMs}
                 style={{
                   background:
@@ -1058,7 +1126,7 @@ export function PolicyVaultPanel() {
                 <button
                   type="button"
                   className="sp-btn sp-btn--ghost"
-                  onClick={() => void refreshAudit()}
+                  onClick={() => void refresh()}
                   style={{ fontSize: 10, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3 }}
                 >
                   <RefreshCw size={10} /> refresh
@@ -1069,18 +1137,139 @@ export function PolicyVaultPanel() {
                   onClick={() =>
                     void run(
                       'clear-audit',
-                      () => trpc.clearPolicyAuditEntries.mutate(),
+                      () => trpc.clearPolicyAuditEntries.mutate({ dwalletId: link.dwalletId }),
                       'audit log cleared (local only)',
                     )
                   }
                   disabled={busy !== null || (auditEntries?.length ?? 0) === 0}
-                  style={{ fontSize: 10, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3, color: '#ef4444' }}
+                  style={{ fontSize: 10, padding: '1px 6px', display: 'inline-flex', alignItems: 'center', gap: 3, color: 'oklch(0.6 0.22 25)' }}
                 >
                   <Trash2 size={10} /> clear
                 </button>
               </div>
             </div>
           </details>
+
+          {/* exit policy: two-step unwrap (the user-controlled way out / migration primitive) */}
+          {snap && (
+            <details style={{ marginTop: 10, padding: 6, border: '1px solid color-mix(in oklch, oklch(0.6 0.22 25) 30%, transparent)', borderRadius: 4 }}>
+              <summary style={{ fontSize: 11, fontWeight: 600, cursor: 'pointer', color: 'var(--theme-banner-error-fg, oklch(0.78 0.14 25))' }}>
+                <Unlock size={11} /> exit policy (unwrap dWallet cap)
+              </summary>
+              <div style={{ marginTop: 6 }}>
+                {!snap.unwrapRequested && (
+                  <>
+                    <p className="sp-muted" style={{ fontSize: 10, margin: '0 0 6px 0' }}>
+                      Pull your wrapped dWallet cap back out of the PolicyVault. Two-step on
+                      purpose: request now, claim after the staged delay (
+                      {fmtMs(snap.stageDelayMs)}). During the wait, any actuator can panic
+                      this vault to block the claim. If a thief got your active key, that wait
+                      is the protection.
+                    </p>
+                    <button
+                      type="button"
+                      className="sp-btn sp-btn--ghost"
+                      onClick={() =>
+                        void run(
+                          'request-unwrap',
+                          () => trpc.requestPolicyUnwrap.mutate({ dwalletId: link.dwalletId }),
+                          `unwrap requested. Claim available in ~${fmtMs(snap.stageDelayMs)}.`,
+                        )
+                      }
+                      disabled={busy !== null || snap.panicked}
+                      style={{ fontSize: 10 }}
+                    >
+                      request unwrap
+                    </button>
+                    {snap.panicked && (
+                      <div className="sp-muted" style={{ fontSize: 10, marginTop: 4, color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))' }}>
+                        Cannot request unwrap while panicked. Unfreeze first (after the delay),
+                        then retry.
+                      </div>
+                    )}
+                  </>
+                )}
+                {snap.unwrapRequested && snap.unwrapAtMs > Date.now() && (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', marginBottom: 4 }}>
+                      <TimerReset size={11} /> Unwrap pending. Claim unlocks in{' '}
+                      {fmtMs(snap.unwrapAtMs - Date.now())}.
+                    </div>
+                    <p className="sp-muted" style={{ fontSize: 10, margin: '0 0 6px 0' }}>
+                      During the wait you can still sign normally (cap + cooldown still apply).
+                      Any actuator can panic to block the claim if this request was not you.
+                    </p>
+                    <button
+                      type="button"
+                      className="sp-btn sp-btn--ghost"
+                      onClick={() =>
+                        void run(
+                          'cancel-unwrap',
+                          () => trpc.cancelPolicyUnwrap.mutate({ dwalletId: link.dwalletId }),
+                          'unwrap request cancelled',
+                        )
+                      }
+                      disabled={busy !== null}
+                      style={{ fontSize: 10 }}
+                    >
+                      cancel unwrap
+                    </button>
+                  </>
+                )}
+                {snap.unwrapRequested && snap.unwrapAtMs <= Date.now() && (
+                  <>
+                    <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))', marginBottom: 4 }}>
+                      <Unlock size={11} /> Unwrap ready to claim.
+                    </div>
+                    <p className="sp-muted" style={{ fontSize: 10, margin: '0 0 6px 0' }}>
+                      Claiming consumes the on-chain PolicyVault and returns the dWallet cap +
+                      any leftover IKA / SUI balance + remaining presigns to your address. The
+                      dWallet becomes policy-free after this. You can re-opt in to a newer
+                      audited Policy Vault version in the same step.
+                    </p>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button
+                        type="button"
+                        className="sp-btn sp-btn--primary"
+                        onClick={() =>
+                          void run(
+                            'claim-unwrap',
+                            () => trpc.claimPolicyUnwrap.mutate({ dwalletId: link.dwalletId }),
+                            'unwrap claimed. dWallet cap returned; vault consumed.',
+                          )
+                        }
+                        disabled={busy !== null || snap.panicked}
+                        style={{ fontSize: 10 }}
+                      >
+                        {busy === 'claim-unwrap' ? <Loader2 size={11} className="sp-spin" /> : 'claim unwrap'}
+                      </button>
+                      <button
+                        type="button"
+                        className="sp-btn sp-btn--ghost"
+                        onClick={() =>
+                          void run(
+                            'cancel-unwrap',
+                            () => trpc.cancelPolicyUnwrap.mutate({ dwalletId: link.dwalletId }),
+                            'unwrap request cancelled',
+                          )
+                        }
+                        disabled={busy !== null}
+                        style={{ fontSize: 10 }}
+                      >
+                        cancel
+                      </button>
+                    </div>
+                    {snap.panicked && (
+                      <div className="sp-muted" style={{ fontSize: 10, marginTop: 4, color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))' }}>
+                        Cannot claim while panicked. This is the bypass-attack gate; an attacker
+                        who triggered the unwrap cannot complete it while the vault is frozen.
+                      </div>
+                    )}
+                  </>
+                )}
+              </div>
+            </details>
+          )}
 
           {/* local clear (removes the local pointer; on-chain object remains) */}
           <details style={{ marginTop: 10 }}>
@@ -1097,7 +1286,7 @@ export function PolicyVaultPanel() {
               onClick={() =>
                 void run(
                   'clear-link',
-                  () => trpc.clearLocalPolicyVaultLink.mutate(),
+                  () => trpc.clearLocalPolicyVaultLink.mutate({ dwalletId: link.dwalletId }),
                   'local link cleared',
                 )
               }
@@ -1113,11 +1302,42 @@ export function PolicyVaultPanel() {
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function curveLabel(n: number): string {
+  // ika curve numbers: SECP256K1=0, SECP256R1=1, ED25519=2, RISTRETTO=3
+  switch (n) {
+    case 0:
+      return 'SECP256K1';
+    case 1:
+      return 'SECP256R1';
+    case 2:
+      return 'ED25519';
+    case 3:
+      return 'RISTRETTO';
+    default:
+      return `curve#${n}`;
+  }
+}
+
+function Field({
+  label,
+  hint,
+  children,
+}: {
+  label: string;
+  /** Optional plain-English explanation of what this setting controls and how to think
+   *  about the value. Renders below the input as small muted text. */
+  hint?: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div style={{ marginBottom: 6 }}>
+    <div style={{ marginBottom: 8 }}>
       <div style={{ fontSize: 10, color: 'var(--sp-muted, rgba(255,255,255,0.5))', marginBottom: 2 }}>{label}</div>
       {children}
+      {hint && (
+        <div className="sp-muted" style={{ fontSize: 10, marginTop: 3, lineHeight: 1.45, opacity: 0.7 }}>
+          {hint}
+        </div>
+      )}
     </div>
   );
 }

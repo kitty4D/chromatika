@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 type ChromeStorageMock = {
   store: Record<string, unknown>;
-  get: (keys: string[], cb: (r: Record<string, unknown>) => void) => void;
+  get: (keys: string[] | null, cb: (r: Record<string, unknown>) => void) => void;
   set: (items: Record<string, unknown>, cb: () => void) => void;
   remove: (keys: string[], cb: () => void) => void;
 };
@@ -16,6 +16,12 @@ const storageMock: ChromeStorageMock = {
   store: {},
   get(keys, cb) {
     const out: Record<string, unknown> = {};
+    // `chrome.storage.local.get(null, cb)` returns the entire store; the policy-vault
+    // listing helpers use this to scan all per-(vault, dwallet) keys.
+    if (keys === null) {
+      cb({ ...this.store });
+      return;
+    }
     for (const k of keys) if (k in this.store) out[k] = this.store[k];
     cb(out);
   },
@@ -95,13 +101,13 @@ describe('policy-vault-storage: per-vault link', () => {
 
   it('returns null for a vault with no link', async () => {
     const m = await import('./policy-vault-storage');
-    expect(await m.getPolicyVaultLink('vault-x')).toBeNull();
+    expect(await m.getPolicyVaultLink('vault-x', VALID_DWALLET_ID)).toBeNull();
   });
 
   it('round-trips a link', async () => {
     const m = await import('./policy-vault-storage');
     await m.setPolicyVaultLink('vault-x', { ...baseLink });
-    const got = await m.getPolicyVaultLink('vault-x');
+    const got = await m.getPolicyVaultLink('vault-x', VALID_DWALLET_ID);
     expect(got?.vaultObjectId).toBe(VALID_VAULT_ID);
     expect(got?.dwalletId).toBe(VALID_DWALLET_ID);
     expect(got?.primaryActuator).toBe(VALID_ACTUATOR);
@@ -115,10 +121,32 @@ describe('policy-vault-storage: per-vault link', () => {
       ...baseLink,
       vaultObjectId: '0x' + 'e'.repeat(64),
     });
-    const a = await m.getPolicyVaultLink('vault-a');
-    const b = await m.getPolicyVaultLink('vault-b');
+    const a = await m.getPolicyVaultLink('vault-a', VALID_DWALLET_ID);
+    const b = await m.getPolicyVaultLink('vault-b', VALID_DWALLET_ID);
     expect(a?.vaultObjectId).toBe(VALID_VAULT_ID);
     expect(b?.vaultObjectId).toBe('0x' + 'e'.repeat(64));
+  });
+
+  it('isolates per-dwallet keys within a single vault', async () => {
+    const m = await import('./policy-vault-storage');
+    const dwalletA = '0x' + 'c'.repeat(64);
+    const dwalletB = '0x' + 'f'.repeat(64);
+    await m.setPolicyVaultLink('vault-x', { ...baseLink, dwalletId: dwalletA });
+    await m.setPolicyVaultLink('vault-x', {
+      ...baseLink,
+      dwalletId: dwalletB,
+      vaultObjectId: '0x' + 'e'.repeat(64),
+      curve: 2,
+      signatureAlgorithm: 3,
+    });
+    const a = await m.getPolicyVaultLink('vault-x', dwalletA);
+    const b = await m.getPolicyVaultLink('vault-x', dwalletB);
+    expect(a?.vaultObjectId).toBe(VALID_VAULT_ID);
+    expect(a?.curve).toBe(0);
+    expect(b?.vaultObjectId).toBe('0x' + 'e'.repeat(64));
+    expect(b?.curve).toBe(2);
+    const list = await m.listPolicyVaultLinks('vault-x');
+    expect(list.length).toBe(2);
   });
 
   it('rejects malformed vaultObjectId', async () => {
@@ -131,7 +159,7 @@ describe('policy-vault-storage: per-vault link', () => {
   it('updateSnapshot patches cached fields', async () => {
     const m = await import('./policy-vault-storage');
     await m.setPolicyVaultLink('vault-x', { ...baseLink });
-    await m.updatePolicyVaultSnapshot('vault-x', {
+    await m.updatePolicyVaultSnapshot('vault-x', VALID_DWALLET_ID, {
       panicked: false,
       panicAtMs: 0,
       unfreezeDelayMs: 7 * 86_400_000,
@@ -153,8 +181,10 @@ describe('policy-vault-storage: per-vault link', () => {
       pendingCapAtMs: 0,
       pendingStageOff: false,
       pendingStageOffAtMs: 0,
+      unwrapRequested: false,
+      unwrapAtMs: 0,
     });
-    const got = await m.getPolicyVaultLink('vault-x');
+    const got = await m.getPolicyVaultLink('vault-x', VALID_DWALLET_ID);
     expect(got?.cachedSnapshot?.dailyCapMicros).toBe('50000000');
     expect(got?.cachedSnapshot?.actuators).toEqual([VALID_ACTUATOR]);
     expect(typeof got?.lastSyncMs).toBe('number');
@@ -162,7 +192,7 @@ describe('policy-vault-storage: per-vault link', () => {
 
   it('updateSnapshot is a no-op when no link exists', async () => {
     const m = await import('./policy-vault-storage');
-    await m.updatePolicyVaultSnapshot('vault-none', {
+    await m.updatePolicyVaultSnapshot('vault-none', VALID_DWALLET_ID, {
       panicked: false,
       panicAtMs: 0,
       unfreezeDelayMs: 0,
@@ -184,15 +214,17 @@ describe('policy-vault-storage: per-vault link', () => {
       pendingCapAtMs: 0,
       pendingStageOff: false,
       pendingStageOffAtMs: 0,
+      unwrapRequested: false,
+      unwrapAtMs: 0,
     });
-    expect(await m.getPolicyVaultLink('vault-none')).toBeNull();
+    expect(await m.getPolicyVaultLink('vault-none', VALID_DWALLET_ID)).toBeNull();
   });
 
   it('clear removes the link entry', async () => {
     const m = await import('./policy-vault-storage');
     await m.setPolicyVaultLink('vault-x', { ...baseLink });
-    expect(await m.getPolicyVaultLink('vault-x')).not.toBeNull();
-    await m.clearPolicyVaultLink('vault-x');
-    expect(await m.getPolicyVaultLink('vault-x')).toBeNull();
+    expect(await m.getPolicyVaultLink('vault-x', VALID_DWALLET_ID)).not.toBeNull();
+    await m.clearPolicyVaultLink('vault-x', VALID_DWALLET_ID);
+    expect(await m.getPolicyVaultLink('vault-x', VALID_DWALLET_ID)).toBeNull();
   });
 });

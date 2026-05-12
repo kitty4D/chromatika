@@ -2,22 +2,30 @@
 seeds = false
 skip-lint = false
 
+[programs.localnet]
+chromatika_policy = "F6fnHYySvjJjvFGzqLb8h2L9qZrq2M8krNviXdNJaPsP"
+
 [programs.devnet]
-chromatika_policy = "ChrPo1icyVau1tProgramID11111111111111111111"
+chromatika_policy = "F6fnHYySvjJjvFGzqLb8h2L9qZrq2M8krNviXdNJaPsP"
 
 [registry]
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
-[scripts]
-test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"
-
-# NOTE: program id above is a placeholder. After `anchor build`, copy the actual
-# program id from `target/deploy/chromatika_policy-keypair.json`'s pubkey into:
-#   1. this file (programs.devnet entry)
+# Policy Vault is Sui-only today. The Solana Anchor program is pre-alpha
+# scaffolding pending ika Solana Alpha-1 (CPI bodies stub to no-ops). The
+# chromatika UI hides the opt-in for Solana-base vaults and the background
+# action layer refuses to wrap. `anchor build` still works for verifying the
+# Rust program compiles; there is no TS test script wired today (the bankrun
+# harness was removed because solana-bankrun ships no Windows binary, and the
+# program does nothing testable until Alpha-1 lands a real CPI surface).
+#
+# program id above is a placeholder. When the program ships, copy the actual
+# program id from `target/deploy/chromatika_policy-keypair.json` into:
+#   1. this file (programs.localnet + programs.devnet entries)
 #   2. lib.rs declare_id!(...)
 #   3. wallet-extension chrome extension Settings -> Security -> "On-chain spend caps + panic"
 #      (parallel slot for Solana base, separate from the Sui package id)

@@ -34,9 +34,9 @@ export function DAppsPage({ onBack }: { onBack: () => void }) {
         <button type="button" className="sp-backBtn" onClick={onBack}>
           ← back
         </button>
-        <div className="sp-pageTitle" style={{ marginBottom: 0 }}>
+        <h2 className="sp-pageTitle" style={{ marginBottom: 0 }}>
           connected dapps
-        </div>
+        </h2>
       </div>
 
       {perms === null && (

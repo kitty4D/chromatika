@@ -13,7 +13,7 @@ a chromatika vault can have a **passkey** envelope that uses webauthn's PRF (HMA
   "rpId": "<extension chrome-extension://... origin>",
   "prfSaltB64": "<32 random bytes>",
   "wrappedMasterKeyB64": "<AES-GCM ciphertext + tag>",
-  "envIvB64": "<12 random bytes>",
+  "envIvB64": "<12 random bytes>"
 }
 ```
 
@@ -68,7 +68,6 @@ HKDF gives us domain separation (`info='chromatika passkey envelope v1'`) and re
 ## determinism guarantee
 
 webauthn PRF spec mandates that for a given (credential, salt) pair, the output is identical across:
-
 - different assertions on the same device
 - different devices that the credential has been **synced to** (e.g. iCloud Passwords sync, Google Passkey sync)
 - different chromatika installs that authenticate against the same credential
@@ -91,9 +90,7 @@ chromatika doesn't distinguish in storage - the envelope record is identical for
 ```js
 extensions: {
   prf: {
-    eval: {
-      first: prfSalt;
-    } // 32-byte salt; we only use 'first', not 'second'
+    eval: { first: prfSalt }    // 32-byte salt; we only use 'first', not 'second'
   }
 }
 ```

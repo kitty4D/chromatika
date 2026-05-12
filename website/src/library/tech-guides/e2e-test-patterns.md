@@ -16,7 +16,7 @@ defined in `e2e/fixtures.ts`:
 export async function mockSwFetch(
   worker: Worker,
   pattern: string,
-  response: { status: number; body: unknown; headers?: Record<string, string> }
+  response: { status: number; body: unknown; headers?: Record<string, string> },
 ): Promise<void>;
 
 export async function clearSwFetchMocks(worker: Worker): Promise<void>;
@@ -29,7 +29,6 @@ export async function clearSwFetchMocks(worker: Worker): Promise<void>;
 ### implementation
 
 `worker.evaluate(...)` runs JS in the SW context. on first call:
-
 1. captures `globalThis.fetch` as `__chromatika_e2e_origFetch`
 2. replaces `globalThis.fetch` with a wrapper that checks the URL against a `Map<pattern, response>` before falling through
 3. sets `__chromatika_e2e_fetchPatched = true` so subsequent calls just add to the map
@@ -43,21 +42,13 @@ test.afterEach(async ({ backgroundWorker }) => {
   await clearSwFetchMocks(backgroundWorker);
 });
 
-test("opting into DeSo + rescanning surfaces the mocked balance row", async ({
-  page,
-  extensionId,
-  backgroundWorker,
+test('opting into DeSo + rescanning surfaces the mocked balance row', async ({
+  page, extensionId, backgroundWorker,
 }) => {
-  await mockSwFetch(backgroundWorker, "/api/v0/get-users-stateless", {
+  await mockSwFetch(backgroundWorker, '/api/v0/get-users-stateless', {
     status: 200,
     body: {
-      UserList: [
-        {
-          PublicKeyBase58Check: "E2E_PLACEHOLDER",
-          BalanceNanos: 1_500_000_000,
-          ProfileEntryResponse: { Username: "e2e_test_user" },
-        },
-      ],
+      UserList: [{ PublicKeyBase58Check: 'E2E_PLACEHOLDER', BalanceNanos: 1_500_000_000, ProfileEntryResponse: { Username: 'e2e_test_user' } }],
     },
   });
 
@@ -84,22 +75,21 @@ URL parameter `e2eLazorMock` on any page that loads `lazor-init.ts`:
 `lazor-init.ts`:
 
 ```ts
-type LazorMockScenario = "deterministic" | "non-deterministic" | "no-pda";
+type LazorMockScenario = 'deterministic' | 'non-deterministic' | 'no-pda';
 
 function readLazorMockScenario(): LazorMockScenario | null {
   if (!import.meta.env.DEV) return null;
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   try {
-    const v = new URL(window.location.href).searchParams.get("e2eLazorMock");
-    if (v === "deterministic" || v === "non-deterministic" || v === "no-pda") return v;
+    const v = new URL(window.location.href).searchParams.get('e2eLazorMock');
+    if (v === 'deterministic' || v === 'non-deterministic' || v === 'no-pda') return v;
   } catch {}
   return null;
 }
 
 export async function lazorConnect(opts) {
   const mock = readLazorMockScenario();
-  if (mock !== null)
-    return { publicKey: CANNED_PASSKEY_B64, credentialId: CANNED_CRED_ID, isCreated: true };
+  if (mock !== null) return { publicKey: CANNED_PASSKEY_B64, credentialId: CANNED_CRED_ID, isCreated: true };
   // ... real SDK path ...
 }
 // same gating in resolveLazorSmartWalletPda + lazorDeterminismProbe
@@ -108,7 +98,6 @@ export async function lazorConnect(opts) {
 ### canned values
 
 deterministic shapes so downstream consumers don't choke:
-
 - `passkeyPublicKeyB64`: a syntactically-valid base64 string
 - `credentialIdB64`: any string (Lazor portal returns base64 in production)
 - `smartWalletPdaB58`: valid base58 32-byte solana pubkey
@@ -118,26 +107,17 @@ deterministic shapes so downstream consumers don't choke:
 ### example: lazor-signature-onboarding spec
 
 ```ts
-test('deterministic mock: full bootstrap persists vault with seedSource = "lazor-signature"', async ({
-  page,
-  extensionId,
-}) => {
-  await page.goto(`chrome-extension://${extensionId}/onboarding.html?e2eLazorMock=deterministic`, {
-    waitUntil: "load",
-  });
+test('deterministic mock: full bootstrap persists vault with seedSource = "lazor-signature"', async ({ page, extensionId }) => {
+  await page.goto(`chrome-extension://${extensionId}/onboarding.html?e2eLazorMock=deterministic`, { waitUntil: 'load' });
   // ... walk through LazorStep, type password, click continue ...
-  await expect(page.getByRole("heading", { name: /wallet ready/i })).toBeVisible({
-    timeout: 90_000,
-  });
+  await expect(page.getByRole('heading', { name: /wallet ready/i })).toBeVisible({ timeout: 90_000 });
 
   // assert the persisted record's seedSource via tRPC
   const ctx = await page.evaluate(async () => {
     const w = window as { chrome?: { runtime?: { sendMessage?: any } } };
-    return w.chrome?.runtime?.sendMessage?.({
-      trpc: { id: "scanContextForActiveVault", input: undefined, type: "query" },
-    });
+    return w.chrome?.runtime?.sendMessage?.({ trpc: { id: 'scanContextForActiveVault', input: undefined, type: 'query' } });
   });
-  expect((ctx as any).seedSource).toBe("lazor-signature");
+  expect((ctx as any).seedSource).toBe('lazor-signature');
 });
 ```
 
@@ -160,29 +140,22 @@ URL parameter `syntheticInventory` with format `<orphans>:<matched>` (e.g. `2:1`
 ```ts
 function readSyntheticInventoryFlag(): { orphans: number; matched: number } | null {
   if (!import.meta.env.DEV) return null;
-  if (typeof window === "undefined") return null;
+  if (typeof window === 'undefined') return null;
   try {
-    const v = new URL(window.location.href).searchParams.get("syntheticInventory");
+    const v = new URL(window.location.href).searchParams.get('syntheticInventory');
     if (!v) return null;
-    const [orphansStr, matchedStr] = v.split(":");
-    const orphans = Number.parseInt(orphansStr ?? "", 10);
-    const matched = Number.parseInt(matchedStr ?? "", 10);
+    const [orphansStr, matchedStr] = v.split(':');
+    const orphans = Number.parseInt(orphansStr ?? '', 10);
+    const matched = Number.parseInt(matchedStr ?? '', 10);
     if (!Number.isFinite(orphans) || !Number.isFinite(matched)) return null;
     return { orphans, matched };
-  } catch {
-    return null;
-  }
+  } catch { return null; }
 }
 
 useEffect(() => {
   const synthetic = readSyntheticInventoryFlag();
   if (synthetic) {
-    setActiveVault({
-      id: "synthetic-vault-0",
-      accountKind: "passkey",
-      baseChain: "sui",
-      addr: "0xSYNTHETIC...",
-    });
+    setActiveVault({ id: 'synthetic-vault-0', accountKind: 'passkey', baseChain: 'sui', addr: '0xSYNTHETIC...' });
     setInventory(buildSyntheticInventory(synthetic.orphans, synthetic.matched));
     return;
   }
@@ -193,20 +166,9 @@ useEffect(() => {
 ### example: sibling-add-inline spec
 
 ```ts
-test("orphan + matched badges render with the synthetic inventory state", async ({
-  page,
-  extensionId,
-}) => {
-  const q = new URLSearchParams({
-    dev: "1",
-    unlocked: "1",
-    vaultExists: "1",
-    tab: "settings",
-    syntheticInventory: "2:3",
-  });
-  await page.goto(`chrome-extension://${extensionId}/side_panel.html?${q.toString()}`, {
-    waitUntil: "domcontentloaded",
-  });
+test('orphan + matched badges render with the synthetic inventory state', async ({ page, extensionId }) => {
+  const q = new URLSearchParams({ dev: '1', unlocked: '1', vaultExists: '1', tab: 'settings', syntheticInventory: '2:3' });
+  await page.goto(`chrome-extension://${extensionId}/side_panel.html?${q.toString()}`, { waitUntil: 'domcontentloaded' });
 
   await expect(page.getByText(/2 orphans?/i).first()).toBeVisible({ timeout: 5_000 });
   await expect(page.getByText(/\(idx 0\)/i).first()).toBeVisible({ timeout: 5_000 });
@@ -230,7 +192,6 @@ chromatika's dev mode supports several query params on `side_panel.html` / `onbo
 - `passkeyregister=<id>` / `passkeysign=<id>` / `hwsign=<id>` — open as a per-flow popup
 
 use the existing flags before adding new ones. when adding a new harness flag:
-
 1. gate it on `import.meta.env.DEV`
 2. read it from `window.location.href` query string
 3. document it in this file under "synthetic harness flags"
@@ -264,7 +225,6 @@ caveat: the dev harness must expose `chrome.runtime.sendMessage` to the page con
 ### when to skip vs assert
 
 soft-skip with an annotation when:
-
 - the harness flag isn't honored (synthetic / mock branch missing)
 - the dev tRPC bridge isn't exposed
 - the UI structure has shifted (e.g. CTA renamed)
@@ -272,7 +232,6 @@ soft-skip with an annotation when:
 **always** include a `test.info().annotations.push(...)` so the soft-skip is visible in the report. don't silently `return` — that hides regressions.
 
 assert when:
-
 - the structural correctness IS the thing we're testing (heading visibility, error message text, persisted vault shape)
 - a real network mock is installed and the spec drove an actual flow that should have hit it
 

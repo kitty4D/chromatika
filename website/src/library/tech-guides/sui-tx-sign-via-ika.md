@@ -22,16 +22,16 @@ async function signSuiTxViaIka(tx: Transaction) {
   // txBytes is the serialized TransactionData (BCS layout)
 
   // 2. wrap with Mysten intent prefix per Sui's signing scheme
-  const intent = new Uint8Array([0x00, 0x00, 0x00]); // [TransactionData, V0, Sui]
+  const intent = new Uint8Array([0x00, 0x00, 0x00]);   // [TransactionData, V0, Sui]
   const intentMessage = new Uint8Array(intent.length + txBytes.length);
   intentMessage.set(intent, 0);
   intentMessage.set(txBytes, intent.length);
 
   // 3. compute the BLAKE2b-256 digest (Sui native verification expects this)
-  const digest = blake2b256(intentMessage); // 32 bytes
+  const digest = blake2b256(intentMessage);   // 32 bytes
 
   // 4. take a presign from ED25519_EDDSA pool
-  const presignId = takePresign("ED25519_EDDSA");
+  const presignId = takePresign('ED25519_EDDSA');
 
   // 5. sign via ika - PASS THE DIGEST (32 bytes)
   // critical: Sui's intent path produces a digest before signing
@@ -44,7 +44,7 @@ async function signSuiTxViaIka(tx: Transaction) {
     dwalletId: activeEd25519DwalletId,
     curve: Curve.ED25519,
     algorithm: SignatureAlgorithm.EdDSA,
-    message: digest, // 32-byte BLAKE2b digest
+    message: digest,                                  // 32-byte BLAKE2b digest
     presignId,
   });
 
@@ -81,7 +81,6 @@ the full intent message is `intent || bcs(tx_data)` = 3 bytes + N bytes. then `b
 ## the BLAKE2b vs SHA-512 question
 
 Sui's native verifier:
-
 ```
 1. recompute digest = blake2b_256(intent || bcs(tx))
 2. verify ed25519_signature(digest, sig, pubkey)
@@ -97,7 +96,6 @@ contrast with **Sui personal-message** (`signPersonalMessage`) where chromatika 
 ## the assembled Sui signature format
 
 Sui signatures aren't just 64 bytes - they're `[scheme_flag(1) || raw_sig(64) || pubkey(32)]` = 97 bytes for ed25519, base64-encoded. the format is per Sui's spec:
-
 - byte 0: scheme flag (0x00 for ed25519, 0x01 for secp256k1, 0x02 for secp256r1, 0x06 for passkey/SIP-9)
 - bytes 1-64: raw signature (64 bytes for ed25519 or secp256k1, 65 bytes for secp256r1 with recovery)
 - bytes 65-96: public key (32 bytes for ed25519)
@@ -114,8 +112,8 @@ async function signSuiTxWithHdKeypair(tx: Transaction) {
   const intentMessage = wrapWithIntent([0x00, 0x00, 0x00], txBytes);
   const digest = blake2b256(intentMessage);
 
-  const hdKeypair = sessionState.feeMaterial.suiKeypair; // Mysten Ed25519Keypair
-  const sigBytes = await hdKeypair.sign(digest); // 64 bytes
+  const hdKeypair = sessionState.feeMaterial.suiKeypair;   // Mysten Ed25519Keypair
+  const sigBytes = await hdKeypair.sign(digest);   // 64 bytes
 
   const dwalletPubkey = hdKeypair.getPublicKey().toRawBytes();
   return assembleSuiSignature(0x00, sigBytes, dwalletPubkey);
@@ -125,7 +123,6 @@ async function signSuiTxWithHdKeypair(tx: Transaction) {
 faster than the MPC path (no presign consumption, no ika round-trip) but trades off the security property of "key never assembled" for "key sits in extension memory while unlocked".
 
 chromatika uses HD fee-payer signing for:
-
 - `sendSuiNative` (HD fee-payer is the canonical sender, not a dWallet)
 - ika DKG / presign / sign PTBs (the fee-payer pays gas; the dWallet identity isn't involved at this layer)
 - any Sui PTB where the wallet is just paying gas and not asserting user identity

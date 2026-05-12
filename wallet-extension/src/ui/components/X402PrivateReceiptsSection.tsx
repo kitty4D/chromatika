@@ -101,20 +101,7 @@ export function X402PrivateReceiptsSection() {
         <Lock size={14} /> private receipts
       </h3>
 
-      <div
-        className="sp-prealphaPill"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          fontSize: 10,
-          padding: '2px 6px',
-          borderRadius: 4,
-          background: 'rgba(255,196,77,0.15)',
-          color: '#ffc44d',
-          marginBottom: 8,
-        }}
-      >
+      <div className="sp-prealphaPill" style={{ marginBottom: 8 }}>
         <AlertTriangle size={10} />
         at-rest only · on-chain amounts still visible until pcUSDC facilitator ships
       </div>

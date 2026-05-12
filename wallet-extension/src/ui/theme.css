@@ -20,6 +20,53 @@
   --theme-banner-success-fg: #86efac;
   --theme-banner-running-bg: rgba(99, 102, 241, 0.16);
   --theme-banner-running-fg: #a5b4fc;
+
+  /* ----- spacing scale (rem-based, mirrors website/src/styles.css) ----- */
+  --space-xs: 0.25rem;  /* 4px */
+  --space-sm: 0.5rem;   /* 8px */
+  --space-md: 0.75rem;  /* 12px */
+  --space-1: 1rem;      /* 16px */
+  --space-2: 1.5rem;    /* 24px */
+  --space-3: 2rem;      /* 32px */
+  --space-4: 3rem;      /* 48px */
+
+  /* ----- type scale (5-step, fixed rem; Bricolage opsz axis covers display) ----- */
+  --text-2xs: 0.6875rem;  /* 11px */
+  --text-xs:  0.8125rem;  /* 13px */
+  --text-sm:  0.95rem;    /* 15px */
+  --text-md:  1.18rem;    /* 19px */
+  --text-lg:  1.5rem;     /* 24px */
+  --text-xl:  2.25rem;    /* 36px */
+  --text-2xl: 3rem;       /* 48px */
+
+  /* ----- master easing (matches website cubic-bezier(0.22,1,0.36,1)) ----- */
+  --ch-ease: cubic-bezier(0.22, 1, 0.36, 1);
+
+  /* ----- signature 4-stop top-border gradient (the chromatika ribbon)
+       used on header bottom-edge, approval popup top-edge, modal/sheet top-edge.
+       lifted from website/src/styles.css .header-bleed::before / .site-footer::before. */
+  --ch-bleed-gradient: linear-gradient(
+    90deg,
+    oklch(0.62 0.19 22),    /* ika red-orange */
+    oklch(0.58 0.13 285),   /* violet */
+    oklch(0.7 0.14 250),    /* sky */
+    oklch(0.62 0.19 22)     /* ika return */
+  );
+
+  /* ----- wordmark gradient (sanctioned background-clip:text — wordmark + onboarding hero only) ----- */
+  --ch-wordmark-gradient: linear-gradient(
+    102deg,
+    oklch(0.97 0.02 270) 0%,
+    oklch(0.82 0.12 285) 44%,
+    oklch(0.88 0.16 22) 92%
+  );
+
+  /* ----- primary CTA gradient (used on filled action buttons across approval/onboarding) ----- */
+  --ch-cta-gradient: linear-gradient(
+    135deg,
+    oklch(0.72 0.18 290),   /* violet */
+    oklch(0.78 0.14 245)    /* sky */
+  );
 }
 
 /* ----- shared: chain shape (radius, font, default dark sp-border tint) ----- */
@@ -33,10 +80,10 @@ html:not([data-ika-chain]) {
   --theme-radius-pill: 999px;
   --theme-radius-sm: 10px;
   --theme-radius-xs: 6px;
-  --theme-font-body: 'DM Sans', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
-  /* display / hero type: paired with DM Sans body */
-  --theme-font-display: 'Fraunces', Georgia, 'Times New Roman', serif;
-  --theme-font-mono: ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
+  /* type stack lifted from website/src/styles.css (cross-product coherence) */
+  --theme-font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif;
+  --theme-font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --theme-font-mono: 'JetBrains Mono', ui-monospace, 'Cascadia Code', 'Segoe UI Mono', Menlo, Consolas, monospace;
   /* keyboard focus ring (inputs, icon buttons); overridden in light appearance */
   --theme-focus-ring: rgba(124, 92, 252, 0.72);
 }
@@ -50,8 +97,9 @@ html[data-ika-chain='solana'] {
   --theme-radius-pill: 0;
   --theme-radius-sm: 0;
   --theme-radius-xs: 0;
-  --theme-font-body: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  --theme-font-display: 'Inter', ui-sans-serif, system-ui, sans-serif;
+  /* same fonts both chains; differentiation lives in radii (sharp vs round) + secondary accent */
+  --theme-font-body: 'Figtree', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --theme-font-display: 'Bricolage Grotesque', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --theme-font-mono: 'JetBrains Mono', ui-monospace, Menlo, Consolas, monospace;
   --theme-focus-ring: rgba(34, 244, 168, 0.88);
 }
@@ -126,6 +174,23 @@ html:not([data-appearance]):not([data-ika-chain]) {
   --theme-help-bubble-bento-bg: #174b38;
   --theme-help-bubble-bento-border: rgba(167, 243, 208, 0.38);
   --theme-help-bubble-bento-icon: rgba(220, 252, 231, 0.95);
+
+  /* ===== website-aligned tokens (lifted from website/src/styles.css :root)
+       these coexist with the legacy --sp-* / --theme-* tokens; new components
+       consume --ink/--surface/--accent/--ika directly. ===== */
+  --ink:        oklch(0.18 0.04 280);    /* page bg / popup root */
+  --surface:    oklch(0.22 0.045 285);   /* card surface */
+  --surface-2:  oklch(0.27 0.05 282);    /* elevated surface */
+  --elevated:   oklch(0.32 0.055 280 / 0.55);
+  --text:       oklch(0.93 0.02 260);
+  --muted:      oklch(0.78 0.04 270);
+  --faint:      oklch(0.62 0.06 275);
+  --accent:     oklch(0.78 0.14 245);    /* sky blue — primary brand accent */
+  --accent-2:   oklch(0.72 0.18 290);    /* vivid violet — secondary accent */
+  --ika:        oklch(0.68 0.2 15);      /* warm coral/red — ika brand */
+  --border:        oklch(0.55 0.08 260 / 0.35);
+  --border-strong: oklch(0.7 0.12 250 / 0.45);
+  --shadow-float:  0 12px 40px oklch(0.1 0.06 280 / 0.45);
 }
 
 /* ----- dark + Solana: terminal charcoal + mint / violet gas ----- */
@@ -195,6 +260,21 @@ html:not([data-appearance])[data-ika-chain='solana'] {
   --theme-help-bubble-bento-bg: oklch(0.32 0.065 295);
   --theme-help-bubble-bento-border: oklch(0.46 0.085 295);
   --theme-help-bubble-bento-icon: oklch(0.76 0.14 295);
+
+  /* ===== website-aligned tokens (solana variant: ink stays nebula-tinted but accent flips to mint) ===== */
+  --ink:        oklch(0.16 0.035 175);   /* deep emerald-leaning charcoal */
+  --surface:    oklch(0.2 0.04 175);
+  --surface-2:  oklch(0.25 0.045 172);
+  --elevated:   oklch(0.3 0.05 170 / 0.55);
+  --text:       oklch(0.94 0.02 170);
+  --muted:      oklch(0.78 0.04 165);
+  --faint:      oklch(0.62 0.06 160);
+  --accent:     oklch(0.78 0.22 152);    /* solana mint — primary accent on solana base */
+  --accent-2:   oklch(0.66 0.2 305);     /* violet sub-accent (solana brand secondary) */
+  --ika:        oklch(0.68 0.2 15);      /* ika red unchanged — used at ika touchpoints */
+  --border:        oklch(0.55 0.1 152 / 0.32);
+  --border-strong: oklch(0.7 0.14 152 / 0.42);
+  --shadow-float:  0 12px 40px oklch(0.08 0.05 175 / 0.5);
 }
 
 /* ----- light + Sui: cool paper + soft azure glass ----- */
@@ -264,6 +344,21 @@ html[data-appearance='light']:not([data-ika-chain]) {
   --theme-help-bubble-bento-bg: oklch(0.96 0.04 285);
   --theme-help-bubble-bento-border: oklch(0.84 0.07 285);
   --theme-help-bubble-bento-icon: oklch(0.45 0.14 285);
+
+  /* ===== website-aligned tokens (light + sui: cool paper, hue 280, accents kept) ===== */
+  --ink:        oklch(0.98 0.012 280);   /* page bg — near-white tinted toward brand hue */
+  --surface:    oklch(0.96 0.018 285);
+  --surface-2:  oklch(0.93 0.025 282);
+  --elevated:   oklch(0.99 0.01 280 / 0.7);
+  --text:       oklch(0.22 0.04 270);    /* deep ink for body */
+  --muted:      oklch(0.42 0.04 270);
+  --faint:      oklch(0.6 0.04 275);
+  --accent:     oklch(0.55 0.16 245);    /* sky deepened for light-mode contrast */
+  --accent-2:   oklch(0.5 0.2 290);
+  --ika:        oklch(0.58 0.21 15);     /* ika held strong; lower L for AA against light bg */
+  --border:        oklch(0.55 0.06 260 / 0.28);
+  --border-strong: oklch(0.4 0.1 250 / 0.45);
+  --shadow-float:  0 12px 40px oklch(0.45 0.05 280 / 0.18);
 }
 
 /* light: chain border contrast (on top of light block) */
@@ -341,6 +436,21 @@ html[data-appearance='light'][data-ika-chain='solana'] {
   --theme-help-bubble-bento-bg: oklch(0.97 0.035 300);
   --theme-help-bubble-bento-border: oklch(0.85 0.07 300);
   --theme-help-bubble-bento-icon: oklch(0.48 0.15 300);
+
+  /* ===== website-aligned tokens (light + solana: warm paper, mint primary accent) ===== */
+  --ink:        oklch(0.98 0.012 165);   /* warm-mint paper */
+  --surface:    oklch(0.96 0.02 168);
+  --surface-2:  oklch(0.93 0.028 165);
+  --elevated:   oklch(0.99 0.012 170 / 0.7);
+  --text:       oklch(0.22 0.04 170);
+  --muted:      oklch(0.42 0.045 165);
+  --faint:      oklch(0.6 0.045 160);
+  --accent:     oklch(0.55 0.2 152);     /* mint deepened for light-mode contrast */
+  --accent-2:   oklch(0.5 0.18 305);     /* violet sub-accent */
+  --ika:        oklch(0.58 0.21 15);
+  --border:        oklch(0.55 0.08 152 / 0.28);
+  --border-strong: oklch(0.4 0.12 152 / 0.42);
+  --shadow-float:  0 12px 40px oklch(0.45 0.05 175 / 0.18);
 }
 
 /* ----- light: input fills (shared tweak) ----- */

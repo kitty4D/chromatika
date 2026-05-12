@@ -68,7 +68,7 @@ function chromatikaWatchAll(): Plugin {
           this.addWatchFile(f);
         }
       }
-      for (const rel of ['vite.config.ts', 'index.html', 'side_panel.html', 'onboarding.html']) {
+      for (const rel of ['vite.config.ts', 'index.html', 'side_panel.html', 'onboarding.html', 'offscreen.html']) {
         const p = resolve(REPO_ROOT, rel);
         if (fs.existsSync(p)) this.addWatchFile(p);
       }
@@ -146,7 +146,7 @@ export default defineConfig({
     webExtension({
       manifest: './src/manifest.json',
       // chromatikaWatchAll handles all file watching - no watchFilePaths needed here
-      additionalInputs: ['src/dapp-interface/inject.ts', 'onboarding.html'],
+      additionalInputs: ['src/dapp-interface/inject.ts', 'onboarding.html', 'offscreen.html'],
       // `vite build --watch`: without this, web-ext spawns a fresh Chromium on every rebuild
       // (watchChange exits the runner; closeBundle opens again). load unpacked from dist/ once
       // and use chrome://extensions -> Reload (see README "Manual testing in Chrome").

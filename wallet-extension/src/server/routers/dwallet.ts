@@ -20,11 +20,13 @@ import {
   getSolanaProgramRecentOverview,
   getSuiDwalletDetail,
   getSuiExplorerOverview,
+  getUnverifiedPresignCapSample,
 } from '@/background/ika/explorer';
 import { withFriendlyIkaError } from '@/background/ika/errors';
 import {
   buildAndExecuteAddStake,
   buildAndExecuteWithdrawStake,
+  getIkaSystemSnapshotForSession,
   listIkaValidatorsForSession,
   listStakedIkaForSession,
 } from '@/background/ika/ika-staking';
@@ -46,6 +48,14 @@ import {
   getDwalletDisplayNameMap,
   setDwalletDisplayNameForVault,
 } from '@/background/dwallet-display-names-storage';
+import {
+  dismissDWalletCreatePromptForVault,
+  isDWalletCreatePromptDismissed,
+} from '@/background/dwallet-create-prompt';
+import {
+  isDWalletCreatePromptGloballyDismissed,
+  setDWalletCreatePromptGloballyDismissed,
+} from '@/background/dwallet-create-prompt-global';
 
 export const dwalletProcedures = {
   registerEncryptionKey: publicProcedure
@@ -102,6 +112,19 @@ export const dwalletProcedures = {
   getSuiExplorerDwalletDetail: publicProcedure
     .input(z.object({ dwalletId: z.string().trim().startsWith('0x').min(10) }))
     .query(({ input }) => withFriendlyIkaError(() => getSuiDwalletDetail(input.dwalletId))),
+
+  /** sample-window count + recent rows for `UnverifiedPresignCap` objects on Sui (chroma lab). */
+  getUnverifiedPresignCapSample: publicProcedure
+    .input(z.object({
+      recentLimit: z.number().int().min(1).max(20).optional(),
+      maxPages: z.number().int().min(1).max(6).optional(),
+    }).optional())
+    .query(({ input }) => withFriendlyIkaError(() =>
+      getUnverifiedPresignCapSample({
+        recentLimit: input?.recentLimit,
+        maxPages: input?.maxPages,
+      }),
+    )),
 
   getSolanaProgramRecentOverview: publicProcedure
     .input(z.object({ limit: z.number().int().min(5).max(40).default(12) }).optional())
@@ -189,6 +212,38 @@ export const dwalletProcedures = {
       }
       await saveDwalletCardOrder(vid, next);
       return { ok: true as const, orderedIds: next };
+    }),
+
+  /** Dismissal state for the Home-screen "create your first dWallets" prompt. OR'd from
+   *  the per-vault flag (`VAULT_SCOPED_KEYS.dwalletCreatePromptDismissed`) and the global
+   *  "don't show on any vault" flag (`DWALLET_CREATE_PROMPT_GLOBALLY_DISMISSED_V1`). Either
+   *  source being true hides the prompt; the UI consumes `dismissed` and can ignore the
+   *  source split unless it wants to surface "globally suppressed" copy. */
+  getDWalletCreatePromptState: publicProcedure.query(async () => {
+    const vid = getActiveVaultId();
+    if (!vid) throw new Error('Wallet locked');
+    const [perVault, global] = await Promise.all([
+      isDWalletCreatePromptDismissed(vid),
+      isDWalletCreatePromptGloballyDismissed(),
+    ]);
+    return { dismissed: perVault || global, perVault, global };
+  }),
+
+  dismissDWalletCreatePrompt: publicProcedure.mutation(async () => {
+    const vid = getActiveVaultId();
+    if (!vid) throw new Error('Wallet locked');
+    await dismissDWalletCreatePromptForVault(vid);
+    return { ok: true as const };
+  }),
+
+  /** Set the global "don't show this on any vault" flag. Independent of the per-vault
+   *  dismissal; setting this true hides `CreateDwalletPrompt` for every vault until toggled
+   *  off from Settings -> Safety -> "Prompts I've dismissed". */
+  setDwalletCreatePromptGloballyDismissed: publicProcedure
+    .input(z.object({ dismissed: z.boolean() }))
+    .mutation(async ({ input }) => {
+      await setDWalletCreatePromptGloballyDismissed(input.dismissed);
+      return { ok: true as const };
     }),
 
   /** addresses for the meta-selected dWallet per curve (same ids signing uses). derived from on-chain `public_output` when present (Active or awaiting key holder), not gated on ika status for display. */
@@ -375,6 +430,10 @@ export const dwalletProcedures = {
 
   ikaStakingPositions: publicProcedure.query(() =>
     withFriendlyIkaError(() => listStakedIkaForSession()),
+  ),
+
+  ikaStakingEpoch: publicProcedure.query(() =>
+    withFriendlyIkaError(() => getIkaSystemSnapshotForSession()),
   ),
 
   ikaStake: publicProcedure

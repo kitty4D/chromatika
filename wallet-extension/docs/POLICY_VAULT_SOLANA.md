@@ -1,6 +1,12 @@
 # Policy Vault — Solana base (chromatika)
 
-> status (2026-05-02): **scaffolded; pre-alpha; awaits ika Solana Alpha-1.** Mirrors `chromatika_policy::sign_gate` (Sui Move) for Solana ika base. The chromatika-policy Solana program ships with the full PolicyVault PDA shape and instruction surface, but the on-chain `do_approve_message_cpi` is a stub until ika Solana exposes a CPI target for caller-PDA-as-authority approve_message. Until Alpha-1, soft-policy gating runs in chromatika TS only; the Solana program enforces nothing because the CPI never lands.
+> status (2026-05-11): **DISABLED in UI; pre-alpha scaffolding; awaits ika Solana Alpha-1.** The chromatika-policy Solana program mirrors `chromatika_policy::sign_gate` (Sui Move) field-for-field, but the on-chain `do_approve_message_cpi` is a no-op stub until ika Solana exposes a CPI target for caller-PDA-as-authority approve_message. Wrapping a Solana-base dWallet in the policy program would not gate anything until Alpha-1, so chromatika reflects that honesty by **disabling the surface in the wallet UI today**:
+>
+> - `PolicyVaultPanel` renders a "Sui-only for now" notice when the active vault's baseChain is `solana` instead of the opt-in form.
+> - `PolicyVaultBanner` does not mount on Solana sends.
+> - `optInToPolicyVault` throws `no-package` on Solana-base as defense-in-depth.
+>
+> The Anchor program source stays in tree as Alpha-1 scaffolding (`anchor build` works for compile verification). **No TS test harness exists today**: `solana-bankrun` and `litesvm` (the two viable in-process Solana VMs for TS tests) both ship no Windows binary, Docker is upstream's documented Windows workaround, and the program has no real signer to test against until Alpha-1 lands. When Alpha-1 ships, both the program CPI bodies and the chromatika UI gates flip in one coordinated change.
 
 ## Why this is shipped scoped down
 

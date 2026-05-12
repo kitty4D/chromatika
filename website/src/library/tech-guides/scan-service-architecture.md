@@ -26,31 +26,31 @@ src/ui/wallet-setup-flow/steps/import.tsx # advanced HD scan toggle + multi-acco
 ## core types
 
 ```ts
-type ScanMethod = "passkey" | "hd" | "seeker" | "waap" | "lazor";
+type ScanMethod = 'passkey' | 'hd' | 'seeker' | 'waap' | 'lazor';
 
 type ScanInput =
-  | { method: "hd"; mnemonic: string; gap?: ScanGapLimits }
-  | { method: "passkey"; suiAddress: string }
-  | { method: "seeker"; solanaAddress: string }
-  | { method: "waap"; suiAddress: string }
-  | { method: "lazor"; lazorSmartWalletPubkeyB58: string };
+  | { method: 'hd'; mnemonic: string; gap?: ScanGapLimits }
+  | { method: 'passkey'; suiAddress: string }
+  | { method: 'seeker'; solanaAddress: string }
+  | { method: 'waap'; suiAddress: string }
+  | { method: 'lazor'; lazorSmartWalletPubkeyB58: string };
 
 type ScanCandidate = {
-  key: string; // unique row key
-  accountIndex?: number; // HD only
+  key: string;                          // unique row key
+  accountIndex?: number;                 // HD only
   suiAddress?: string;
   solanaAddress?: string;
-  evmAddress?: string; // HD only
-  secp256k1CompressedHex?: string; // HD only; powers DeSo + Cosmos probes
-  polkadotEd25519PubkeyHex?: string; // HD only; powers SS58 probe
+  evmAddress?: string;                   // HD only
+  secp256k1CompressedHex?: string;       // HD only; powers DeSo + Cosmos probes
+  polkadotEd25519PubkeyHex?: string;     // HD only; powers SS58 probe
 };
 
 type ChainProbe = {
   chainId: string;
   chainName: string;
-  kind: "sui" | "solana" | "evm" | "bitcoin" | "aptos" | "deso" | "cosmos" | "polkadot";
+  kind: 'sui' | 'solana' | 'evm' | 'bitcoin' | 'aptos' | 'deso' | 'cosmos' | 'polkadot';
   addressFor: (c: ScanCandidate) => string | undefined;
-  probe: (address: string) => Promise<Omit<ScanProbeResult, "chainId" | "chainName" | "address">>;
+  probe: (address: string) => Promise<Omit<ScanProbeResult, 'chainId' | 'chainName' | 'address'>>;
 };
 
 type ScanResult = {
@@ -59,7 +59,7 @@ type ScanResult = {
   suggestedKeys: string[];
   elapsedMs: number;
   warnings: string[];
-  notes: string[]; // setup-time notes (e.g. lazor placeholder PDA detected)
+  notes: string[];      // setup-time notes (e.g. lazor placeholder PDA detected)
 };
 ```
 
@@ -100,20 +100,16 @@ one discriminated union, one entry per chain:
 
 ```ts
 type ScanChainEntry =
-  | { kind: "evm"; id; name; chainId; rpcUrl; symbol; explorerUrl? }
-  | { kind: "bitcoin"; id; name; esploraUrl; cluster: "mainnet" | "signet" | "testnet3" }
-  | { kind: "aptos"; id; name; rpcUrl; cluster: "mainnet" | "testnet" }
-  | { kind: "deso"; id; name; cluster: "mainnet" | "testnet" }
-  | { kind: "cosmos"; id; name; restUrl; bech32Hrp; nativeDenom; nativeDecimals; nativeSymbol }
-  | { kind: "polkadot"; id; name; subscanApiUrl; ss58Prefix; nativeDecimals; nativeSymbol };
+  | { kind: 'evm'; id; name; chainId; rpcUrl; symbol; explorerUrl? }
+  | { kind: 'bitcoin'; id; name; esploraUrl; cluster: 'mainnet' | 'signet' | 'testnet3' }
+  | { kind: 'aptos'; id; name; rpcUrl; cluster: 'mainnet' | 'testnet' }
+  | { kind: 'deso'; id; name; cluster: 'mainnet' | 'testnet' }
+  | { kind: 'cosmos'; id; name; restUrl; bech32Hrp; nativeDenom; nativeDecimals; nativeSymbol }
+  | { kind: 'polkadot'; id; name; subscanApiUrl; ss58Prefix; nativeDecimals; nativeSymbol };
 
 const SUPER_PRO_CHAINS: ScanChainEntry[] = [
-  ...SUPER_PRO_EVM,
-  ...SUPER_PRO_BITCOIN,
-  ...SUPER_PRO_APTOS,
-  ...SUPER_PRO_DESO,
-  ...SUPER_PRO_COSMOS,
-  ...SUPER_PRO_POLKADOT,
+  ...SUPER_PRO_EVM, ...SUPER_PRO_BITCOIN, ...SUPER_PRO_APTOS,
+  ...SUPER_PRO_DESO, ...SUPER_PRO_COSMOS, ...SUPER_PRO_POLKADOT,
 ];
 ```
 
@@ -156,7 +152,6 @@ async function runScan(input, chains, gap): Promise<ScanResult> {
 ```
 
 per-probe execution is `probeOne(candidate, probes, warnings)`:
-
 - builds `Promise.all(probes.map(...))` — concurrent across chains for one candidate
 - timeboxes each probe via `withTimeout(promise, PROBE_TIMEOUT_MS=12s, label)`
 - captures rejections as warnings + emits a row with `error` set; `hasActivity: false`

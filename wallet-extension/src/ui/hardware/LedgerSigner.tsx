@@ -196,7 +196,7 @@ export function LedgerSigner({ requestId }: { requestId: string }) {
     return (
       <div className="wc-approvalSheet">
         {status.kind === 'error' ? (
-          <p style={{ color: 'rgba(255,99,132,0.95)' }}>{status.msg}</p>
+          <p style={{ color: 'var(--theme-banner-error-fg, oklch(0.78 0.14 25))' }}>{status.msg}</p>
         ) : (
           <p>loading request…</p>
         )}
@@ -208,28 +208,28 @@ export function LedgerSigner({ requestId }: { requestId: string }) {
     <div className="wc-approvalSheet">
         <div style={{ fontWeight: 800, marginBottom: 16 }}>ledger sign request</div>
 
-        <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>chain</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>chain</div>
         <div style={{ marginBottom: 12, fontWeight: 600 }}>{meta.chain.toUpperCase()}</div>
 
-        <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>derivation path</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>derivation path</div>
         <div style={{ marginBottom: 12, fontFamily: 'monospace', fontSize: 13 }}>{meta.derivationPath}</div>
 
-        <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>type</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>type</div>
         <div style={{ marginBottom: 16, fontWeight: 600 }}>{meta.kind}</div>
 
-        <div style={{ fontSize: 12, color: 'rgba(234,240,255,0.6)', marginBottom: 4 }}>payload</div>
-        <div style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all', background: 'rgba(0,0,0,0.25)', padding: 10, borderRadius: 10, marginBottom: 18, maxHeight: 80, overflow: 'auto' }}>
+        <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 4 }}>payload</div>
+        <div style={{ fontFamily: 'monospace', fontSize: 11, wordBreak: 'break-all', background: 'color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 65%, transparent)', padding: 10, borderRadius: 10, marginBottom: 18, maxHeight: 80, overflow: 'auto' }}>
           {meta.payloadHex}
         </div>
 
         {status.kind === 'error' && (
-          <p style={{ color: 'rgba(255,99,132,0.95)', fontSize: 13, marginBottom: 14 }}>{status.msg}</p>
+          <p style={{ color: 'var(--theme-banner-error-fg, oklch(0.78 0.14 25))', fontSize: 13, marginBottom: 14 }}>{status.msg}</p>
         )}
         {status.kind === 'waiting_device' && (
-          <p style={{ color: 'rgba(245,158,11,0.95)', fontSize: 13, marginBottom: 14 }}>{status.msg}</p>
+          <p style={{ color: 'var(--theme-banner-warn-fg, oklch(0.78 0.18 80))', fontSize: 13, marginBottom: 14 }}>{status.msg}</p>
         )}
         {status.kind === 'done' && (
-          <p style={{ color: 'rgba(16,185,129,0.95)', fontSize: 13, marginBottom: 14 }}>signed! closing…</p>
+          <p style={{ color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))', fontSize: 13, marginBottom: 14 }}>signed! closing…</p>
         )}
 
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>

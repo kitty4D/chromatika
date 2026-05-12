@@ -16,7 +16,6 @@ BIP39 is the spec for "twelve or twenty-four word seed phrases" - the human-read
 generators / validators come from `@scure/bip39` and the English wordlist from `@scure/bip39/wordlists/english`. the generator pulls 16 / 32 bytes from `crypto.getRandomValues` (browser CSPRNG seeded from OS entropy) for entropy; checksum is computed locally; the words are returned as a single space-joined string.
 
 `validateWords(words)` does:
-
 1. split + length check (must be 12 / 15 / 18 / 21 / 24)
 2. each word must be in the English wordlist
 3. checksum bits must match `SHA-256(entropy)` first bits

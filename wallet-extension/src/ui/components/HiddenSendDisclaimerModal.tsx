@@ -10,7 +10,7 @@
  * vaults re-prompts.
  */
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Lock, AlertTriangle, X, Loader2 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 
@@ -43,55 +43,46 @@ export function HiddenSendDisclaimerModal({
     }
   }
 
+  // Escape-to-close for keyboard users.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !busy) onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, busy]);
+
   return (
     <div
-      className="sp-modalBackdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="pc-disclaimer-title"
+      className="ch-bottomSheet-backdrop"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.7)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
     >
-      <div className="sp-modalCard" style={{ maxWidth: 480, width: '92%', padding: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <Lock size={16} />
-          <div id="pc-disclaimer-title" style={{ fontWeight: 600 }}>
-            before you send hidden — read this
-          </div>
+      <div
+        className="ch-bottomSheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pc-disclaimer-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="ch-bottomSheet-head">
+          <span id="pc-disclaimer-title" className="ch-bottomSheet-title">
+            <Lock size={16} />
+            before you send hidden - read this
+          </span>
           <button
             type="button"
             onClick={onClose}
-            style={{ marginLeft: 'auto', background: 'transparent', border: 0, cursor: 'pointer' }}
+            className="ch-bottomSheet-close"
             aria-label="close"
           >
             <X size={14} />
           </button>
         </div>
 
-        <div
-          className="sp-prealphaPill"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 10,
-            padding: '2px 6px',
-            borderRadius: 4,
-            background: 'rgba(255,196,77,0.15)',
-            color: '#ffc44d',
-            marginBottom: 12,
-          }}
-        >
+        <div className="sp-prealphaPill" style={{ marginBottom: 12 }}>
           <AlertTriangle size={10} />
           encrypt.xyz pre-alpha · pc-token · dev preview only
         </div>

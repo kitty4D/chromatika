@@ -159,20 +159,7 @@ export function DeSoPanel({ advanced }: { advanced: boolean }) {
       <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Bot size={14} /> deso · social chain
       </h3>
-      <div
-        className="sp-prealphaPill"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          fontSize: 10,
-          padding: '2px 6px',
-          borderRadius: 4,
-          background: 'rgba(255,196,77,0.15)',
-          color: '#ffc44d',
-          marginBottom: 8,
-        }}
-      >
+      <div className="sp-prealphaPill" style={{ marginBottom: 8 }}>
         <AlertTriangle size={10} />
         deso mainnet · real funds
       </div>
@@ -189,13 +176,13 @@ export function DeSoPanel({ advanced }: { advanced: boolean }) {
         </div>
       )}
       {msg && (
-        <div className="sp-muted" style={{ fontSize: 11, color: '#86efac', marginBottom: 6 }}>
+        <div className="sp-muted" style={{ fontSize: 11, color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))', marginBottom: 6 }}>
           {msg}
         </div>
       )}
 
       {/* identity + balance row */}
-      <div style={{ marginBottom: 10, padding: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}>
+      <div style={{ marginBottom: 10, padding: 8, background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 45%, transparent)', borderRadius: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600 }}>
           <Coins size={11} /> identity
           {identity?.isDelegated && (
@@ -288,7 +275,7 @@ export function DeSoPanel({ advanced }: { advanced: boolean }) {
       <DeSoLinkSection onChange={() => void refresh()} />
 
       {/* send form */}
-      <div style={{ marginBottom: 10, padding: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}>
+      <div style={{ marginBottom: 10, padding: 8, background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 45%, transparent)', borderRadius: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
           <Send size={11} /> send DESO
         </div>
@@ -333,7 +320,7 @@ export function DeSoPanel({ advanced }: { advanced: boolean }) {
       </div>
 
       {/* post form */}
-      <div style={{ marginBottom: 10, padding: 8, background: 'rgba(255,255,255,0.03)', borderRadius: 4 }}>
+      <div style={{ marginBottom: 10, padding: 8, background: 'color-mix(in oklch, var(--surface, oklch(0.22 0.045 285)) 45%, transparent)', borderRadius: 4 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, fontWeight: 600, marginBottom: 6 }}>
           <FileText size={11} /> publish a post
         </div>

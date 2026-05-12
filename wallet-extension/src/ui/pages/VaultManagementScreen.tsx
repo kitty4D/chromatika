@@ -9,9 +9,9 @@ import { useState } from 'react';
 
 function renameLabelSuggestions(h?: VaultNameHint): Array<{ key: string; pill: string; value: string }> {
   const out: Array<{ key: string; pill: string; value: string }> = [];
-  if (h?.suinsNames[0]) {
-    const n = h.suinsNames[0];
-    out.push({ key: 'suins', pill: `SuiNS · ${n}`, value: n });
+  const suinsPrimary = h?.suinsNames?.[0];
+  if (suinsPrimary) {
+    out.push({ key: 'suins', pill: `SuiNS · ${suinsPrimary}`, value: suinsPrimary });
   }
   if (h?.snsName) {
     out.push({ key: 'sns', pill: `SNS · ${h.snsName}`, value: h.snsName });
@@ -97,9 +97,9 @@ export function VaultManagementScreen({
           <button type="button" className="sp-backBtn" onClick={() => setScanOpen(false)}>
             ← back
           </button>
-          <div className="sp-pageTitle" style={{ marginBottom: 0 }}>
+          <h2 className="sp-pageTitle" style={{ marginBottom: 0 }}>
             scan{activeLabel ? ` · ${activeLabel}` : ''}
-          </div>
+          </h2>
         </div>
         <p className="sp-muted" style={{ fontSize: 12, lineHeight: 1.45 }}>
           look for more accounts, dwallets, or activity attached to this vault's identity.
@@ -115,9 +115,9 @@ export function VaultManagementScreen({
         <button type="button" className="sp-backBtn" onClick={onBack}>
           ← back
         </button>
-        <div className="sp-pageTitle" style={{ marginBottom: 0 }}>
+        <h2 className="sp-pageTitle" style={{ marginBottom: 0 }}>
           vault management
-        </div>
+        </h2>
       </div>
       <p className="sp-muted" style={{ fontSize: 12, lineHeight: 1.45 }}>
         multi–dWallet Vault list for this install. rename or remove here.

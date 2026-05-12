@@ -5,7 +5,7 @@ chromatika's USD price oracle is a **waterfall**: try sources in user-configured
 ## the cache
 
 ```ts
-const cache = new Map<string, { priceUsd: number; fetchedAtMs: number }>();
+const cache = new Map<string, { priceUsd: number, fetchedAtMs: number }>();
 const CACHE_TTL_MS = 60_000;
 
 async function getPrice(symbol: string): Promise<number> {
@@ -33,11 +33,9 @@ async function getPrice(symbol: string): Promise<number> {
 
 ```ts
 async function fetchCoingeckoPrice(symbol: string): Promise<number> {
-  const id = COINGECKO_IDS[symbol]; // e.g. "ethereum" for "eth"
-  if (!id) throw "unknown symbol";
-  const resp = await fetch(
-    `https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`
-  );
+  const id = COINGECKO_IDS[symbol];   // e.g. "ethereum" for "eth"
+  if (!id) throw 'unknown symbol';
+  const resp = await fetch(`https://api.coingecko.com/api/v3/simple/price?ids=${id}&vs_currencies=usd`);
   const data = await resp.json();
   return data[id]?.usd ?? 0;
 }
@@ -51,7 +49,7 @@ async function fetchCoingeckoPrice(symbol: string): Promise<number> {
 
 ```ts
 async function fetchDefiLlamaPrice(symbol: string): Promise<number> {
-  const id = DEFILLAMA_IDS[symbol]; // e.g. "coingecko:ethereum"
+  const id = DEFILLAMA_IDS[symbol];   // e.g. "coingecko:ethereum"
   const resp = await fetch(`https://coins.llama.fi/prices/current/${id}`);
   const data = await resp.json();
   return data.coins[id]?.price ?? 0;
@@ -67,11 +65,11 @@ async function fetchDefiLlamaPrice(symbol: string): Promise<number> {
 ```ts
 async function fetchCmcPrice(symbol: string): Promise<number> {
   const apiKey = import.meta.env.VITE_CMC_API_KEY;
-  if (!apiKey) return 0; // not configured
+  if (!apiKey) return 0;   // not configured
   const sym = symbol.toUpperCase();
   const resp = await fetch(
     `https://pro-api.coinmarketcap.com/v1/cryptocurrency/quotes/latest?symbol=${sym}`,
-    { headers: { "X-CMC_PRO_API_KEY": apiKey } }
+    { headers: { 'X-CMC_PRO_API_KEY': apiKey } }
   );
   const data = await resp.json();
   return data.data?.[sym]?.quote?.USD?.price ?? 0;
@@ -85,12 +83,9 @@ async function fetchCmcPrice(symbol: string): Promise<number> {
 ## Pyth (on-chain oracle)
 
 ```ts
-async function fetchPythPrice(
-  symbol: string,
-  chain: "solana" | "evm" | "sui" | "aptos"
-): Promise<number> {
+async function fetchPythPrice(symbol: string, chain: 'solana' | 'evm' | 'sui' | 'aptos'): Promise<number> {
   const feedId = PYTH_FEED_IDS[chain]?.[symbol];
-  if (!feedId) throw "no Pyth feed";
+  if (!feedId) throw 'no Pyth feed';
   // Pyth has a "Hermes" service with REST + price update API
   const resp = await fetch(`https://hermes.pyth.network/api/latest_price_feeds?ids[]=${feedId}`);
   const data = await resp.json();
@@ -108,7 +103,7 @@ async function fetchPythPrice(
 ```ts
 async function fetchChainlinkPrice(symbol: string, chainId: number): Promise<number> {
   const feedAddr = CHAINLINK_FEEDS[chainId]?.[symbol];
-  if (!feedAddr) throw "no Chainlink feed";
+  if (!feedAddr) throw 'no Chainlink feed';
   const provider = await getRpcProviderForChain(chainId);
   const aggregator = new ethers.Contract(feedAddr, AGGREGATOR_V3_ABI, provider);
   const [, answer] = await aggregator.latestRoundData();
@@ -125,11 +120,9 @@ async function fetchChainlinkPrice(symbol: string, chainId: number): Promise<num
 
 ```ts
 async function fetchGeckoTerminalPrice(symbol: string): Promise<number> {
-  const route = DEX_PRICE_ROUTES[symbol]; // e.g. for IKA: { network, poolAddress }
-  if (!route) throw "no DEX route";
-  const resp = await fetch(
-    `https://api.geckoterminal.com/api/v2/networks/${route.network}/pools/${route.poolAddress}`
-  );
+  const route = DEX_PRICE_ROUTES[symbol];   // e.g. for IKA: { network, poolAddress }
+  if (!route) throw 'no DEX route';
+  const resp = await fetch(`https://api.geckoterminal.com/api/v2/networks/${route.network}/pools/${route.poolAddress}`);
   const data = await resp.json();
   return Number(data.data?.attributes?.base_token_price_usd ?? 0);
 }
@@ -142,7 +135,6 @@ async function fetchGeckoTerminalPrice(symbol: string): Promise<number> {
 ## the SUI / IKA peculiarity
 
 IKA price specifically falls to GeckoTerminal because:
-
 - CoinGecko / DefiLlama / CMC don't always list IKA
 - Pyth doesn't have a feed today
 - Chainlink is EVM-only

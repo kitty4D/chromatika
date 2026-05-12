@@ -4,40 +4,40 @@ chromatika persists state in two chrome storage areas with very different semant
 
 ## the two areas
 
-| area                     | persists across browser quit? | persists across SW unload?    | quota                                                                            | use for                                                           |
-| ------------------------ | ----------------------------- | ----------------------------- | -------------------------------------------------------------------------------- | ----------------------------------------------------------------- |
-| `chrome.storage.local`   | yes (until uninstall)         | yes                           | 5 MB default, can request more via `'storage'` permission with unlimited storage | encrypted vault blob, dWallet meta, registry, settings            |
-| `chrome.storage.session` | **no**                        | yes (within a chrome session) | a few MB                                                                         | unlock cache (post-KDF AES key bytes), in-flight pending requests |
+| area | persists across browser quit? | persists across SW unload? | quota | use for |
+|------|-------------------------------|----------------------------|-------|---------|
+| `chrome.storage.local` | yes (until uninstall) | yes | 5 MB default, can request more via `'storage'` permission with unlimited storage | encrypted vault blob, dWallet meta, registry, settings |
+| `chrome.storage.session` | **no** | yes (within a chrome session) | a few MB | unlock cache (post-KDF AES key bytes), in-flight pending requests |
 
 `chrome.storage.sync` (a third area that syncs across browser profiles) is **not used** by chromatika - per-install scoping is intentional.
 
 ## chromatika's keys in `chrome.storage.local`
 
-per the chromatika storage-key convention `chromatika_<domain>_v<N>`:
+per CLAUDE.md convention `chromatika_<domain>_v<N>`:
 
-| key                                     | content                                             |
-| --------------------------------------- | --------------------------------------------------- |
-| `chromatika_vault_v3`                   | encrypted multi-vault blob                          |
-| `chromatika_dwallet_meta_v2_<vaultId>`  | per-vault dWallet overlay (cap ids, addresses)      |
-| `chromatika_presign_pools_v3_<vaultId>` | per-vault ika presign pools                         |
-| `chromatika_active_networks_v1`         | per-chain active network selection                  |
-| `chromatika_custom_networks_v1`         | user-added EVM (and others) custom networks         |
-| `chromatika_media_safety_v1`            | MediaSafetyMode value                               |
-| `chromatika_dapp_permissions_v1`        | dapp connection permissions                         |
-| `chromatika_hw_accounts_v1`             | hardware account list (Ledger / Trezor / MWA / WC)  |
-| `chromatika_advanced_mode_v1`           | advanced UI toggle                                  |
-| `chromatika_ika_base_mode_v1`           | global ika base preference (sui / solana)           |
-| `chromatika_mcp_v1`                     | MCP agent surface state (token, port, enabled flag) |
-| `chromatika_x402_caps_v1`               | x402 spending caps                                  |
-| `chromatika_x402_receipts_v1`           | x402 payment receipts (capped at 200)               |
+| key | content |
+|-----|---------|
+| `chromatika_vault_v3` | encrypted multi-vault blob |
+| `chromatika_dwallet_meta_v2_<vaultId>` | per-vault dWallet overlay (cap ids, addresses) |
+| `chromatika_presign_pools_v3_<vaultId>` | per-vault ika presign pools |
+| `chromatika_active_networks_v1` | per-chain active network selection |
+| `chromatika_custom_networks_v1` | user-added EVM (and others) custom networks |
+| `chromatika_media_safety_v1` | MediaSafetyMode value |
+| `chromatika_dapp_permissions_v1` | dapp connection permissions |
+| `chromatika_hw_accounts_v1` | hardware account list (Ledger / Trezor / MWA / WC) |
+| `chromatika_advanced_mode_v1` | advanced UI toggle |
+| `chromatika_ika_base_mode_v1` | global ika base preference (sui / solana) |
+| `chromatika_mcp_v1` | MCP agent surface state (token, port, enabled flag) |
+| `chromatika_x402_caps_v1` | x402 spending caps |
+| `chromatika_x402_receipts_v1` | x402 payment receipts (capped at 200) |
 
 bumping the integer suffix denotes a schema change. parser rejects older versions on load (chromatika is pre-release; no migration path yet).
 
 ## chromatika's keys in `chrome.storage.session`
 
-| key                              | content                                                                               |
-| -------------------------------- | ------------------------------------------------------------------------------------- |
-| `chromatika_unlock_cache_v1`     | post-argon2id AES key bytes + KDF meta (b64)                                          |
+| key | content |
+|-----|---------|
+| `chromatika_unlock_cache_v1` | post-argon2id AES key bytes + KDF meta (b64) |
 | `chromatika_pending_<requestId>` | in-flight tx-approval / sign-approval / x402-approval requests waiting on user action |
 
 note: a legacy `chromatika_unlock_cache_v1_local` (in `local`, not `session`) is **explicitly removed on lock / unlock / write** by the current code. plaintext password fields are also defensively removed. session storage is the only correct place for unlock material. see [cold-sw-unlock-cache.md](/library/tech/cold-sw-unlock-cache).
@@ -46,12 +46,12 @@ note: a legacy `chromatika_unlock_cache_v1_local` (in `local`, not `session`) is
 
 ```ts
 // async API; returns a promise (or accepts callback in legacy code)
-const { chromatika_vault_v3 } = await chrome.storage.local.get("chromatika_vault_v3");
+const { chromatika_vault_v3 } = await chrome.storage.local.get('chromatika_vault_v3');
 await chrome.storage.local.set({ chromatika_vault_v3: newBlob });
-await chrome.storage.local.remove("chromatika_unlock_cache_v1_local");
+await chrome.storage.local.remove('chromatika_unlock_cache_v1_local');
 
 // session same shape
-const cached = await chrome.storage.session.get("chromatika_unlock_cache_v1");
+const cached = await chrome.storage.session.get('chromatika_unlock_cache_v1');
 ```
 
 `webextension-polyfill` (the cross-browser shim chromatika uses) wraps these; works on Firefox + Chrome with the same API.
@@ -60,7 +60,7 @@ const cached = await chrome.storage.session.get("chromatika_unlock_cache_v1");
 
 ```ts
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  if (areaName === "local" && "chromatika_vault_v3" in changes) {
+  if (areaName === 'local' && 'chromatika_vault_v3' in changes) {
     // reload vault state
   }
 });

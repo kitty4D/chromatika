@@ -171,9 +171,9 @@ export function NetworkSelectorPage({
         <button type="button" className="sp-btn" onClick={onBack} style={{ padding: '6px 12px', fontSize: 12 }}>
           ← back
         </button>
-        <div className="sp-pageTitle" style={{ margin: 0 }}>
+        <h2 className="sp-pageTitle" style={{ margin: 0 }}>
           networks
-        </div>
+        </h2>
       </div>
 
       <div className="sp-muted" style={{ fontSize: 12, marginBottom: 12 }}>

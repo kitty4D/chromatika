@@ -21,13 +21,86 @@
   justify-self: stretch;
 }
 
-/* main wallet chrome (side panel + extension popup): one visual system */
+/* main wallet chrome (side panel + extension popup): one visual system.
+ * archetype-1 treatment: glass-stack chrome from website + signature 4-stop ribbon
+ * at the bottom edge ("you are inside chromatika" signal across every screen).
+ *
+ * perf (i-optimize P1): backdrop-filter blur trimmed 18px->12px + saturate 170%->140%.
+ * the always-visible titlebar pays this cost every frame; the slight reduction is
+ * imperceptible and saves GPU compositing budget. `contain: layout paint` isolates
+ * the paint region so titlebar updates don't invalidate the body. */
 .ct-titleBar--wallet,
 .ct-titleBar--sidepanel {
+  position: relative;
   min-height: 36px;
   padding: 6px 10px 8px;
-  border-bottom: 1px solid var(--theme-chrome-border-soft);
-  background: var(--theme-chrome-sidepanel-bg);
+  border-bottom: 1px solid color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 22%, oklch(0.62 0.1 275 / 0.55));
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.18 0.05 285) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.04 295) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.06 25) 12%, transparent) 100%
+    ),
+    var(--theme-chrome-sidepanel-bg);
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  contain: layout paint;
+}
+
+/* signature 4-stop ribbon at the bottom edge — chromatika's strongest visual signal */
+.ct-titleBar--wallet::after,
+.ct-titleBar--sidepanel::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  z-index: 5;
+  pointer-events: none;
+  background: var(--ch-bleed-gradient, linear-gradient(90deg,
+    oklch(0.62 0.19 22),
+    oklch(0.58 0.13 285),
+    oklch(0.7 0.14 250),
+    oklch(0.62 0.19 22)
+  ));
+  opacity: 0.92;
+}
+
+/* solana base: shift glass hue toward mint */
+html[data-ika-chain='solana'] .ct-titleBar--wallet,
+html[data-ika-chain='solana'] .ct-titleBar--sidepanel {
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.16 0.04 175) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.035 170) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.05 25) 12%, transparent) 100%
+    ),
+    var(--theme-chrome-sidepanel-bg);
+}
+
+/* light appearance: invert lightness while keeping the glass + ribbon */
+html[data-appearance='light'] .ct-titleBar--wallet,
+html[data-appearance='light'] .ct-titleBar--sidepanel {
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.96 0.025 285) 80%, transparent) 0%,
+      color-mix(in oklch, oklch(0.92 0.02 295) 65%, transparent) 50%,
+      color-mix(in oklch, oklch(0.94 0.04 25) 18%, transparent) 100%
+    ),
+    var(--theme-chrome-sidepanel-bg);
+}
+
+/* light + solana: warm-paper titlebar shifted to mint hue (175) per chain palette */
+html[data-appearance='light'][data-ika-chain='solana'] .ct-titleBar--wallet,
+html[data-appearance='light'][data-ika-chain='solana'] .ct-titleBar--sidepanel {
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.96 0.022 175) 80%, transparent) 0%,
+      color-mix(in oklch, oklch(0.93 0.02 170) 65%, transparent) 50%,
+      color-mix(in oklch, oklch(0.94 0.04 25) 18%, transparent) 100%
+    ),
+    var(--theme-chrome-sidepanel-bg);
 }
 
 .ct-titleBar--onboarding {
@@ -45,12 +118,31 @@
 
 .ct-titleBar-center {
   font-family: var(--theme-font-display);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.22em;
-  text-transform: uppercase;
-  color: rgba(234, 240, 255, 0.78);
+  font-size: 13px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: lowercase;
   white-space: nowrap;
+  /* sanctioned wordmark gradient (lifted from website .header-bar-wordmark-text) */
+  background-image: var(--ch-wordmark-gradient, linear-gradient(102deg,
+    oklch(0.97 0.02 270) 0%,
+    oklch(0.82 0.12 285) 44%,
+    oklch(0.88 0.16 22) 92%
+  ));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 0 12px oklch(0.55 0.14 285 / 0.32));
+}
+
+@supports not ((-webkit-background-clip: text) or (background-clip: text)) {
+  .ct-titleBar-center {
+    color: oklch(0.96 0.02 260);
+    background: none;
+    -webkit-text-fill-color: currentColor;
+    filter: none;
+  }
 }
 
 .ct-titleBar-right {
@@ -74,25 +166,27 @@
 }
 
 .ct-settingsBtn {
+  appearance: none;
+  -webkit-appearance: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
-  min-width: 32px;
-  min-height: 32px;
+  width: 40px;
+  height: 40px;
+  min-width: 40px;
+  min-height: 40px;
   padding: 0;
   border: none;
   border-radius: var(--theme-radius-sm);
   background: transparent;
-  color: rgba(234, 240, 255, 0.72);
+  color: color-mix(in oklch, var(--text, oklch(0.93 0.02 260)) 75%, transparent);
   cursor: pointer;
-  transition: background 0.15s, color 0.15s;
+  transition: background 0.15s var(--ch-ease, ease), color 0.15s var(--ch-ease, ease);
 }
 
 .ct-settingsBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(234, 240, 255, 0.95);
+  background: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 12%, transparent);
+  color: var(--text, oklch(0.97 0.015 270));
 }
 
 .ct-settingsBtn:focus-visible {
@@ -102,28 +196,49 @@
 
 /*
  * Borderless copy / row icon actions.
- * Hit area: 28×28px min (WCAG 2.5.8 needs ≥24×24; side panel + touch laptops get a sane tap zone without blowing token rows).
- * Glyph stays small via svg rules below.
+ * Visual size: 28×28 (stays compact in dense rows). Hit zone: 40×40 via invisible
+ * ::before pseudo-element so tap targets pass WCAG 2.5.5 (44×44 ideal) on touch
+ * surfaces while keeping the glyph small in token rows.
  */
 .ch-copyIconBtn {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
   flex-shrink: 0;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   margin: 0;
   padding: 0;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 6px;
   background: transparent;
-  color: rgba(234, 240, 255, 0.42);
+  /* polish (i-polish P2 from audit): drop hardcoded oklch fallback in color-mix.
+   * --text is declared in all 4 chain×appearance blocks in theme.css so the fallback
+   * is dead weight — and would lock solana base to sui-hued text (260) instead of
+   * mint-hued (170). plain var() lets the cascade do its job. */
+  color: color-mix(in oklch, var(--text) 45%, transparent);
   cursor: pointer;
   line-height: 0;
+  transition:
+    color 0.16s ease,
+    background 0.16s ease,
+    border-color 0.16s ease;
   box-sizing: border-box;
 }
 
+.ch-copyIconBtn::before {
+  content: '';
+  position: absolute;
+  /* expand tap area to 40×40 (visual button is 28×28 → +6px each side) */
+  inset: -6px;
+  border-radius: inherit;
+}
+
 .ch-copyIconBtn:hover {
-  color: rgba(234, 240, 255, 0.88);
-  background: rgba(255, 255, 255, 0.05);
+  color: var(--text);
+  background: color-mix(in oklch, var(--ika) 14%, transparent);
+  border-color: color-mix(in oklch, var(--ika) 28%, transparent);
 }
 
 .ch-copyIconBtn:focus-visible {
@@ -152,12 +267,36 @@
 /* vault context header — cv-context* */
 
 .cv-contextHeader {
+  position: relative;
   display: flex;
   flex-direction: column;
   gap: 6px;
-  padding: 8px 12px 10px;
+  padding: 10px 12px 12px;
   border-bottom: 1px solid var(--theme-chrome-border-soft, rgba(255, 255, 255, 0.1));
-  background: rgba(0, 0, 0, 0.12);
+  background: linear-gradient(
+    180deg,
+    color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 25%, transparent) 0%,
+    transparent 100%
+  );
+}
+
+/* subtle echo of the signature ribbon at the bottom of the vault context strip
+ * (opacity 0.45 vs the titlebar's 0.92 — secondary edge marker) */
+.cv-contextHeader::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 1px;
+  pointer-events: none;
+  background: var(--ch-bleed-gradient, linear-gradient(90deg,
+    oklch(0.62 0.19 22),
+    oklch(0.58 0.13 285),
+    oklch(0.7 0.14 250),
+    oklch(0.62 0.19 22)
+  ));
+  opacity: 0.45;
 }
 
 .cv-contextHeader--withDapp {
@@ -368,9 +507,12 @@
 }
 
 .cv-contextBaseAddr {
-  font-family: ui-monospace, monospace;
+  font-family: var(--theme-font-mono, 'JetBrains Mono', ui-monospace, monospace);
   font-size: 12px;
-  color: var(--sp-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+  color: var(--muted, var(--sp-muted));
 }
 
 .cv-contextNetBadge {
@@ -469,6 +611,9 @@ html[data-appearance='light'] .cv-prealphaNotice-text code {
   border: 1px dashed rgba(255, 255, 255, 0.18);
   text-align: center;
   color: var(--sp-muted);
+  min-width: 0;
+  overflow: hidden;
+  box-sizing: border-box;
 }
 
 .cv-dwalletsEmpty-title {
@@ -484,8 +629,10 @@ html[data-appearance='light'] .cv-prealphaNotice-text code {
   line-height: 1.45;
 }
 
-.cv-dwalletsEmpty-btn {
+.cv-dwalletsEmpty .cv-dwalletsEmpty-btn {
   margin-top: 12px;
+  white-space: normal;
+  word-break: break-word;
 }
 
 html[data-appearance='light'] .cv-dwalletsEmpty {
@@ -607,6 +754,15 @@ html[data-appearance='light'] .cv-fundingPill {
   pointer-events: none;
 }
 
+.sp-vaultPickerMeta--usd {
+  font-variant-numeric: tabular-nums;
+  font-weight: 500;
+  margin-left: auto;
+  margin-right: 8px;
+  color: var(--cv-text-muted, #c0c0c0);
+  font-size: 12px;
+}
+
 .cv-cockpitImage {
   pointer-events: none;
 }
@@ -704,12 +860,13 @@ html[data-appearance='light'] .cv-fundingPill {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  font-family: ui-monospace, monospace;
+  font-family: var(--theme-font-mono, ui-monospace, monospace);
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.04em;
-  color: #ffffff;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9), 0 0 6px rgba(0, 0, 0, 0.8);
+  color: var(--text, oklch(0.97 0.015 270));
+  /* single tinted shadow (was double drop-shadow stack — generic AI tell) */
+  text-shadow: 0 1px 4px color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 75%, transparent);
   pointer-events: none;
   white-space: nowrap;
   z-index: 10;
@@ -718,7 +875,8 @@ html[data-appearance='light'] .cv-fundingPill {
 .cv-gauge-label svg {
   flex-shrink: 0;
   opacity: 1;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.9)) drop-shadow(0 0 6px rgba(0, 0, 0, 0.8));
+  /* single tinted drop-shadow (was double stack — generic AI tell) */
+  filter: drop-shadow(0 1px 4px color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 75%, transparent));
 }
 
 .cv-gauge--sui .cv-gauge-label svg {
@@ -1449,9 +1607,46 @@ html[data-appearance='light'] .cv-baseCard-faucetLink:focus-visible {
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.42), 0 0 0 1px rgba(124, 92, 252, 0.12);
 }
 
+/* Tier-2 hero treatment for the active dWallet card (one per screen rule).
+ * combine border highlight + halo radial behind + the website's hit-card lift on hover.
+ */
 .cd-card--active {
-  border-color: rgba(124, 92, 252, 0.45);
-  box-shadow: 0 0 0 1px rgba(124, 92, 252, 0.2);
+  position: relative;
+  isolation: isolate;
+  border-color: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 55%, transparent);
+  box-shadow:
+    0 0 0 1px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 25%, transparent),
+    0 1px 0 oklch(1 0 0 / 0.08) inset,
+    var(--shadow-float, 0 12px 40px oklch(0.1 0.06 280 / 0.45));
+}
+
+.cd-card--active::before {
+  content: '';
+  position: absolute;
+  inset: -28px;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 95% 70% at 50% 0%,
+      color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 28%, transparent),
+      transparent 60%),
+    radial-gradient(ellipse 70% 60% at 100% 100%,
+      color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 16%, transparent),
+      transparent 65%);
+  opacity: 0.85;
+  /* perf (i-optimize P2): removed `filter: blur(2px)` — radial-gradient soft edges are
+   * sufficient, filter created an unneeded compositing layer. */
+}
+
+/* solana base: shift halo toward mint */
+html[data-ika-chain='solana'] .cd-card--active::before {
+  background:
+    radial-gradient(ellipse 95% 70% at 50% 0%,
+      color-mix(in oklch, oklch(0.78 0.22 152) 28%, transparent),
+      transparent 60%),
+    radial-gradient(ellipse 70% 60% at 100% 100%,
+      color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 16%, transparent),
+      transparent 65%);
 }
 
 .cd-card--pending {
@@ -1472,10 +1667,13 @@ html[data-appearance='light'] .cv-baseCard-faucetLink:focus-visible {
 }
 
 .cd-cardTitle {
-  font-size: 13px;
+  font-family: var(--theme-font-display);
+  font-size: 14px;
   font-weight: 700;
+  letter-spacing: -0.005em;
+  text-transform: lowercase;
   margin-bottom: 0;
-  line-height: 1.3;
+  line-height: 1.25;
   flex: 1;
   min-width: 0;
 }
@@ -1506,6 +1704,25 @@ html[data-appearance='light'] .cv-baseCard-faucetLink:focus-visible {
 
 .cd-cardRename {
   margin-bottom: 10px;
+}
+
+.cd-cardRenameField {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cd-cardRenameField .sp-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.cd-cardRenamePrefix {
+  font-size: 0.8em;
+  font-weight: 600;
+  color: var(--theme-muted);
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .cd-cardRenameActions {
@@ -1708,13 +1925,19 @@ html[data-appearance='light'] .cv-baseCard-faucetLink:focus-visible {
   gap: 0;
 }
 
+/* per-chain section header — lifted from website .site-footer-heading
+ * (left ika-stripe + bottom hairline + display 800 uppercase tracked) */
 .cp-portfolioSectionHdr {
-  font-size: 10px;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-2xs, 0.6875rem);
   font-weight: 800;
   letter-spacing: 0.14em;
-  color: var(--sp-muted, rgba(255, 255, 255, 0.55));
-  margin: 10px 0 6px;
-  padding-left: 2px;
+  text-transform: uppercase;
+  color: var(--muted, rgba(255, 255, 255, 0.7));
+  margin: 18px 0 10px;
+  padding: 4px 0 6px 12px;
+  border-left: 3px solid color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 62%, oklch(0.5 0.1 285));
+  border-bottom: 1px solid color-mix(in oklch, var(--border, var(--sp-border)) 55%, transparent);
 }
 
 .cp-portfolioSecpRule {
@@ -1988,10 +2211,8 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
 
 /* dWallet context strip under vault header */
 .cv-dwalletBar {
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  padding: 4px var(--ch-content-pad, 12px);
+  display: block;
+  padding: 6px var(--ch-content-pad, 12px);
   border-bottom: 1px solid var(--sp-border);
   background: color-mix(in srgb, var(--sp-bg) 92%, transparent);
   position: relative;
@@ -2000,7 +2221,10 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
 }
 
 .cv-dwalletBar--empty {
+  display: flex;
+  align-items: center;
   justify-content: center;
+  min-height: 32px;
 }
 
 .cv-dwalletBar-muted {
@@ -2011,10 +2235,9 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
 .cv-dwalletBar--singleWrap {
   width: 100%;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0;
+  flex-direction: column;
+  gap: 4px;
+  padding: 0;
   box-sizing: border-box;
 }
 
@@ -2028,6 +2251,8 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
   padding: 0;
   flex-shrink: 0;
   min-width: 0;
+  display: inline-flex;
+  align-items: center;
 }
 
 .cv-dwalletBar--single {
@@ -2045,85 +2270,208 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
   padding: 4px 0;
 }
 
-.cv-dwalletBar-triggerWrap {
+/**
+ * bordered trigger for the dWallet selector. signals the row is clickable to switch
+ * dWallets (the prior flat layout left users hunting for the chevron). subordinate to
+ * `.sp-vaultPickerBtn` above: softer border, no fill by default, hover lifts to the
+ * full token. focus ring + filled hover matches the vault picker family.
+ */
+.cv-dwalletBar-triggerBtn {
   width: 100%;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-  padding: 4px 0;
-  box-sizing: border-box;
-}
-
-.cv-dwalletBar-triggerLabel,
-.cv-dwalletBar-triggerChev {
-  border: none;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid color-mix(in oklch, var(--theme-chain-border) 65%, transparent);
   background: transparent;
   color: inherit;
   font: inherit;
+  text-align: left;
   cursor: pointer;
-  padding: 0;
-  flex-shrink: 0;
+  box-sizing: border-box;
+  transition: border-color 120ms ease, background-color 120ms ease;
 }
 
-.cv-dwalletBar-triggerAddr {
+.cv-dwalletBar-triggerBtn:hover,
+.cv-dwalletBar-triggerBtn:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: var(--theme-chain-border);
+}
+
+.cv-dwalletBar-triggerBtn:focus-visible {
+  outline: 2px solid color-mix(in oklch, var(--theme-chain-border) 80%, white);
+  outline-offset: 1px;
+}
+
+.cv-dwalletBar-triggerBtn[aria-disabled='true'] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.cv-dwalletBar-row1 {
   display: flex;
   align-items: center;
+  flex-wrap: wrap;
+  row-gap: 4px;
+  column-gap: 8px;
   min-width: 0;
-  flex: 1;
-  justify-content: flex-end;
-  gap: 2px;
 }
 
-.cv-dwalletBar-curveHint {
-  font-size: 11px;
-  color: var(--sp-muted);
+/**
+ * label must be allowed to shrink BELOW its intrinsic width so the row doesn't
+ * push the network pill / chevron off-screen at narrow side-panel widths. ellipsis
+ * is the graceful fallback for long custom names.
+ */
+.cv-dwalletBar {
+  /* override the global `.cv-dwalletBar-label` font sizing only inside the new
+     trigger so longer custom names get the same treatment. handled below. */
+}
+
+.cv-dwalletBar-row1 .cv-dwalletBar-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv-dwalletBar-row1-spacer {
+  flex: 1 0 0;
+  min-width: 4px;
+  max-width: 24px;
+}
+
+.cv-dwalletBar-row2 {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-width: 0;
+}
+
+/**
+ * row-2 address layout. `ExplorerValueRow` brings link + copy + transient confirmation
+ * already; we just size it for the dWallet bar. Truncation is middle-ellipsis (head 8,
+ * tail 6) so the address never wraps — public keys on two lines are unreadable. The
+ * native `title` attribute on the link reveals the full address on hover.
+ */
+.cv-dwalletBar-addrGuard {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.cv-dwalletBar-addrRow {
+  flex: 1 1 auto;
+  min-width: 0;
+  justify-content: flex-start;
+  gap: 6px;
+}
+
+.cv-dwalletBar-addrLink {
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.cv-dwalletBar-addrEmpty {
+  font-size: 12px;
+  opacity: 0.6;
+}
+
+.cv-dwalletBar-triggerChev {
   flex-shrink: 0;
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 2px;
 }
 
-.cv-dwalletBar-addrExplorer {
+/**
+ * inline guard wrappers prevent clicks on copy / network switcher / dapps pill from
+ * bubbling up to the outer `role=button` div and accidentally opening the dWallet
+ * selector when the user actually wanted to interact with the inner control.
+ */
+.cv-dwalletBar-inlineGuard {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
   min-width: 0;
-  flex: 1;
-  justify-content: flex-end;
 }
 
+/**
+ * dropdown row: stacked vertically — name on row 1, chain-tagged address on row 2 — so a long
+ * `[BTC.EVM] <user name>` label never has to wrap and competes for space with the address.
+ * the whole row is the picker (role=option), the inner address row stops propagation so the
+ * explorer link / copy button operate independently of the pick action.
+ */
 .cv-dwalletBar-itemRow {
   display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 0;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 2px;
+  padding: 8px 10px;
+  border: none;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  cursor: pointer;
+  transition: background-color 100ms ease;
 }
 
 .cv-dwalletBar-itemRow:last-child {
   border-bottom: none;
 }
 
+.cv-dwalletBar-itemRow:hover,
+.cv-dwalletBar-itemRow:focus-visible {
+  background: rgba(255, 255, 255, 0.04);
+  outline: none;
+}
+
 .cv-dwalletBar-itemRow--active {
   background: rgba(124, 92, 252, 0.08);
 }
 
-.cv-dwalletBar-itemMain {
-  flex: 1;
+.cv-dwalletBar-itemHead {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   min-width: 0;
-  display: block;
-  padding: 8px 10px;
-  border: none;
-  background: transparent;
-  color: inherit;
-  font-size: 12px;
-  text-align: left;
-  cursor: pointer;
 }
 
-.cv-dwalletBar-itemMain:hover {
-  background: rgba(255, 255, 255, 0.04);
+.cv-dwalletBar-itemLabel {
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv-dwalletBar-itemRow--active .cv-dwalletBar-itemLabel {
+  font-weight: 700;
+}
+
+.cv-dwalletBar-itemAddrRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cv-dwalletBar-itemChainTag {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  color: color-mix(in oklch, var(--theme-page-text) 70%, transparent);
+  user-select: none;
 }
 
 .cv-dwalletBar-itemExplorer {
-  flex-shrink: 0;
-  max-width: 48%;
-  padding-right: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .cv-dwalletBar-label {
@@ -2240,27 +2588,44 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
 .ap-tabRow {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 14px;
+  gap: 8px;
+  margin-bottom: 18px;
+  align-items: center;
 }
 
 .ap-tabBtn {
-  padding: 6px 12px;
+  padding: 8px 14px;
+  min-height: 32px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--sp-muted);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  border: 1px solid color-mix(in oklch, var(--border, var(--sp-border)) 75%, transparent);
+  background: color-mix(in oklch, var(--surface, var(--sp-surface)) 50%, transparent);
+  color: var(--muted, var(--sp-muted));
+  font-family: var(--theme-font-display);
+  font-size: var(--text-2xs, 0.6875rem);
+  font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
+  transition:
+    color 0.18s ease,
+    background 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.2s ease;
+}
+
+.ap-tabBtn:hover {
+  color: var(--text, var(--sp-text));
+  border-color: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 28%, var(--border, var(--sp-border)));
 }
 
 .ap-tabBtn--active {
-  border-color: rgba(124, 92, 252, 0.55);
-  background: rgba(124, 92, 252, 0.18);
-  color: var(--sp-text);
+  border-color: color-mix(in oklch, var(--accent, oklch(0.78 0.14 245)) 55%, transparent);
+  background: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 22%, transparent);
+  color: var(--text, var(--sp-text));
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.06) inset,
+    0 0 0 1px color-mix(in oklch, var(--accent, oklch(0.78 0.14 245)) 18%, transparent),
+    0 4px 12px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 22%, transparent);
 }
 
 .ap-tokensStub {
@@ -2296,42 +2661,130 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
   position: fixed;
   inset: 0;
   z-index: 80;
-  background: rgba(0, 0, 0, 0.55);
+  background:
+    radial-gradient(ellipse 80% 60% at 50% 100%, color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 65%, transparent), transparent 70%),
+    color-mix(in oklch, oklch(0.05 0.04 285) 78%, transparent);
+  backdrop-filter: blur(8px) saturate(1.4);
+  -webkit-backdrop-filter: blur(8px) saturate(1.4);
   display: flex;
   align-items: flex-end;
   justify-content: center;
-  padding: 12px;
+  padding: 0;
   box-sizing: border-box;
+  animation: dp-receiveBackdrop-fade 0.22s var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1));
 }
 
+@keyframes dp-receiveBackdrop-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+/* bottom sheet pattern (Archetype 5): signature 4-stop ribbon at top, drag handle,
+ * glass-stack chrome, slide-up entrance — matches website design language. */
 .dp-receiveSheet {
+  position: relative;
   width: 100%;
-  max-width: 400px;
-  border-radius: 16px 16px 12px 12px;
-  padding: 16px 16px 18px;
-  background: var(--theme-setup-card-bg-side, rgba(18, 20, 28, 0.98));
-  border: 1px solid var(--theme-chain-border);
-  box-shadow: 0 -8px 40px rgba(0, 0, 0, 0.45);
+  max-width: 480px;
+  border-radius: 22px 22px 0 0;
+  padding: 20px 18px 22px;
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.18 0.05 285) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.04 295) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.06 25) 12%, transparent) 100%
+    ),
+    color-mix(in oklch, var(--ink, oklch(0.18 0.04 280)) 95%, transparent);
+  /* perf (i-optimize P1 round 2): blur 20->12, saturate 165%->140%. matches .ch-bottomSheet. */
+  backdrop-filter: blur(12px) saturate(140%);
+  -webkit-backdrop-filter: blur(12px) saturate(140%);
+  border: 1px solid color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 18%, oklch(0.55 0.1 275 / 0.45));
+  border-bottom: none;
+  box-shadow:
+    0 1px 0 oklch(1 0 0 / 0.06) inset,
+    0 -16px 56px oklch(0.05 0.06 285 / 0.55),
+    0 0 80px color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 6%, transparent);
+  isolation: isolate;
+  animation: dp-receiveSheet-pop 0.32s var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* signature 4-stop ribbon at the top edge */
+.dp-receiveSheet::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 2px;
+  z-index: 4;
+  pointer-events: none;
+  background: var(--ch-bleed-gradient, linear-gradient(90deg,
+    oklch(0.62 0.19 22),
+    oklch(0.58 0.13 285),
+    oklch(0.7 0.14 250),
+    oklch(0.62 0.19 22)
+  ));
+  opacity: 0.95;
+  border-radius: 22px 22px 0 0;
+}
+
+/* drag handle (touch-affordance signal) */
+.dp-receiveSheet::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 40px;
+  height: 4px;
+  border-radius: 999px;
+  background: color-mix(in oklch, var(--faint, oklch(0.62 0.06 275)) 55%, transparent);
+  pointer-events: none;
+}
+
+@keyframes dp-receiveSheet-pop {
+  from { opacity: 0; transform: translateY(20px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* solana variant: shift glass hue toward mint */
+html[data-ika-chain='solana'] .dp-receiveSheet {
+  background:
+    linear-gradient(168deg,
+      color-mix(in oklch, oklch(0.16 0.04 175) 72%, transparent) 0%,
+      color-mix(in oklch, oklch(0.1 0.035 170) 48%, transparent) 50%,
+      color-mix(in oklch, oklch(0.16 0.05 25) 12%, transparent) 100%
+    ),
+    color-mix(in oklch, var(--ink, oklch(0.16 0.035 175)) 95%, transparent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dp-receiveBackdrop,
+  .dp-receiveSheet {
+    animation: none;
+  }
 }
 
 .dp-receiveSheet-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 6px;
+  margin: 8px 0 10px;
+  padding-top: 8px;
 }
 
 .dp-receiveSheet-title {
-  font-size: 14px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
+  font-family: var(--theme-font-display);
+  font-size: var(--text-md, 1.18rem);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-transform: lowercase;
 }
 
 .dp-receiveSheet-sub {
-  font-size: 11px;
-  color: var(--sp-muted);
-  margin-bottom: 12px;
+  font-family: var(--theme-font-body);
+  font-size: var(--text-xs, 0.8125rem);
+  color: var(--muted, var(--sp-muted));
+  margin-bottom: 14px;
 }
 
 .dp-receiveClose {
@@ -2488,22 +2941,30 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
   justify-content: flex-end;
 }
 
+/* explorer link: lifted from website's .md-doc a — ika red as link color
+ * (chromatika's owned link color, matches website doc rendering). hover lightens. */
 .cd-explorerMonoLink {
   font-variant-numeric: tabular-nums;
-  font-family: ui-monospace, monospace;
-  font-size: 11px;
+  font-family: var(--theme-font-mono, 'JetBrains Mono', ui-monospace, monospace);
+  font-size: var(--text-xs, 0.8125rem);
+  font-weight: 500;
   line-height: 1.35;
-  color: rgba(147, 197, 253, 0.95);
-  text-decoration: none;
+  letter-spacing: 0.01em;
+  color: var(--ika, oklch(0.68 0.2 15));
+  text-decoration: underline;
+  text-decoration-color: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 35%, transparent);
+  text-underline-offset: 0.18em;
+  text-decoration-thickness: 1px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   min-width: 0;
+  transition: color 0.16s ease, text-decoration-color 0.16s ease;
 }
 
 .cd-explorerMonoLink:hover {
-  text-decoration: underline;
-  text-underline-offset: 2px;
+  color: color-mix(in oklch, var(--ika, oklch(0.68 0.2 15)) 85%, oklch(0.97 0.015 270));
+  text-decoration-color: var(--ika, oklch(0.68 0.2 15));
 }
 
 .cd-explorerMonoPlain {
@@ -2641,4 +3102,37 @@ html[data-appearance='light'] .dp-portfolioAssetsSlab {
   background: rgba(252, 165, 165, 0.12);
   color: rgba(252, 165, 165, 0.95);
   border: 1px solid rgba(252, 165, 165, 0.4);
+}
+
+/* vault total line — cv-vaultTotal* */
+
+.cv-vaultTotalRow {
+  display: flex;
+  justify-content: center;
+  padding: 4px 0 2px;
+}
+
+.cv-vaultTotal {
+  background: transparent;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  color: var(--cv-text, #f5f5f5);
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  cursor: pointer;
+}
+
+.cv-vaultTotal:hover {
+  opacity: 0.85;
+}
+
+.cv-vaultTotal--pending {
+  animation: vault-total-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes vault-total-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.45; }
 }

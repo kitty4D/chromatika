@@ -141,69 +141,53 @@ export function NoteEditModal({
     setDecrypted(null);
   }
 
+  // Escape-to-close for keyboard users (WCAG 2.4.3 focus order + standard dialog behavior).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && busy === 'idle') onClose();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose, busy]);
+
   const hasNote = status?.hasNote === true;
   const hasRecord = status?.hasRecord === true;
 
   return (
     <div
-      className="sp-modalBackdrop"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="note-edit-modal-title"
+      className="ch-bottomSheet-backdrop"
+      role="presentation"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        backgroundColor: 'rgba(0,0,0,0.6)',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        zIndex: 1000,
-      }}
     >
-      <div className="sp-modalCard" style={{ maxWidth: 420, width: '90%', padding: 16 }}>
-        <div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            marginBottom: 8,
-          }}
-        >
-          <Lock size={14} />
-          <div id="note-edit-modal-title" style={{ fontWeight: 600 }}>
+      <div
+        className="ch-bottomSheet"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="note-edit-modal-title"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="ch-bottomSheet-head">
+          <span id="note-edit-modal-title" className="ch-bottomSheet-title">
+            <Lock size={16} />
             encrypted activity note
-          </div>
+          </span>
           <button
             type="button"
             onClick={onClose}
-            style={{ marginLeft: 'auto', background: 'transparent', border: 0, cursor: 'pointer' }}
+            className="ch-bottomSheet-close"
             aria-label="close"
           >
             ×
           </button>
         </div>
 
-        <div className="sp-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+        <div className="sp-muted" style={{ fontSize: 11, marginBottom: 8, fontFamily: 'var(--theme-font-mono, ui-monospace, monospace)' }}>
           tx: {txLabel ?? txHash.slice(0, 10) + '…' + txHash.slice(-6)}
         </div>
 
-        <div
-          className="sp-prealphaPill"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: 4,
-            fontSize: 10,
-            padding: '2px 6px',
-            borderRadius: 4,
-            background: 'rgba(255,196,77,0.15)',
-            color: '#ffc44d',
-            marginBottom: 12,
-          }}
-        >
+        <div className="sp-prealphaPill" style={{ marginBottom: 12 }}>
           <AlertTriangle size={10} />
           encrypt.xyz pre-alpha · dev preview
         </div>

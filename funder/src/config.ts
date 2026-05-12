@@ -18,12 +18,17 @@
  * mainnet pricing and bump these to `max(observed_mainnet, fallback)`. revisit quarterly,
  * since on-chain pricing can be governance-updated.
  *
- * last calibrated: NEVER (using fallback values; needs measurement before first prod deploy)
+ * last calibrated: 2026-05-11 against https://graphql.mainnet.sui.io/graphql (49 pricing
+ *   rows). raw observed max fee_ika across all curves + protocols was 250_000_000 base
+ *   units; +10% buffer gives 275_000_000 (27.5x the SDK fallback floor!). raw observed
+ *   max gas_fee_reimbursement_sui was 0n on mainnet at calibration time, so SUI stays at
+ *   the 10_000_000n fallback floor. re-measure with `node wallet-extension/scripts/
+ *   calibrate-funder-pricing.mjs` quarterly or after any ika governance change.
  * source of truth for the formula: wallet-extension/src/background/ika/pricing.ts
  */
 
 /** per `getRequiredCoinAmounts`-session IKA cost in base IKA units (1 IKA = 10^9 base units). */
-export const PER_SESSION_IKA: bigint = 10_000_000n;
+export const PER_SESSION_IKA: bigint = 275_000_000n;
 
 /** per `getRequiredCoinAmounts`-session SUI cost in mist (1 SUI = 10^9 mist). */
 export const PER_SESSION_SUI: bigint = 10_000_000n;

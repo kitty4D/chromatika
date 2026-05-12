@@ -182,7 +182,7 @@ export function SendPage({
 
   return (
     <div className="sp-page">
-      <div className="sp-pageTitle">send</div>
+      <h2 className="sp-pageTitle">send</h2>
 
       <PolicyVaultBanner />
 

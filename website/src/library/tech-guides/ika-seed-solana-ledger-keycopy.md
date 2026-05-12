@@ -60,13 +60,11 @@ contrast Seeker / WalletConnect Solana vaults where the ika seed is the **wallet
 ## why not Seeker-style signature derivation for Ledger
 
 a hardware-only Ledger Solana vault (ika seed derived from a Ledger-signed message) is achievable in principle:
-
 - Ledger Solana app supports `solana_signMessage` or arbitrary-bytes signing
 - a fixed message like `IKA_USK_DERIVATION_MESSAGE` could be signed at pairing
 - `keccak256(signature || index)` would be the seed
 
 what's missing today:
-
 - the chromatika UX flow that pops the Ledger sign popup at vault-create time before any keys are committed
 - testing across Ledger firmware versions (sign-message availability varies)
 - handling the case where Ledger requires display approval for arbitrary bytes (the user has to physically confirm a fixed string they don't recognize)

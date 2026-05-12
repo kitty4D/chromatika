@@ -1,0 +1,642 @@
+{
+  "user": [
+    {
+      "slug": "activity-notes",
+      "title": "how to use encrypted activity notes"
+    },
+    {
+      "slug": "add-custom-network",
+      "title": "how to add a custom network"
+    },
+    {
+      "slug": "agent-surface-mcp",
+      "title": "how to use the agent surface (MCP)"
+    },
+    {
+      "slug": "app-settings",
+      "title": "how to configure chromatika app settings"
+    },
+    {
+      "slug": "approve-dapp-tx",
+      "title": "how to approve a dapp transaction"
+    },
+    {
+      "slug": "browse-nfts",
+      "title": "how to browse NFTs"
+    },
+    {
+      "slug": "connect-dapp",
+      "title": "how to connect a dapp"
+    },
+    {
+      "slug": "create-dwallet",
+      "title": "how to create a dWallet"
+    },
+    {
+      "slug": "create-vault",
+      "title": "how to create a chromatika vault"
+    },
+    {
+      "slug": "dapp-consent-mode",
+      "title": "how to set the dapp consent mode"
+    },
+    {
+      "slug": "encrypted-dwallet-labels",
+      "title": "how to use encrypted dWallet labels"
+    },
+    {
+      "slug": "encryption-lab",
+      "title": "how to use the encryption lab"
+    },
+    {
+      "slug": "find-more-accounts",
+      "title": "how to find more accounts (post-unlock activity scan + dwallet inventory)"
+    },
+    {
+      "slug": "hardware-vault",
+      "title": "how to set up a hardware-only vault"
+    },
+    {
+      "slug": "ika-fee-management",
+      "title": "how to manage ika fee-payer (Solana base)"
+    },
+    {
+      "slug": "ika-staking",
+      "title": "how to stake IKA"
+    },
+    {
+      "slug": "import-vault-mnemonic",
+      "title": "how to import a chromatika vault from an existing mnemonic"
+    },
+    {
+      "slug": "import-vault-private-key",
+      "title": "how to import a chromatika vault from a private key"
+    },
+    {
+      "slug": "lazor-vault",
+      "title": "how to use a Lazor-backed solana vault"
+    },
+    {
+      "slug": "ledger",
+      "title": "how to use a Ledger hardware wallet"
+    },
+    {
+      "slug": "manage-dapp-permissions",
+      "title": "how to manage dapp permissions"
+    },
+    {
+      "slug": "manage-dwallets",
+      "title": "how to manage dWallets"
+    },
+    {
+      "slug": "manage-networks",
+      "title": "how to manage active networks"
+    },
+    {
+      "slug": "manage-vaults",
+      "title": "how to manage multiple chromatika vaults"
+    },
+    {
+      "slug": "media-safety-mode",
+      "title": "how to set MediaSafetyMode"
+    },
+    {
+      "slug": "multi-vault-siblings",
+      "title": "how to use multi-vault siblings (one identity, multiple dwallets)"
+    },
+    {
+      "slug": "passkey-vault",
+      "title": "how to use a passkey-backed vault"
+    },
+    {
+      "slug": "phishing-protection",
+      "title": "how to use chromatika's phishing protection"
+    },
+    {
+      "slug": "policy-vault",
+      "title": "how to use the on-chain policy vault (spend caps + panic + rescue)"
+    },
+    {
+      "slug": "presign-pool",
+      "title": "how to manage the presign pool"
+    },
+    {
+      "slug": "price-source-priority",
+      "title": "how to configure price source priority"
+    },
+    {
+      "slug": "readme",
+      "title": "chromatika user guides"
+    },
+    {
+      "slug": "recovery-words",
+      "title": "how to use BIP39 recovery words"
+    },
+    {
+      "slug": "safety-alerts",
+      "title": "how to use chromatika safety alerts"
+    },
+    {
+      "slug": "seeker-local",
+      "title": "how to use Solana Mobile Wallet Adapter (local transport)"
+    },
+    {
+      "slug": "seeker-remote",
+      "title": "how to use Solana Mobile Wallet Adapter (remote transport)"
+    },
+    {
+      "slug": "send-bitcoin",
+      "title": "how to send native BTC"
+    },
+    {
+      "slug": "send-evm",
+      "title": "how to send a transaction on EVM"
+    },
+    {
+      "slug": "send-solana",
+      "title": "how to send native SOL"
+    },
+    {
+      "slug": "send-sui",
+      "title": "how to send native SUI"
+    },
+    {
+      "slug": "sign-messages",
+      "title": "how to sign messages across chains"
+    },
+    {
+      "slug": "sui-ika-swap",
+      "title": "how to swap SUI for IKA"
+    },
+    {
+      "slug": "sui-kiosks",
+      "title": "how to use Sui Kiosks"
+    },
+    {
+      "slug": "transfer-dwallet",
+      "title": "how to transfer a dWallet"
+    },
+    {
+      "slug": "trezor",
+      "title": "how to use a Trezor hardware wallet"
+    },
+    {
+      "slug": "unlock-and-lock",
+      "title": "how to unlock and lock chromatika"
+    },
+    {
+      "slug": "view-activity-and-portfolio",
+      "title": "how to view activity and portfolio"
+    },
+    {
+      "slug": "waap-vault",
+      "title": "how to use a WAAP-backed vault"
+    },
+    {
+      "slug": "walletconnect",
+      "title": "how to use WalletConnect for remote signing"
+    },
+    {
+      "slug": "x402-payments",
+      "title": "how to use x402 HTTP payments"
+    }
+  ],
+  "tech": [
+    {
+      "slug": "2pc-mpc-overview",
+      "title": "2PC-MPC overview (ika protocol)"
+    },
+    {
+      "slug": "activity-notes-encrypt-decrypt",
+      "title": "activity notes encrypt + decrypt flows"
+    },
+    {
+      "slug": "aes-gcm-vault",
+      "title": "AES-256-GCM vault encryption"
+    },
+    {
+      "slug": "aftermath-router",
+      "title": "Aftermath router (Sui swap)"
+    },
+    {
+      "slug": "alerts-overview",
+      "title": "safety alerts subsystem overview"
+    },
+    {
+      "slug": "alerts-poller-and-actions",
+      "title": "alerts poller + actions (notifications + dNR rules)"
+    },
+    {
+      "slug": "alerts-publish-cli",
+      "title": "`publish-alert.mjs` CLI"
+    },
+    {
+      "slug": "alerts-publisher-allowlist",
+      "title": "alerts publisher allowlist (`alerts-publishers.ts`)"
+    },
+    {
+      "slug": "alerts-signed-feed-format",
+      "title": "`SignedAlertV1` wire format + canonical JSON + ed25519 verify"
+    },
+    {
+      "slug": "aptos-sign",
+      "title": "Aptos signing"
+    },
+    {
+      "slug": "argon2id-kdf",
+      "title": "argon2id KDF in chromatika"
+    },
+    {
+      "slug": "bip39-mnemonic",
+      "title": "BIP39 mnemonics in chromatika"
+    },
+    {
+      "slug": "bip44-slip10-derivation",
+      "title": "BIP44 + SLIP10 derivation paths"
+    },
+    {
+      "slug": "bitcoinjs-lib-usage",
+      "title": "`bitcoinjs-lib` usage in chromatika"
+    },
+    {
+      "slug": "btc-tx-sign-segwit-taproot",
+      "title": "Bitcoin tx signing - segwit (P2WPKH) + taproot (P2TR)"
+    },
+    {
+      "slug": "buffer-polyfill",
+      "title": "`buffer-polyfill.ts` (Node Buffer in browser)"
+    },
+    {
+      "slug": "chainlist-search",
+      "title": "Chainlist search"
+    },
+    {
+      "slug": "chrome-alarms-and-idle",
+      "title": "`chrome.alarms` + `chrome.idle`"
+    },
+    {
+      "slug": "chrome-declarativenetrequest",
+      "title": "`chrome.declarativeNetRequest` (dNR)"
+    },
+    {
+      "slug": "chrome-runtime-connect-trpc-port",
+      "title": "`chrome.runtime.connect` (tRPC port for UI ↔ background)"
+    },
+    {
+      "slug": "chrome-runtime-connectnative",
+      "title": "`chrome.runtime.connectNative` (MCP native messaging)"
+    },
+    {
+      "slug": "chrome-storage-local-and-session",
+      "title": "`chrome.storage.local` + `chrome.storage.session`"
+    },
+    {
+      "slug": "cold-sw-unlock-cache",
+      "title": "cold-SW unlock cache (`chromatika_unlock_cache_v1`)"
+    },
+    {
+      "slug": "dapp-bridge-message-validation",
+      "title": "dapp bridge message validation"
+    },
+    {
+      "slug": "e2e-test-patterns",
+      "title": "e2e test patterns: SW fetch mock + dev-harness flags"
+    },
+    {
+      "slug": "ecdsa-secp256k1",
+      "title": "secp256k1 ECDSA in chromatika"
+    },
+    {
+      "slug": "ed25519-eddsa",
+      "title": "ed25519 EdDSA in chromatika"
+    },
+    {
+      "slug": "eip-1193-and-6963",
+      "title": "EIP-1193 + EIP-6963 (EVM dapp injection)"
+    },
+    {
+      "slug": "eip-3085-3326",
+      "title": "EIP-3085 (`wallet_addEthereumChain`) + EIP-3326 (`wallet_switchEthereumChain`)"
+    },
+    {
+      "slug": "encrypt-17-byte-canonical-format",
+      "title": "Encrypt 17-byte canonical input format"
+    },
+    {
+      "slug": "encrypt-create-input",
+      "title": "Encrypt CreateInput flow"
+    },
+    {
+      "slug": "encrypt-grpc-web-fetch-transport",
+      "title": "Encrypt gRPC-web transport (HTTP/1.1 over fetch)"
+    },
+    {
+      "slug": "encrypt-multi-chunk-labels",
+      "title": "Encrypt multi-chunk labels (1-64 utf-8 bytes → 1-4 EUint128 chunks)"
+    },
+    {
+      "slug": "encrypt-on-chain-status-polling",
+      "title": "Encrypt on-chain status polling (4s pill)"
+    },
+    {
+      "slug": "encrypt-pre-alpha-overview",
+      "title": "Encrypt.xyz integration (pre-alpha overview)"
+    },
+    {
+      "slug": "encrypt-protobuf-wire",
+      "title": "Encrypt protobuf wire codec (hand-rolled)"
+    },
+    {
+      "slug": "encrypt-read-ciphertext-signed",
+      "title": "Encrypt ReadCiphertext (signed) flow"
+    },
+    {
+      "slug": "encryption-backend-abstraction",
+      "title": "`EncryptionBackend` abstraction (`src/background/encryption/`)"
+    },
+    {
+      "slug": "eth-phishing-detect",
+      "title": "MetaMask `eth-phishing-detect` integration"
+    },
+    {
+      "slug": "evm-personal-sign-and-typeddata",
+      "title": "EVM personal_sign + signTypedData_v4"
+    },
+    {
+      "slug": "evm-send-flow",
+      "title": "EVM transaction send flow"
+    },
+    {
+      "slug": "ika-accept-share-zerotrust",
+      "title": "ika accept-share zero-trust flow"
+    },
+    {
+      "slug": "ika-dkg-flow",
+      "title": "ika DKG flow"
+    },
+    {
+      "slug": "ika-presign-pool-impl",
+      "title": "ika presign pool implementation"
+    },
+    {
+      "slug": "ika-re-encrypt-transfer",
+      "title": "ika re-encrypt and dWallet transfer"
+    },
+    {
+      "slug": "ika-seed-derivation-overview",
+      "title": "ika `UserShareEncryptionKeys` seed derivation overview"
+    },
+    {
+      "slug": "ika-seed-solana-lazor",
+      "title": "ika seed: Solana base + Lazor"
+    },
+    {
+      "slug": "ika-seed-solana-ledger-keycopy",
+      "title": "ika seed: Solana base + Ledger (key-copy from source vault)"
+    },
+    {
+      "slug": "ika-seed-solana-mnemonic",
+      "title": "ika seed: Solana base + BIP39 mnemonic"
+    },
+    {
+      "slug": "ika-seed-solana-mwa-walletconnect",
+      "title": "ika seed: Solana base + MWA / WalletConnect signature"
+    },
+    {
+      "slug": "ika-seed-solana-private-key",
+      "title": "ika seed: Solana base + imported private key"
+    },
+    {
+      "slug": "ika-seed-sui-ledger-keycopy",
+      "title": "ika seed: Sui base + Ledger (key-copy from source vault)"
+    },
+    {
+      "slug": "ika-seed-sui-mnemonic",
+      "title": "ika seed: Sui base + BIP39 mnemonic"
+    },
+    {
+      "slug": "ika-seed-sui-passkey",
+      "title": "ika seed: Sui base + passkey (WebAuthn PRF)"
+    },
+    {
+      "slug": "ika-seed-sui-private-key",
+      "title": "ika seed: Sui base + imported private key"
+    },
+    {
+      "slug": "ika-seed-sui-waap",
+      "title": "ika seed: Sui base + WAAP"
+    },
+    {
+      "slug": "ika-sign-flow",
+      "title": "ika sign flow"
+    },
+    {
+      "slug": "keccak256-uses",
+      "title": "keccak256 in chromatika"
+    },
+    {
+      "slug": "ledger-hw-app-libs",
+      "title": "Ledger hw-app libraries"
+    },
+    {
+      "slug": "mcp-bearer-token-auth",
+      "title": "MCP bearer-token auth"
+    },
+    {
+      "slug": "mcp-host-spawn-and-setup",
+      "title": "MCP host spawn + per-OS setup"
+    },
+    {
+      "slug": "mcp-http-transport",
+      "title": "MCP HTTP transport (`POST /mcp`)"
+    },
+    {
+      "slug": "mcp-list-active-alerts-tool",
+      "title": "`listActiveAlerts` MCP read-tier tool"
+    },
+    {
+      "slug": "mcp-native-messaging-frame",
+      "title": "chrome native messaging frame protocol"
+    },
+    {
+      "slug": "mcp-protocol-overview",
+      "title": "MCP protocol overview (chromatika)"
+    },
+    {
+      "slug": "mcp-reconfigure-port",
+      "title": "MCP `reconfigure-port` live rebind"
+    },
+    {
+      "slug": "mcp-stdio-bridge",
+      "title": "MCP stdio bridge mode (`--stdio-bridge`)"
+    },
+    {
+      "slug": "mcp-tool-routing",
+      "title": "MCP tool-call routing and correlation"
+    },
+    {
+      "slug": "multi-envelope-design",
+      "title": "multi-envelope unlock design (V4)"
+    },
+    {
+      "slug": "mwa-2-spec-and-reflector",
+      "title": "Mobile Wallet Adapter 2.0 spec + reflector protocol"
+    },
+    {
+      "slug": "mwa-local-android-intent",
+      "title": "MWA local transport (Android intent)"
+    },
+    {
+      "slug": "mwa-remote-qr-pairing",
+      "title": "MWA remote transport (desktop ↔ phone QR pairing)"
+    },
+    {
+      "slug": "mysten-kiosk-client",
+      "title": "`@mysten/kiosk` `KioskClient`"
+    },
+    {
+      "slug": "mysten-sui-pinning-and-patches",
+      "title": "`@mysten/sui` pinning + deduplication"
+    },
+    {
+      "slug": "nft-api-providers",
+      "title": "NFT API providers (Alchemy, Helius, Hiro, Mysten Display, Aptos Indexer)"
+    },
+    {
+      "slug": "noble-and-scure-crypto-libs",
+      "title": "`@noble/*` and `@scure/*` crypto libraries"
+    },
+    {
+      "slug": "offscreen-media-cache",
+      "title": "offscreen media cache"
+    },
+    {
+      "slug": "operation-progress-banner",
+      "title": "operation-progress banner"
+    },
+    {
+      "slug": "passkey-prf-envelope",
+      "title": "passkey PRF envelope"
+    },
+    {
+      "slug": "password-envelope",
+      "title": "password envelope"
+    },
+    {
+      "slug": "policy-vault",
+      "title": "on-chain policy vault (Sui Move + Solana Anchor)"
+    },
+    {
+      "slug": "price-waterfall-and-sources",
+      "title": "price waterfall + sources"
+    },
+    {
+      "slug": "readme",
+      "title": "chromatika tech guides (deep dive)"
+    },
+    {
+      "slug": "recovery-words-envelope",
+      "title": "recovery-words envelope"
+    },
+    {
+      "slug": "scan-service-architecture",
+      "title": "activity scan service architecture"
+    },
+    {
+      "slug": "session-state-multi-vault",
+      "title": "session state + multi-vault model"
+    },
+    {
+      "slug": "sha512-and-blake2b",
+      "title": "SHA-512 and BLAKE2b in chromatika"
+    },
+    {
+      "slug": "signature-normalization",
+      "title": "`parseSignatureFromSignOutput` and signature normalization"
+    },
+    {
+      "slug": "signed-tx-record",
+      "title": "signed-tx record store + activity feed merge"
+    },
+    {
+      "slug": "solana-confirm-polling",
+      "title": "Solana confirm-by-polling"
+    },
+    {
+      "slug": "solana-tx-sign",
+      "title": "Solana transaction signing via ika MPC"
+    },
+    {
+      "slug": "ss58-cosmos-bech32-address-derivation",
+      "title": "SS58 + Cosmos bech32 address derivation"
+    },
+    {
+      "slug": "sui-graphql-client",
+      "title": "`SuiGraphQLClient` (Mysten's Sui GraphQL transport)"
+    },
+    {
+      "slug": "sui-personal-message-divergence",
+      "title": "Sui `signPersonalMessage` ika SHA-512 vs Mysten BLAKE2b divergence"
+    },
+    {
+      "slug": "sui-tx-sign-via-ika",
+      "title": "Sui transaction signing via ika MPC"
+    },
+    {
+      "slug": "taproot-schnorr",
+      "title": "BTC taproot Schnorr (BIP340) in chromatika"
+    },
+    {
+      "slug": "trezor-connect-iframe",
+      "title": "Trezor Connect (`@trezor/connect-web`)"
+    },
+    {
+      "slug": "vault-blob-v3-format",
+      "title": "vault blob v3 format (`chromatika_vault_v3`)"
+    },
+    {
+      "slug": "vault-total-cache",
+      "title": "vault-total-cache"
+    },
+    {
+      "slug": "waap-determinism-probe",
+      "title": "WAAP determinism probe"
+    },
+    {
+      "slug": "wallet-signature-envelope",
+      "title": "wallet-signature envelope"
+    },
+    {
+      "slug": "wallet-standard-sui-and-solana",
+      "title": "Wallet Standard (Sui + Solana)"
+    },
+    {
+      "slug": "walletconnect-v2",
+      "title": "WalletConnect v2 (`@walletconnect/sign-client`)"
+    },
+    {
+      "slug": "webauthn-prf-hmac-secret",
+      "title": "WebAuthn PRF / HMAC-secret extension"
+    },
+    {
+      "slug": "webhid-popup-context",
+      "title": "WebHID (popup / side-panel only)"
+    },
+    {
+      "slug": "x402-caps-receipts",
+      "title": "x402 spending caps + receipt log"
+    },
+    {
+      "slug": "x402-fetch-interception",
+      "title": "x402 fetch interception (`x402-fetch-wrapper.ts`)"
+    },
+    {
+      "slug": "x402-solana-tx-build",
+      "title": "x402 Solana tx build (`x402-solana-build.ts`)"
+    },
+    {
+      "slug": "x402-spec-svm-exact",
+      "title": "x402 v2 spec - the SVM `exact` scheme"
+    }
+  ]
+}

@@ -66,11 +66,13 @@ function orderGasRows(rows: DwalletHomeGasRow[], cap: OwnedDWalletCapView, activ
   const pinned = hasPin && pinKey ? rows.find((r) => r.rowKey === pinKey)! : null;
   const rest = hasPin && pinKey ? rows.filter((r) => r.rowKey !== pinKey) : [...rows];
   rest.sort((a, b) => {
-    const na = a.usdValue != null && Number.isFinite(a.usdValue) ? a.usdValue : -1;
-    const nb = b.usdValue != null && Number.isFinite(b.usdValue) ? b.usdValue : -1;
+    const na = a.usdValue != null && Number.isFinite(a.usdValue) && a.usdValue > 0 ? a.usdValue : 0;
+    const nb = b.usdValue != null && Number.isFinite(b.usdValue) && b.usdValue > 0 ? b.usdValue : 0;
     const d = nb - na;
     if (d !== 0) return d;
-    return a.chainLabel.localeCompare(b.chainLabel);
+    const lc = a.chainLabel.localeCompare(b.chainLabel);
+    if (lc !== 0) return lc;
+    return a.rowKey.localeCompare(b.rowKey);
   });
   return pinned ? [pinned, ...rest] : rest;
 }

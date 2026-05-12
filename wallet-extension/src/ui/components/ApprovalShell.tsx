@@ -156,14 +156,14 @@ const titleInner: CSSProperties = {
 const iconWrap: CSSProperties = {
   display: 'inline-flex',
   alignItems: 'center',
-  color: 'rgba(165,180,252,0.95)',
+  color: 'var(--accent-2, oklch(0.72 0.18 290))',
   flexShrink: 0,
 };
 
 const closeBtn: CSSProperties = {
   background: 'transparent',
   border: 'none',
-  color: 'rgba(234,240,255,0.6)',
+  color: 'var(--muted)',
   cursor: 'pointer',
   padding: 4,
   display: 'inline-flex',
@@ -175,21 +175,21 @@ const closeBtn: CSSProperties = {
 
 const originRow: CSSProperties = {
   fontSize: 11,
-  color: 'rgba(234,240,255,0.55)',
+  color: 'var(--faint)',
   marginBottom: 10,
   textTransform: 'uppercase',
   letterSpacing: 0.4,
 };
 
 const errorText: CSSProperties = {
-  color: 'rgba(255,99,132,0.95)',
+  color: 'var(--theme-banner-error-fg, oklch(0.7 0.2 25))',
   fontSize: 13,
   margin: '0 0 10px 0',
   wordBreak: 'break-word',
 };
 
 const successText: CSSProperties = {
-  color: 'rgba(16,185,129,0.95)',
+  color: 'var(--theme-banner-success-fg, oklch(0.78 0.16 152))',
   fontSize: 12,
   margin: '0 0 10px 0',
   wordBreak: 'break-all',

@@ -17,6 +17,7 @@ import {
   evmAddressExplorerUrl,
 } from '@/lib/explorer-href';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
+import { ChromaLabLeaderboardSection } from '@/ui/components/leaderboard/ChromaLabLeaderboardSection';
 import type { Networks } from '@/ui/types';
 import '@/ui/chroma-lab.css';
 
@@ -25,6 +26,7 @@ type SuiOverview = Awaited<ReturnType<typeof trpc.getSuiExplorerOverview.query>>
 type SuiDetail = Awaited<ReturnType<typeof trpc.getSuiExplorerDwalletDetail.query>>;
 type SolanaOverview = Awaited<ReturnType<typeof trpc.getSolanaProgramRecentOverview.query>>;
 type SolanaDetail = Awaited<ReturnType<typeof trpc.getSolanaExplorerDwalletDetail.query>>;
+type UnverifiedPresignSample = Awaited<ReturnType<typeof trpc.getUnverifiedPresignCapSample.query>>;
 
 function shortId(id: string, left = 10, right = 8): string {
   if (id.length <= left + right + 1) return id;
@@ -103,6 +105,8 @@ export function ChromaLabPage({
   const [encryptBatchOut, setEncryptBatchOut] = useState<string | null>(null);
   const [encryptDepositBanner, setEncryptDepositBanner] = useState<string | null>(null);
   const [encryptRoadmapLines, setEncryptRoadmapLines] = useState<string | null>(null);
+  const [presignSample, setPresignSample] = useState<UnverifiedPresignSample | null>(null);
+  const [presignSampleError, setPresignSampleError] = useState<string | null>(null);
 
   const encryptLabUnlocked = useMemo(() => {
     if (!balances || balances.locked) return false;
@@ -178,6 +182,20 @@ export function ChromaLabPage({
       .then(setSolOverview)
       .catch((e) => setError(e instanceof Error ? e.message : String(e)));
     setSuiOverview(null);
+  }, [ikaMode, balances]);
+
+  // network presign caps - only meaningful on Sui base. cleared when we flip to Solana so
+  // a stale Sui card doesn't linger under the Solana refs section.
+  useEffect(() => {
+    if (!balances || balances.locked || ikaMode !== 'sui') {
+      setPresignSample(null);
+      setPresignSampleError(null);
+      return;
+    }
+    setPresignSampleError(null);
+    void trpc.getUnverifiedPresignCapSample.query({ recentLimit: 5, maxPages: 2 })
+      .then(setPresignSample)
+      .catch((e) => setPresignSampleError(e instanceof Error ? e.message : String(e)));
   }, [ikaMode, balances]);
 
   const suiNetworkId = refs?.networkIds.sui ?? 'sui-mainnet';
@@ -261,7 +279,7 @@ export function ChromaLabPage({
             <FlaskConical size={18} strokeWidth={2.2} />
           </span>
           <div>
-            <h1 className="lab-title">Chroma Lab</h1>
+            <h1 className="lab-title">chroma lab</h1>
             <div className="sp-muted" style={{ fontSize: 12 }}>
               `ink dive` for ika exploration, plus solana-only Encrypt pre-alpha lab surfaces.
             </div>
@@ -612,6 +630,8 @@ export function ChromaLabPage({
         ) : null}
       </div>
 
+      <ChromaLabLeaderboardSection />
+
       <div className="sp-section">
         <div className="sp-sectionTitle">{ikaMode === 'sui' ? 'sui ika refs' : 'solana ika refs'}</div>
         <div className="lab-card">
@@ -677,6 +697,123 @@ export function ChromaLabPage({
             </div>
           )}
         </div>
+
+        {ikaMode === 'sui' ? (
+          <div className="lab-card" style={{ marginTop: 10 }}>
+            <div className="lab-cardTitle">network presigns (unverified)</div>
+            <div className="sp-muted" style={{ fontSize: 11, marginBottom: 8, lineHeight: 1.45 }}>
+              in-flight presign caps observed on Sui. high counts hint that the network is
+              currently processing many presign requests. these caps convert to verified caps
+              once the network validates the presign output.
+            </div>
+            {presignSampleError ? (
+              <div className="sp-muted" role="alert" style={{ color: 'rgba(255,99,132,0.95)', fontSize: 11 }}>
+                lookup failed: {presignSampleError}
+              </div>
+            ) : !presignSample ? (
+              <div className="sp-muted" style={{ fontSize: 11 }}>loading sample...</div>
+            ) : (
+              <>
+                <div className="lab-metrics" style={{ marginBottom: 10 }}>
+                  <div className="lab-metric">
+                    <div className="lab-metricLabel">observed</div>
+                    <div className="lab-metricValue">
+                      {presignSample.observed}
+                      {presignSample.truncated ? '+' : ''}
+                    </div>
+                  </div>
+                  <div className="lab-metric">
+                    <div className="lab-metricLabel">recent</div>
+                    <div className="lab-metricValue">{presignSample.recent.length}</div>
+                  </div>
+                </div>
+                {presignSample.suiscanCollectionUrl ? (
+                  <a
+                    className="lab-linkButton"
+                    href={presignSample.suiscanCollectionUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ marginBottom: 10, display: 'inline-block' }}
+                  >
+                    open suiscan collection
+                  </a>
+                ) : (
+                  <div className="sp-muted" style={{ fontSize: 11, marginBottom: 10 }}>
+                    suiscan collection page is mainnet only; current network is {suiNetworkId}.
+                  </div>
+                )}
+                {presignSample.recent.length > 0 ? (
+                  <div className="lab-list">
+                    {presignSample.recent.map((row) => {
+                      const capHref = buildSuiExplorerUrl(explorerPrefs, suiNetworkId, 'object', row.id);
+                      const presignHref = row.presignId
+                        ? buildSuiExplorerUrl(explorerPrefs, suiNetworkId, 'object', row.presignId)
+                        : null;
+                      const dwalletHref = row.dwalletId
+                        ? buildSuiExplorerUrl(explorerPrefs, suiNetworkId, 'object', row.dwalletId)
+                        : null;
+                      return (
+                        <div key={row.id} className="lab-linkRow">
+                          <div className="lab-linkMeta" style={{ minWidth: 0 }}>
+                            <div className="lab-linkLabel">cap</div>
+                            <ExplorerValueRow
+                              fullValue={row.id}
+                              href={capHref}
+                              truncateMid={{ head: 10, tail: 8 }}
+                              copyLabel="copy presign cap object id"
+                              className="lab-explorerRow"
+                              linkClassName="cd-explorerMonoLink sp-muted lab-mono"
+                            />
+                            <div className="sp-muted" style={{ fontSize: 10, marginTop: 4 }}>
+                              {row.dwalletId ? (
+                                <>
+                                  dwallet-bound -{' '}
+                                  <a
+                                    href={dwalletHref ?? '#'}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="cd-explorerMonoLink"
+                                  >
+                                    {row.dwalletId.slice(0, 10)}...{row.dwalletId.slice(-6)}
+                                  </a>
+                                </>
+                              ) : (
+                                'global presign (ED25519 / Schnorr)'
+                              )}
+                              {row.presignId ? (
+                                <>
+                                  {' '}- presign{' '}
+                                  <a
+                                    href={presignHref ?? '#'}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="cd-explorerMonoLink"
+                                  >
+                                    {row.presignId.slice(0, 10)}...{row.presignId.slice(-6)}
+                                  </a>
+                                </>
+                              ) : null}
+                            </div>
+                          </div>
+                          {capHref ? (
+                            <a className="lab-linkButton" href={capHref} target="_blank" rel="noreferrer">
+                              open
+                            </a>
+                          ) : null}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="sp-muted" style={{ fontSize: 11 }}>
+                    no unverified presign caps in the current sample window. either the network
+                    just processed a batch, or our query didn't catch any mid-flight.
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        ) : null}
       </div>
 
       {ikaMode === 'sui' && refs ? (
@@ -688,6 +825,11 @@ export function ChromaLabPage({
               <ExplorerValueRow
                 fullValue={refs.sui.ikaCoinType}
                 href={tokenExplorerHref}
+                // Move coin types look like `0x<32-byte pkg>::ika::IKA`. tail-only
+                // truncation collapses to `...:IKA` which loses the package address;
+                // head+tail keeps both the pkg prefix and the `::ika::IKA` suffix
+                // visible so the type is recognisable at a glance.
+                truncateMid={{ head: 12, tail: 14 }}
                 copyLabel="copy IKA coin type"
                 className="lab-explorerRow"
                 linkClassName="cd-explorerMonoLink sp-muted lab-mono"

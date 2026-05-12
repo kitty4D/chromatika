@@ -26,7 +26,7 @@ list the NFTs your active dWallet (or any address you specify) owns, per chain. 
 
 1. call `getSuiNfts` with `address`
 2. response is the NFT list with metadata + image URLs (filtered by MediaSafetyMode)
-3. uses `client.core.*` (GraphQL) on chromatika's vault-shared `SuiGraphQLClient` - no JSON-RPC anywhere
+3. uses `client.core.*` (GraphQL) where possible; falls back to JSON-RPC for legacy reads
 
 ## how to list EVM NFTs for an address on a chain
 

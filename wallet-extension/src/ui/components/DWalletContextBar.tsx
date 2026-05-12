@@ -4,7 +4,11 @@ import { buildDwalletIndexMap, resolveDwalletLabel, type DwalletCurve } from '@/
 import type { Balances, Networks } from '@/ui/types';
 import type { IkaBaseMode } from '@/background/ika-base-mode';
 import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
-import { capPrimaryAddressExplorerHref, dwalletObjectExplorerHref } from '@/lib/explorer-href';
+import {
+  capPrimaryAddressExplorerHref,
+  dwalletObjectExplorerHref,
+  gasRowAddressExplorerHref,
+} from '@/lib/explorer-href';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
 import { useOnClickOutside } from '@/lib/hooks/use-on-click-outside';
 
@@ -107,7 +111,7 @@ function NetworkSwitcherPill({
           }}
         >
           {err && (
-            <div style={{ color: 'rgba(255,99,132,0.95)', fontSize: 11, padding: '4px 8px' }}>{err}</div>
+            <div style={{ color: 'var(--theme-banner-error-fg, oklch(0.7 0.2 25))', fontSize: 11, padding: '4px 8px' }}>{err}</div>
           )}
           {list.map((n) => (
             <button
@@ -156,7 +160,27 @@ function originsForDwallet(perms: Permissions | null, curve: string, dwalletId: 
   return out;
 }
 
+/**
+ * trim a dapp origin to a readable product name for the pill. strips leading subdomains
+ * commonly used for "the app surface" (`app.`, `www.`, `mobile.`, `m.`, `dapp.`, `beta.`,
+ * `testnet.`, `mainnet.`) and a trailing common TLD (`.com`, `.org`, `.io`, `.app`, `.xyz`,
+ * `.finance`, `.network`, `.so`, `.ag`, `.tech`, `.fi`, `.exchange`, `.trade`). full origin
+ * stays in the `title` attribute on the pill so phishing checks still work via hover.
+ */
 function hostFromOrigin(origin: string): string {
+  let host: string;
+  try {
+    host = new URL(origin).hostname;
+  } catch {
+    return origin;
+  }
+  host = host.replace(/^(app|www|mobile|m|dapp|beta|testnet|mainnet)\./i, '');
+  host = host.replace(/\.(com|org|io|app|xyz|finance|network|so|ag|tech|fi|exchange|trade)$/i, '');
+  return host;
+}
+
+/** raw hostname (no trimming) - used in the dapp pill tooltip so the user can verify origin. */
+function rawHostFromOrigin(origin: string): string {
   try {
     return new URL(origin).hostname;
   } catch {
@@ -164,15 +188,52 @@ function hostFromOrigin(origin: string): string {
   }
 }
 
+type AddrRow = { tag: string; addr: string; icon: 'evm' | 'btc' | 'sui' | 'sol' | 'apt' };
+
+/**
+ * every chain address a dWallet exposes for sign-time, in display order. Selecting a dWallet
+ * picks the whole key, not one chain - the same SECP256K1 dWallet signs both EVM and BTC
+ * transactions, the same ED25519 dWallet signs Sui, Solana, and Aptos. Distinct labels for
+ * the two BTC encodings (Segwit P2WPKH vs Taproot P2TR) since those are genuinely different
+ * on-chain addresses with different scripts even though they share the same key.
+ */
+function addressesForRow(c: {
+  curve: string;
+  chainAddresses?: {
+    evm?: string;
+    btcP2wpkh?: string;
+    btcP2tr?: string;
+    sui?: string;
+    solana?: string;
+    aptos?: string;
+  };
+}): AddrRow[] {
+  const a = c.chainAddresses ?? {};
+  const out: AddrRow[] = [];
+  if (c.curve === 'SECP256K1') {
+    if (a.evm) out.push({ tag: 'evm', addr: a.evm, icon: 'evm' });
+    if (a.btcP2wpkh) out.push({ tag: 'btc·sw', addr: a.btcP2wpkh, icon: 'btc' });
+    if (a.btcP2tr) out.push({ tag: 'btc·tr', addr: a.btcP2tr, icon: 'btc' });
+  } else if (c.curve === 'ED25519') {
+    if (a.sui) out.push({ tag: 'sui', addr: a.sui, icon: 'sui' });
+    if (a.solana) out.push({ tag: 'sol', addr: a.solana, icon: 'sol' });
+    if (a.aptos) out.push({ tag: 'apt', addr: a.aptos, icon: 'apt' });
+  }
+  return out;
+}
+
 function ConnectedDappsPill({ origins }: { origins: string[] }) {
   if (origins.length === 0) return null;
-  const hosts = origins.map(hostFromOrigin);
-  const label = origins.length === 1 ? hosts[0] : `${hosts[0]} +${origins.length - 1}`;
+  const cleanHosts = origins.map(hostFromOrigin);
+  const rawHosts = origins.map(rawHostFromOrigin);
+  const label = cleanHosts.length === 1 ? cleanHosts[0] : `${cleanHosts[0]} +${cleanHosts.length - 1}`;
+  // tooltip + aria use the FULL hostname so the user can verify the origin (anti-phishing)
+  // even though the visible label is trimmed to the product name.
   return (
     <span
       className="cv-dwalletBar-dappsPill"
-      title={`connected dapps: ${hosts.join(', ')}`}
-      aria-label={`${origins.length} connected ${origins.length === 1 ? 'dapp' : 'dapps'}: ${hosts.join(', ')}`}
+      title={`connected dapps: ${rawHosts.join(', ')}`}
+      aria-label={`${origins.length} connected ${origins.length === 1 ? 'dapp' : 'dapps'}: ${rawHosts.join(', ')}`}
     >
       <span aria-hidden>🔌</span>
       <span className="cv-dwalletBar-dappsPillLabel">{label}</span>
@@ -299,120 +360,178 @@ export function DWalletContextBar({
     );
   }
 
-  if (caps.length === 1) {
-    return (
-      <div className="cv-dwalletBar cv-dwalletBar--singleWrap">
-        <button type="button" className="cv-dwalletBar-singleNav" onClick={() => onNavigateDwallet?.()}>
-          <span className="cv-dwalletBar-label">{activeLabel}</span>
-        </button>
-        {addr ? (
-          <ExplorerValueRow
-            fullValue={addr}
-            href={addrExplorerHref}
-            truncateTail={6}
-            copyLabel="copy dWallet address"
-            className="cv-dwalletBar-addrExplorer"
-            linkClassName="cd-explorerMonoLink cv-dwalletBar-addr"
-          />
-        ) : (
-          <span className="cv-dwalletBar-addr mono">…</span>
-        )}
-        <ConnectedDappsPill origins={activeOrigins} />
-        <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
-      </div>
-    );
-  }
-
   const primaryHref = addr
     ? addrExplorerHref
     : active
       ? dwalletObjectExplorerHref(explorerPrefs, networks, active.dwalletId)
       : null;
+  const addrDisplay = active ? addr || active.dwalletId : '';
+
+  if (caps.length === 1) {
+    return (
+      <div className="cv-dwalletBar cv-dwalletBar--singleWrap">
+        <div className="cv-dwalletBar-row1">
+          <button type="button" className="cv-dwalletBar-singleNav" onClick={() => onNavigateDwallet?.()}>
+            <span className="cv-dwalletBar-label">{activeLabel}</span>
+          </button>
+          <div className="cv-dwalletBar-row1-spacer" />
+          <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
+        </div>
+        <div className="cv-dwalletBar-row2">
+          {addrDisplay ? (
+            <ExplorerValueRow
+              fullValue={addrDisplay}
+              href={primaryHref}
+              truncateMid={{ head: 8, tail: 6 }}
+              copyLabel={addr ? 'copy dWallet address' : 'copy dWallet id'}
+              className="cv-dwalletBar-addrRow"
+              linkClassName="cd-explorerMonoLink cv-dwalletBar-addrLink"
+            />
+          ) : (
+            <span className="cv-dwalletBar-addrEmpty mono">…</span>
+          )}
+          <ConnectedDappsPill origins={activeOrigins} />
+        </div>
+      </div>
+    );
+  }
+
+  function onTriggerKey(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!busy) setOpen(!open);
+    } else if (e.key === 'Escape' && open) {
+      setOpen(false);
+    }
+  }
 
   return (
     <div className="cv-dwalletBar" ref={menuWrapRef}>
-      <div className="cv-dwalletBar-triggerWrap">
-        <button
-          type="button"
-          className="cv-dwalletBar-triggerLabel"
-          onClick={() => setOpen(!open)}
-          aria-expanded={open}
-          disabled={busy}
-        >
+      <div
+        className="cv-dwalletBar-triggerBtn"
+        role="button"
+        tabIndex={busy ? -1 : 0}
+        onClick={() => !busy && setOpen(!open)}
+        onKeyDown={onTriggerKey}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        aria-label="choose dWallet"
+        aria-disabled={busy}
+      >
+        <div className="cv-dwalletBar-row1">
           <span className="cv-dwalletBar-label">{active ? activeLabel : 'dWallet'}</span>
-        </button>
-        {active ? (
-          <div className="cv-dwalletBar-triggerAddr">
-            <span className="cv-dwalletBar-curveHint mono" aria-hidden>
-              {active.curve.slice(0, 4)} ·{' '}
+          <div className="cv-dwalletBar-row1-spacer" />
+          <span
+            className="cv-dwalletBar-inlineGuard"
+            onClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onKeyDown={(e) => e.stopPropagation()}
+          >
+            <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
+          </span>
+          <span className="cv-dwalletBar-triggerChev" aria-hidden>
+            {open ? '▴' : '▾'}
+          </span>
+        </div>
+        <div className="cv-dwalletBar-row2">
+          {active && addrDisplay ? (
+            <span
+              className="cv-dwalletBar-inlineGuard cv-dwalletBar-addrGuard"
+              onClick={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+            >
+              <ExplorerValueRow
+                fullValue={addrDisplay}
+                href={primaryHref}
+                truncateMid={{ head: 8, tail: 6 }}
+                copyLabel={addr ? 'copy dWallet address' : 'copy dWallet id'}
+                className="cv-dwalletBar-addrRow"
+                linkClassName="cd-explorerMonoLink cv-dwalletBar-addrLink"
+              />
             </span>
-            <ExplorerValueRow
-              fullValue={addr || active.dwalletId}
-              href={primaryHref}
-              truncateTail={4}
-              copyLabel={addr ? 'copy dWallet address' : 'copy dWallet id'}
-              className="cv-dwalletBar-addrExplorer"
-              linkClassName="cd-explorerMonoLink cv-dwalletBar-addr"
-            />
+          ) : (
+            <span className="cv-dwalletBar-addrEmpty mono">…</span>
+          )}
+          <span
+            className="cv-dwalletBar-inlineGuard"
+            onClick={(e) => e.stopPropagation()}
+          >
             <ConnectedDappsPill origins={activeOrigins} />
-          </div>
-        ) : (
-          <span className="cv-dwalletBar-addr mono">…</span>
-        )}
-        <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
-        <button
-          type="button"
-          className="cv-dwalletBar-triggerChev"
-          onClick={() => setOpen(!open)}
-          aria-expanded={open}
-          disabled={busy}
-          aria-label="choose dWallet"
-        >
-          {open ? '▴' : '▾'}
-        </button>
+          </span>
+        </div>
       </div>
       {open && (
         <div className="cv-dwalletBar-menu" role="listbox">
           {err && <div className="sp-error" style={{ padding: '6px 10px' }}>{err}</div>}
           {caps.map((c) => {
-            const rowAddr =
-              c.chainAddresses?.evm ?? c.chainAddresses?.sui ?? c.chainAddresses?.solana ?? '';
-            const rowAddrHref = capPrimaryAddressExplorerHref(explorerPrefs, networks, c.chainAddresses);
+            const rowAddrs = addressesForRow(c);
             const rowDwalletHref = dwalletObjectExplorerHref(explorerPrefs, networks, c.dwalletId);
             const rowOrigins =
               c.curve === 'SECP256K1' || c.curve === 'ED25519'
                 ? originsForDwallet(permissions, c.curve, c.dwalletId)
                 : [];
+            const isActiveRow = c.dwalletId === active?.dwalletId;
             return (
               <div
                 key={c.capObjectId}
-                role="presentation"
-                className={`cv-dwalletBar-itemRow${c.dwalletId === active?.dwalletId ? ' cv-dwalletBar-itemRow--active' : ''}`}
+                role="option"
+                tabIndex={busy ? -1 : 0}
+                aria-selected={isActiveRow}
+                className={`cv-dwalletBar-itemRow${isActiveRow ? ' cv-dwalletBar-itemRow--active' : ''}`}
+                onClick={() => !busy && void pick(c.dwalletId)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    if (!busy) void pick(c.dwalletId);
+                  }
+                }}
               >
-                <button
-                  type="button"
-                  role="option"
-                  className="cv-dwalletBar-itemMain"
-                  aria-selected={c.dwalletId === active?.dwalletId}
-                  onClick={() => void pick(c.dwalletId)}
-                >
-                  <span className="cv-dwalletBar-itemMainInner">
-                    <span>
-                      {c.curve === 'SECP256K1' || c.curve === 'ED25519'
-                        ? resolveDwalletLabel(c.dwalletId, c.curve as DwalletCurve, nameMap, indexMap)
-                        : c.curve}
-                    </span>
-                    <ConnectedDappsPill origins={rowOrigins} />
+                <div className="cv-dwalletBar-itemHead">
+                  <span className="cv-dwalletBar-itemLabel">
+                    {c.curve === 'SECP256K1' || c.curve === 'ED25519'
+                      ? resolveDwalletLabel(c.dwalletId, c.curve as DwalletCurve, nameMap, indexMap)
+                      : c.curve}
                   </span>
-                </button>
-                <ExplorerValueRow
-                  fullValue={rowAddr || c.dwalletId}
-                  href={rowAddr ? rowAddrHref : rowDwalletHref}
-                  truncateMid={{ head: 6, tail: 4 }}
-                  copyLabel={rowAddr ? 'copy dWallet address' : 'copy dWallet id'}
-                  className="cv-dwalletBar-itemExplorer"
-                  linkClassName="cd-explorerMonoLink cv-dwalletBar-itemMeta"
-                />
+                  <ConnectedDappsPill origins={rowOrigins} />
+                </div>
+                {rowAddrs.length === 0 ? (
+                  <div
+                    className="cv-dwalletBar-itemAddrRow"
+                    onClick={(e) => e.stopPropagation()}
+                    onPointerDown={(e) => e.stopPropagation()}
+                    onKeyDown={(e) => e.stopPropagation()}
+                  >
+                    <ExplorerValueRow
+                      fullValue={c.dwalletId}
+                      href={rowDwalletHref}
+                      truncateMid={{ head: 8, tail: 6 }}
+                      copyLabel="copy dWallet id"
+                      className="cv-dwalletBar-itemExplorer"
+                      linkClassName="cd-explorerMonoLink cv-dwalletBar-itemMeta"
+                    />
+                  </div>
+                ) : (
+                  rowAddrs.map((row) => (
+                    <div
+                      key={row.tag}
+                      className="cv-dwalletBar-itemAddrRow"
+                      onClick={(e) => e.stopPropagation()}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onKeyDown={(e) => e.stopPropagation()}
+                    >
+                      <span className="cv-dwalletBar-itemChainTag">{row.tag}</span>
+                      <ExplorerValueRow
+                        fullValue={row.addr}
+                        href={gasRowAddressExplorerHref(explorerPrefs, networks, row.icon, row.addr)}
+                        truncateMid={{ head: 8, tail: 6 }}
+                        copyLabel={`copy ${row.tag} address`}
+                        className="cv-dwalletBar-itemExplorer"
+                        linkClassName="cd-explorerMonoLink cv-dwalletBar-itemMeta"
+                      />
+                    </div>
+                  ))
+                )}
               </div>
             );
           })}

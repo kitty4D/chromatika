@@ -1,12 +1,12 @@
 # how to use Solana Mobile Wallet Adapter (remote transport)
 
-pair a Seeker (or any MWA-compliant phone wallet that supports the reflector protocol) with chromatika running on a **desktop** via QR-coded MWA remote transport. the wallet to extension link uses a websocket reflector at `wss://development.reflector.solanamobile.com` and an `auth_token` so subsequent signs reauthorize without rescanning the QR.
+pair a Seeker (or any MWA-compliant phone wallet that supports the reflector protocol) with chromatika running on a **desktop** via QR-coded MWA remote transport. the wallet ↔ extension link uses a websocket reflector at `wss://reflect.solanamobile.com` and an `auth_token` so subsequent signs reauthorize without rescanning the QR.
 
 ## prerequisites
 
 - chromatika is running on a desktop Chromium browser (popup or side-panel context)
 - a phone with an MWA 2.0 wallet that can scan a chromatika QR or accept a `solana-wallet://` association URL (Seeker built-in, Phantom Android, Solflare Android, Jupiter)
-- network access to `wss://development.reflector.solanamobile.com`
+- network access to `wss://reflect.solanamobile.com`
 - chromatika manifest allows wss connections (CSP `connect-src *` covers this today; will tighten when product surface stabilizes)
 - your Chromatika vault is unlocked
 

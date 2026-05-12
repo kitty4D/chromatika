@@ -51,20 +51,7 @@ export function PcTokenMarketsPanel({ advanced }: { advanced: boolean }) {
       <h3 style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         <Lock size={14} /> PC-Token markets (encrypt.xyz)
       </h3>
-      <div
-        className="sp-prealphaPill"
-        style={{
-          display: 'inline-flex',
-          alignItems: 'center',
-          gap: 4,
-          fontSize: 10,
-          padding: '2px 6px',
-          borderRadius: 4,
-          background: 'rgba(255,196,77,0.15)',
-          color: '#ffc44d',
-          marginBottom: 8,
-        }}
-      >
+      <div className="sp-prealphaPill" style={{ marginBottom: 8 }}>
         <AlertTriangle size={10} />
         encrypt.xyz pre-alpha · sender visible · dev preview
       </div>

@@ -7,21 +7,22 @@ the bundled list of pubkeys whose alerts the wallet trusts. an alert from any ot
 ```ts
 export const BUNDLED_PUBLISHERS_REVISION = 1;
 
-export const PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64 = "+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=";
+export const PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64 =
+  '+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA=';
 
 export const BUNDLED_PUBLISHERS: BundledPublisher[] = [
   {
     pubkeyB64: PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64,
-    label: "chromatika dev publisher (placeholder)",
-    addedAt: "2026-04-30",
+    label: 'chromatika dev publisher (placeholder)',
+    addedAt: '2026-04-30',
   },
-  // pre-mainnet: append the real chromatika-team production pubkey here
+  // TODO(hackathon): add real chromatika-team production pubkey here
 ];
 
 interface BundledPublisher {
-  pubkeyB64: string; // base64 32-byte ed25519 pubkey
-  label: string; // human-readable; surfaced in settings UI
-  addedAt: string; // ISO date "YYYY-MM-DD" of when this entry was added
+  pubkeyB64: string;          // base64 32-byte ed25519 pubkey
+  label: string;              // human-readable; surfaced in settings UI
+  addedAt: string;            // ISO date "YYYY-MM-DD" of when this entry was added
 }
 ```
 
@@ -29,7 +30,7 @@ interface BundledPublisher {
 
 ```ts
 export function isAllowedPublisher(pubkeyB64: string): boolean {
-  return BUNDLED_PUBLISHERS.some((p) => p.pubkeyB64 === pubkeyB64);
+  return BUNDLED_PUBLISHERS.some(p => p.pubkeyB64 === pubkeyB64);
 }
 ```
 
@@ -40,7 +41,7 @@ constant-time comparison would be ideal but here the threat is moot - the pubkey
 the current `PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64` is the deterministic ed25519 pubkey derived from the seed `chromatika-dev-publisher-v0`:
 
 ```js
-const SEED = new TextEncoder().encode("chromatika-dev-publisher-v0");
+const SEED = new TextEncoder().encode('chromatika-dev-publisher-v0');
 const priv = sha512(SEED).slice(0, 32);
 const pub = await ed.getPublicKeyAsync(priv);
 // pub b64 = '+Qzgt7hrnGc94nPyvFFmQuv+EzRxCBvYsCN0XHHkWQA='
@@ -48,13 +49,13 @@ const pub = await ed.getPublicKeyAsync(priv);
 
 run `node scripts/publish-alert.mjs --gen-dev-key` to regenerate the same keypair anywhere.
 
-since the privkey is deterministic from a known seed, **anyone can sign alerts that the bundled wallet accepts** today. this is intentional for local demos - a developer can locally sign + inject test alerts without setting up real publishing infrastructure.
+since the privkey is deterministic from a known seed, **anyone can sign alerts that the bundled wallet accepts** today. this is intentional for hackathon demos - a developer can locally sign + inject test alerts without setting up real publishing infrastructure.
 
-## the pre-mainnet step
+## the pre-launch TODO
 
 per `wallet-extension/docs/STATUS.md` lines 91-101:
 
-> **Pre-mainnet step**: replace `PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64` with the real chromatika-team production pubkey. run `node scripts/publish-alert.mjs --gen-key`, save privkey somewhere safe, paste pubkey into `BUNDLED_PUBLISHERS`. bump `BUNDLED_PUBLISHERS_REVISION` so cached alerts re-verify against the new allowlist.
+> **Pre-launch TODO**: replace `PLACEHOLDER_DEV_PUBLISHER_PUBKEY_B64` with the real chromatika-team production pubkey. run `node scripts/publish-alert.mjs --gen-key`, save privkey somewhere safe, paste pubkey into `BUNDLED_PUBLISHERS`. bump `BUNDLED_PUBLISHERS_REVISION` so cached alerts re-verify against the new allowlist.
 
 ## the revision number
 
@@ -68,7 +69,7 @@ stored alerts include the revision they were verified under (in the alerts state
 
 ```ts
 async function getAlertsState(): Promise<AlertsState> {
-  const raw = await chrome.storage.local.get("chromatika_alerts_v1");
+  const raw = await chrome.storage.local.get('chromatika_alerts_v1');
   let state: AlertsState = raw.chromatika_alerts_v1 ?? defaultState();
 
   if (state.publishersRevision !== BUNDLED_PUBLISHERS_REVISION) {

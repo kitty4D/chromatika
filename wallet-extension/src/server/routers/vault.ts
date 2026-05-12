@@ -53,6 +53,15 @@ import {
   getGraphqlPaginationDebugSnapshot,
   resetGraphqlPaginationDebug,
 } from '@/background/sui-graphql-pagination-debug';
+import {
+  clearVaultTotalCache as clearVaultTotalCacheStorage,
+  isStaleSnapshot,
+} from '@/background/services/vault-total-cache';
+import {
+  computeVaultTotal,
+  getCachedVaultTotal,
+  refreshVaultTotalsBatch,
+} from '@/background/services/vault-total-value';
 
 /** push the active EVM/Aptos addresses to dapp tabs after a vault lifecycle event. */
 async function pushDappAccountAndAptosHints(): Promise<void> {
@@ -517,6 +526,43 @@ export const vaultProcedures = {
     if (!s) throw new Error('Wallet locked');
     return listVaultSummaries();
   }),
+
+  // vault total reads chain balances + chrome.storage (no private material), so the
+  // tRPC lock-gate here is the only auth surface - computeVaultTotal itself is safe
+  // to run without a session.
+  getVaultTotal: publicProcedure
+    .input(z.object({ vaultId: z.string().min(1) }))
+    .query(async ({ input }) => {
+      const s = getSession();
+      if (!s) throw new Error('Wallet locked');
+      return computeVaultTotal(input.vaultId);
+    }),
+
+  getVaultTotalsForOthers: publicProcedure
+    .input(z.object({ vaultIds: z.array(z.string().min(1)).max(20) }))
+    .query(async ({ input }) => {
+      const s = getSession();
+      if (!s) throw new Error('Wallet locked');
+      const cached = await Promise.all(input.vaultIds.map(getCachedVaultTotal));
+      const now = Date.now();
+      const staleIds = input.vaultIds.filter((_, i) => isStaleSnapshot(cached[i], now));
+      if (staleIds.length > 0) {
+        // fire-and-forget; UI re-renders via chrome.storage.onChanged
+        void refreshVaultTotalsBatch(staleIds);
+      }
+      return cached;
+    }),
+
+  // intentionally lock-gated even though storage clear is itself safe - callers that
+  // race the auto-lock get a clean "Wallet locked" rather than a silent no-op so the
+  // UI can decide whether to retry post-unlock.
+  clearVaultTotalCache: publicProcedure
+    .input(z.object({ vaultId: z.string().min(1) }))
+    .mutation(async ({ input }) => {
+      const s = getSession();
+      if (!s) throw new Error('Wallet locked');
+      await clearVaultTotalCacheStorage(input.vaultId);
+    }),
 
   /**
    * read HD mnemonic from another vault on the opposite ika base (same chromatika password).

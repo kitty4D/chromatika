@@ -1,11 +1,20 @@
-import { useRef, useState } from 'react';
-import { Wallet } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { Plus, Wallet } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { useOnClickOutside } from '@/lib/hooks/use-on-click-outside';
 import type { VaultNameHint } from '@/lib/hooks/use-vault-name-hints';
 import { VaultLabelAvatar } from '@/ui/components/VaultLabelAvatar';
+import { formatVaultTotalUsd } from '@/lib/format-vault-total';
+import { vaultTotalCacheKey, parseStoredWireSnapshot } from '@/background/services/vault-total-cache';
 
 export type VaultSummary = Awaited<ReturnType<typeof trpc.listVaults.query>>[number];
+type Snap = Awaited<ReturnType<typeof trpc.getVaultTotal.query>>;
+type BaseChain = 'sui' | 'solana';
+
+const BASE_LABEL: Record<BaseChain, string> = {
+  sui: 'Sui',
+  solana: 'Solana',
+};
 
 export function vaultAvatarUrl(v: VaultSummary, h?: VaultNameHint): string | null {
   if (!h) return null;
@@ -18,24 +27,109 @@ export function VaultPicker({
   activeVaultId,
   onSwitched,
   nameHints,
+  onAddVault,
 }: {
   vaults: VaultSummary[];
   activeVaultId: string | null;
   onSwitched: () => void;
-  /** optional on-chain name / PFP hints */
   nameHints?: Map<string, VaultNameHint>;
+  /**
+   * called when the user clicks the "create a dWallet vault on <chain>" CTA inside the
+   * dropdown. when omitted, the CTA is hidden (the dropdown stays a pure switcher).
+   * upstream wiring goes to `setIkaGateMissingChain` so the existing add-vault flow renders
+   * with `vaultBaseChainOverride` preselected.
+   */
+  onAddVault?: (baseChain: BaseChain) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
+  // map of vaultId -> snapshot (or null if a fetch failed). undefined = not yet fetched
+  const [totals, setTotals] = useState<Map<string, Snap | null>>(() => new Map());
   const wrapRef = useRef<HTMLDivElement>(null);
   useOnClickOutside(wrapRef, () => setOpen(false), open && vaults.length > 1);
 
-  if (vaults.length <= 1) return null;
+  // when the dropdown opens, fetch totals for all non-active vaults (SWR via tRPC)
+  useEffect(() => {
+    if (!open) return;
+    const others = vaults.map((v) => v.id).filter((id) => id !== activeVaultId);
+    if (others.length === 0) return;
+    let cancelled = false;
+    trpc.getVaultTotalsForOthers
+      .query({ vaultIds: others })
+      .then((snaps) => {
+        if (cancelled) return;
+        const arr = Array.isArray(snaps) ? snaps : [];
+        setTotals((prev) => {
+          const next = new Map(prev);
+          others.forEach((id, i) => next.set(id, arr[i] ?? null));
+          return next;
+        });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, vaults, activeVaultId]);
 
+  // also refresh the active vault's snapshot for the dropdown's active row
+  useEffect(() => {
+    if (!open || !activeVaultId) return;
+    let cancelled = false;
+    trpc.getVaultTotal
+      .query({ vaultId: activeVaultId })
+      .then((snap) => {
+        if (cancelled) return;
+        setTotals((prev) => new Map(prev).set(activeVaultId, snap));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [open, activeVaultId]);
+
+  // live update on background storage writes from refreshVaultTotalsBatch
+  useEffect(() => {
+    if (!open) return;
+    const watchedKeys = new Set(vaults.map((v) => vaultTotalCacheKey(v.id)));
+    const handler = (changes: Record<string, chrome.storage.StorageChange>, area: string) => {
+      if (area !== 'session') return;
+      const updates: Array<[string, Snap | null]> = [];
+      for (const v of vaults) {
+        const k = vaultTotalCacheKey(v.id);
+        if (!watchedKeys.has(k) || !(k in changes)) continue;
+        updates.push([v.id, parseStoredWireSnapshot(changes[k].newValue)]);
+      }
+      if (updates.length === 0) return;
+      setTotals((prev) => {
+        const next = new Map(prev);
+        for (const [id, snap] of updates) next.set(id, snap);
+        return next;
+      });
+    };
+    chrome.storage.onChanged.addListener(handler);
+    return () => chrome.storage.onChanged.removeListener(handler);
+  }, [open, vaults]);
+
+  if (vaults.length <= 1) return null;
   const active = vaults.find((v) => v.id === activeVaultId) ?? vaults[0]!;
   const activeHint = nameHints?.get(active.id);
   const activeAvatar = vaultAvatarUrl(active, activeHint);
+
+  // group by baseChain, active chain first, then divider, then the other chain
+  // (or its CTA when empty). active vault always renders in its own group. inline
+  // (no useMemo) because there's no path to call a hook here without breaking the
+  // rules-of-hooks ordering against the `vaults.length <= 1` early return above.
+  const suiVaults: VaultSummary[] = [];
+  const solanaVaults: VaultSummary[] = [];
+  for (const v of vaults) {
+    if (v.baseChain === 'solana') solanaVaults.push(v);
+    else suiVaults.push(v);
+  }
+  const activeChain: BaseChain = active.baseChain === 'solana' ? 'solana' : 'sui';
+  const otherChain: BaseChain = activeChain === 'sui' ? 'solana' : 'sui';
+  const primaryVaults = activeChain === 'sui' ? suiVaults : solanaVaults;
+  const secondaryVaults = otherChain === 'sui' ? suiVaults : solanaVaults;
 
   async function pick(id: string) {
     if (id === activeVaultId) {
@@ -55,6 +149,14 @@ export function VaultPicker({
     }
   }
 
+  function rowUsdText(v: VaultSummary): string {
+    const snap = totals.get(v.id);
+    if (snap === undefined) return '…';
+    if (snap === null) return '—';
+    if (snap.perChain.length > 0 && snap.perChain.every((p) => !p.ok)) return '—';
+    return formatVaultTotalUsd({ usdMicros: snap.usdMicros, partial: snap.partial }, 'compact');
+  }
+
   return (
     <div className="sp-vaultPicker" ref={wrapRef}>
       <button
@@ -71,28 +173,89 @@ export function VaultPicker({
       {open && (
         <div className="sp-vaultPickerMenu" role="listbox">
           {err && <div className="sp-error" style={{ padding: '6px 10px' }}>{err}</div>}
-          {vaults.map((v) => {
-            const hi = nameHints?.get(v.id);
-            const av = vaultAvatarUrl(v, hi);
-            return (
-              <button
+          {/* primary group: active chain's vaults */}
+          <div className="sp-vaultPickerGroup" role="presentation">
+            <div className="sp-vaultPickerGroupLabel">{BASE_LABEL[activeChain]} vaults</div>
+            {primaryVaults.map((v) => (
+              <VaultPickerItem
                 key={v.id}
+                vault={v}
+                activeVaultId={activeVaultId}
+                nameHints={nameHints}
+                usdText={rowUsdText(v)}
+                onPick={pick}
+              />
+            ))}
+          </div>
+          <div className="sp-vaultPickerDivider" role="presentation" />
+          {/* secondary group: other chain's vaults OR a CTA when empty */}
+          <div className="sp-vaultPickerGroup" role="presentation">
+            <div className="sp-vaultPickerGroupLabel">{BASE_LABEL[otherChain]} vaults</div>
+            {secondaryVaults.length > 0 ? (
+              secondaryVaults.map((v) => (
+                <VaultPickerItem
+                  key={v.id}
+                  vault={v}
+                  activeVaultId={activeVaultId}
+                  nameHints={nameHints}
+                  usdText={rowUsdText(v)}
+                  onPick={pick}
+                />
+              ))
+            ) : onAddVault ? (
+              <button
                 type="button"
-                role="option"
-                className={`sp-vaultPickerItem${v.id === activeVaultId ? ' sp-vaultPickerItemActive' : ''}`}
-                onClick={() => void pick(v.id)}
+                className="sp-vaultPickerCta"
+                onClick={() => {
+                  setOpen(false);
+                  onAddVault(otherChain);
+                }}
               >
-                <VaultLabelAvatar label={v.label} imageUrl={av} ikaBaseChain={v.baseChain} size={22} />
-                <span className="sp-vaultPickerItemLabel">{v.label}</span>
-                <span className="sp-vaultPickerMeta sp-vaultPickerMeta--count" aria-label={`${v.dwalletCount} d wallets`}>
-                  <Wallet size={14} strokeWidth={2} className="sp-vaultPickerMetaIcon" aria-hidden />
-                  <span>{v.dwalletCount}</span>
-                </span>
+                <Plus size={14} strokeWidth={2} aria-hidden />
+                <span>Create a dWallet vault on {BASE_LABEL[otherChain]}</span>
+                <span className="sp-vaultPickerCtaArrow" aria-hidden>→</span>
               </button>
-            );
-          })}
+            ) : (
+              <div className="sp-vaultPickerEmpty">no {BASE_LABEL[otherChain]} vaults</div>
+            )}
+          </div>
         </div>
       )}
     </div>
+  );
+}
+
+function VaultPickerItem({
+  vault,
+  activeVaultId,
+  nameHints,
+  usdText,
+  onPick,
+}: {
+  vault: VaultSummary;
+  activeVaultId: string | null;
+  nameHints?: Map<string, VaultNameHint>;
+  usdText: string;
+  onPick: (id: string) => void | Promise<void>;
+}) {
+  const hi = nameHints?.get(vault.id);
+  const av = vaultAvatarUrl(vault, hi);
+  return (
+    <button
+      type="button"
+      role="option"
+      className={`sp-vaultPickerItem${vault.id === activeVaultId ? ' sp-vaultPickerItemActive' : ''}`}
+      onClick={() => void onPick(vault.id)}
+    >
+      <VaultLabelAvatar label={vault.label} imageUrl={av} ikaBaseChain={vault.baseChain} size={22} />
+      <span className="sp-vaultPickerItemLabel">{vault.label}</span>
+      <span className="sp-vaultPickerMeta sp-vaultPickerMeta--usd" aria-label="vault total usd">
+        {usdText}
+      </span>
+      <span className="sp-vaultPickerMeta sp-vaultPickerMeta--count" aria-label={`${vault.dwalletCount} d wallets`}>
+        <Wallet size={14} strokeWidth={2} className="sp-vaultPickerMetaIcon" aria-hidden />
+        <span>{vault.dwalletCount}</span>
+      </span>
+    </button>
   );
 }

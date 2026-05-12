@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Check, Copy } from 'lucide-react';
 import { DWalletPanel } from '@/ui/dwallet-panel';
+import { usePostCreatePolicyPrompt } from '@/ui/components/use-post-create-policy-prompt';
 import type { Balances, Networks } from '@/ui/types';
 
 export function DWalletManagementScreen({
@@ -8,16 +9,22 @@ export function DWalletManagementScreen({
   networks,
   advanced,
   onBack,
-  onRefresh: _onRefresh,
+  onRefresh,
+  onOpenPolicyVault,
 }: {
   balances: Balances;
   networks: Networks | null;
   advanced: boolean;
   onBack: () => void;
-  /** reserved for post-ika-ops refresh wiring */
+  /** parent refresh hook fired after policy-vault wrap succeeds; also reserved for
+   *  post-ika-ops refreshes. */
   onRefresh?: () => void;
+  /** navigate the shell to the Policy Vault settings panel; used by the post-creation
+   *  prompt's "Customize first" path. */
+  onOpenPolicyVault?: () => void;
 }) {
-  void _onRefresh;
+  const { triggerAfterCreate: triggerPolicyPrompt, modal: policyPromptModal } =
+    usePostCreatePolicyPrompt(onOpenPolicyVault, () => onRefresh?.());
   const [copied, setCopied] = useState<string | null>(null);
   const canIka = balances.funding?.ready === true;
   const suiAddr = balances.canonicalReceiveAddress ?? '';
@@ -31,13 +38,14 @@ export function DWalletManagementScreen({
 
   return (
     <div className="sp-page">
+      {policyPromptModal}
       <div className="cv-vaultMgmt-head">
         <button type="button" className="sp-backBtn" onClick={onBack}>
           ← back
         </button>
-        <div className="sp-pageTitle" style={{ marginBottom: 0 }}>
+        <h2 className="sp-pageTitle" style={{ marginBottom: 0 }}>
           dWallet management
-        </div>
+        </h2>
       </div>
       <p className="sp-muted" style={{ fontSize: 12, lineHeight: 1.45 }}>
         sui receive + fee payer, network, ika tools, and address book.
@@ -91,7 +99,7 @@ export function DWalletManagementScreen({
       </div>
 
       <div style={{ marginTop: 8 }}>
-        <DWalletPanel enabled={canIka} />
+        <DWalletPanel enabled={canIka} onDwalletCreated={triggerPolicyPrompt} />
       </div>
     </div>
   );

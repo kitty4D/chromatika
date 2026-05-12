@@ -1,0 +1,170 @@
+/**
+ * Chromatika motion grammar — four named moments + reusable utilities.
+ *
+ * Lifted from website/src/styles.css `header-spectral-shift` + `header-glow-sweep`.
+ * Master easing matches website's hover-lift transitions: cubic-bezier(0.22, 1, 0.36, 1).
+ *
+ * Per CC-B8 from the plan:
+ *   1. Signing in progress  -> spectral-shift across hero amount text. Stops when done.
+ *   2. Vault switch         -> 240ms cross-fade + 16px upward translate.
+ *   3. Tab switch           -> 180ms slide (already implicit via React mount).
+ *   4. Approval success     -> letter-spacing morph + color fade + underline draw.
+ *
+ * All animations respect `prefers-reduced-motion: reduce` -> end-state-no-animation.
+ */
+
+/* ----- keyframes (named after website motifs) ----- */
+
+@keyframes ch-spectral-shift {
+  0%   { background-position: 0% 50%; }
+  100% { background-position: 100% 50%; }
+}
+
+@keyframes ch-glow-sweep {
+  0%   { background-position: 180% 0; opacity: 0.35; }
+  40%  { opacity: 0.72; }
+  100% { background-position: -180% 0; opacity: 0.35; }
+}
+
+@keyframes ch-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ch-vault-switch {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes ch-success-morph {
+  0% {
+    letter-spacing: -0.01em;
+    color: var(--text, oklch(0.93 0.02 260));
+  }
+  60% {
+    letter-spacing: 0.02em;
+  }
+  100% {
+    letter-spacing: 0.02em;
+    color: oklch(0.78 0.16 152);
+  }
+}
+
+@keyframes ch-success-underline {
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
+
+@keyframes ch-pulse-low {
+  0%, 100% { opacity: 0.55; }
+  50%      { opacity: 1; }
+}
+
+/* ----- utilities (use as className on the element you want to animate) ----- */
+
+/* signing-in-progress shimmer: slow hue-shift across the hero amount type.
+ * apply via `data-signing="true"` attribute or `.ch-anim-signing` class. */
+.ch-anim-signing,
+[data-signing='true'] .ch-anim-signing-target {
+  background-image: linear-gradient(
+    105deg,
+    oklch(0.97 0.02 270) 0%,
+    oklch(0.82 0.12 285) 22%,
+    oklch(0.85 0.15 145) 44%,
+    oklch(0.78 0.14 245) 62%,
+    oklch(0.88 0.16 22) 82%,
+    oklch(0.97 0.02 270) 100%
+  );
+  background-size: 320% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  animation: ch-spectral-shift 12s ease-in-out infinite alternate;
+}
+
+/* one-shot success morph: text widens + greens out. attach when state transitions to `done`. */
+.ch-anim-success {
+  animation: ch-success-morph 320ms var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1)) forwards;
+}
+
+/* drawn underline beneath success amount. wraps the amount and animates left-to-right. */
+.ch-anim-success-underline {
+  position: relative;
+}
+.ch-anim-success-underline::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -4px;
+  height: 2px;
+  background: oklch(0.78 0.16 152);
+  transform-origin: left center;
+  transform: scaleX(0);
+  animation: ch-success-underline 300ms var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1)) 200ms forwards;
+}
+
+/* generic fade-in-up entrance. use sparingly — only on content that benefits from a beat. */
+.ch-anim-fade-in-up {
+  animation: ch-fade-in-up 220ms var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* vault switch: applied briefly to the vault context strip after switchVault completes. */
+.ch-anim-vault-switch {
+  animation: ch-vault-switch 240ms var(--ch-ease, cubic-bezier(0.22, 1, 0.36, 1));
+}
+
+/* low-attention pulse for state-change indicators (e.g. presign pool refilling, wakeup banners).
+ * 5-cycle limit so it doesn't become permanent attention-grab. */
+.ch-anim-pulse-low {
+  animation: ch-pulse-low 1.4s ease-in-out 5;
+}
+
+/* ----- nav indicator (active tab signature ribbon) -----
+ * the signature 4-stop gradient is visually distinctive on its own; the previous
+ * `animation: ch-spectral-shift 14s infinite alternate` was paying continuous paint
+ * cycles for a subtle shimmer that wasn't pulling its weight. Removed per i-optimize
+ * P1 finding. If "this tab is alive" signal is missed, reintroduce as a finite-cycle
+ * pulse on tab-switch only (.ch-anim-pulse-low pattern). */
+
+/* ----- master easing audit: replace any `ease` / `ease-in-out` on hover transforms
+ * to use `--ch-ease` for cohesion. Existing components already use cubic-bezier(0.22,1,0.36,1)
+ * inline (set in earlier batches) — no widescale rewrite needed. */
+
+/* ----- reduced-motion fallback: collapse all animations to end state ----- */
+@media (prefers-reduced-motion: reduce) {
+  .ch-anim-signing,
+  [data-signing='true'] .ch-anim-signing-target,
+  .ch-anim-success,
+  .ch-anim-fade-in-up,
+  .ch-anim-vault-switch,
+  .ch-anim-pulse-low,
+  .sp-navIndicator {
+    animation: none !important;
+  }
+
+  .ch-anim-success-underline::after {
+    animation: none;
+    transform: scaleX(1);
+  }
+
+  .ch-anim-signing,
+  [data-signing='true'] .ch-anim-signing-target {
+    /* still apply the gradient text effect, just don't shimmer */
+    -webkit-text-fill-color: var(--accent, oklch(0.78 0.14 245));
+    color: var(--accent, oklch(0.78 0.14 245));
+  }
+}
