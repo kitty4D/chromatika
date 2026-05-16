@@ -180,7 +180,7 @@ export function App() {
 
   const [popupVaultLabel, setPopupVaultLabel] = useState<string | null>(devMode ? 'default' : null);
   const [popupTab, setPopupTab] = useState<Tab>('vault');
-  type PopupWalletOverlay = null | 'vaultMgmt' | 'dwalletMgmt' | 'send';
+  type PopupWalletOverlay = null | 'vaultMgmt' | 'dwalletMgmt';
   const [popupWalletOverlay, setPopupWalletOverlay] = useState<PopupWalletOverlay>(null);
   const [ikaGateLabDrawerOpen, setIkaGateLabDrawerOpen] = useState(false);
 

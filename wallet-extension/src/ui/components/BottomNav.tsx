@@ -1,5 +1,5 @@
 import { motion, useReducedMotion } from 'framer-motion';
-import { ClipboardList, Coins, KeyRound, Shield, ShieldCheck } from 'lucide-react';
+import { ClipboardList, KeyRound, Send, Shield, ShieldCheck } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import type { Tab } from '@/ui/types';
 
@@ -15,10 +15,10 @@ const NAV: NavItem[] = [
   {
     id: 'dwallet',
     Icon: KeyRound,
-    label: 'dWALLET',
+    label: 'dWallets',
     title: 'Create and manage ika dWallets (identities for dapps and sends)',
   },
-  { id: 'assets', Icon: Coins, label: 'assets', title: 'Portfolio and token balances' },
+  { id: 'send', Icon: Send, label: 'send', title: 'Send coins and tokens across chains' },
   { id: 'activity', Icon: ClipboardList, label: 'activity', title: 'Transaction activity' },
   {
     id: 'policy',

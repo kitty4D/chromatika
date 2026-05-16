@@ -1381,7 +1381,10 @@ html[data-ika-chain='solana'] .cv-contextBaseAddr {
   letter-spacing: 0.12em;
 }
 .sp-navLabel--dwallet {
-  text-transform: lowercase;
+  /* render the label exactly as authored (mixed case "dWallets") - the other tabs use
+   * `text-transform: uppercase` from the base `.sp-navLabel` rule but this one preserves
+   * the dWallet noun's signature casing per `wallet-extension/CLAUDE.md` terminology. */
+  text-transform: none;
   letter-spacing: 0.02em;
   font-weight: 800;
 }

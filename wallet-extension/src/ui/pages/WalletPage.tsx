@@ -6,6 +6,7 @@ import { buildDwalletIndexMap, resolveDwalletLabel, type DwalletCurve } from '@/
 import { HelpBubble } from '@/ui/components/HelpBubble';
 import { SwapCard } from '@/ui/components/SwapCard';
 import { VaultBaseCard } from '@/ui/components/VaultBaseCard';
+import { PolicyVaultBanner } from '@/ui/components/PolicyVaultBanner';
 import { DWalletReorderList } from '@/ui/components/DWalletReorderList';
 import { PendingDWalletCard } from '@/ui/components/DWalletCard';
 import { ReceiveAddressSheet } from '@/ui/components/ReceiveAddressSheet';
@@ -254,6 +255,7 @@ export function WalletPage({
   return (
     <div className="sp-page sp-page--walletHome">
       {policyPromptModal}
+      <PolicyVaultBanner />
       <VaultBaseCard
         balances={balances}
         network={balances.network}

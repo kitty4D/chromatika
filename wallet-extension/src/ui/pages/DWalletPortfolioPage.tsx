@@ -19,13 +19,19 @@ import {
   type NativeAssetRow,
   type PcTokenAssetRow,
   type PortfolioPcTokenConfig,
+  type PortfolioQuickSendRow,
   type SolanaSplRow,
 } from '@/ui/components/PortfolioAssetTable';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
+import { PolicyVaultBanner } from '@/ui/components/PolicyVaultBanner';
 import { WrapPcTokenModal } from '@/ui/components/WrapPcTokenModal';
 import { UnwrapPcTokenModal } from '@/ui/components/UnwrapPcTokenModal';
+import { NftsCollectiblesPanel, KioskPanel } from '@/ui/pages/NftsPage';
+import { useIkaBaseMode } from '@/lib/use-ika-base-mode';
+import { useSharedBus } from '@/lib/use-shared-bus';
 import type { Balances, Networks } from '@/ui/types';
 import type { DwalletCapChainAddresses } from '@/background/chains/dwallet-derived-addresses';
+import { tableRowToSendTokenRow, type PortfolioTableRowShape } from '@/ui/lib/portfolio-row-bridge';
 
 type PcTokenMarketsList = Awaited<ReturnType<typeof trpc.listPcTokenMarkets.query>>;
 type PcMarket = PcTokenMarketsList['markets'][number];
@@ -168,6 +174,7 @@ export function DWalletPortfolioPage({
   balances,
   onBack,
   onOpenSend,
+  onOpenSendForRow,
 }: {
   dwalletId?: string;
   networks: Networks | null;
@@ -175,11 +182,22 @@ export function DWalletPortfolioPage({
   onBack?: () => void;
   /** open the Send page; pass a `pcMarketId` to pre-select a hidden-transfer flow for that market. */
   onOpenSend?: (opts?: { pcMarketId?: string }) => void;
+  /**
+   * portfolio row quick-send: jump straight to the Recipient step of the Send tab with the asset
+   * already chosen. wired by `MainWalletShell.openSendForRow`. when omitted, the row send icons
+   * fall back to opening the Send tab without preselect.
+   */
+  onOpenSendForRow?: (row: import('@/background/services/send-token-types').SendTokenRow) => void;
 }) {
   const [caps, setCaps] = useState<OwnedCap[] | null>(null);
   const [book, setBook] = useState<Awaited<ReturnType<typeof trpc.dwalletAddressBook.query>> | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [rail, setRail] = useState<PortfolioChainRail>('sui');
+  /** inner-tab switch: portfolio (default), nfts, or kiosks. moved here from the deleted Assets tab. */
+  const [innerTab, setInnerTab] = useState<'portfolio' | 'nfts' | 'kiosks'>('portfolio');
+  const { broadcast } = useSharedBus(() => {});
+  const { mode: ikaMode } = useIkaBaseMode({ broadcast });
+  const showKiosks = ikaMode === 'sui';
   const [tokens, setTokens] = useState<Awaited<ReturnType<typeof trpc.getEvmTokenBalances.query>>['tokens']>([]);
   const [evmLoading, setEvmLoading] = useState(false);
   const [nativeRows, setNativeRows] = useState<NativeRow[]>([]);
@@ -494,6 +512,44 @@ export function DWalletPortfolioPage({
     return null;
   }, [networks, receiveAddr, secpCombined, rail, evmNet, explorerPrefs]);
 
+  /**
+   * portfolio row quick-send dispatcher. translates the row variant into a `SendTokenRow` and
+   * hands it to `MainWalletShell.openSendForRow`, which sets the SendNav preselect + flips to
+   * the Send tab. when `onOpenSendForRow` is not wired (legacy callers), this is a no-op so the
+   * Send icon still renders but does nothing - safer than no affordance.
+   */
+  const handleQuickSend = useCallback(
+    (qs: PortfolioQuickSendRow) => {
+      if (!onOpenSendForRow || !capWithAddrs) return;
+      const ownerLabel = resolvedWalletTitle;
+      const chainAddresses = capWithAddrs.chainAddresses ?? ({} as DwalletCapChainAddresses);
+      const dwalletId = capWithAddrs.dwalletId;
+      let shape: PortfolioTableRowShape | null = null;
+      if (qs.kind === 'evm') {
+        const evmChainIdForRow = secpCombined ? portfolioEvmChainId : chainId;
+        const networkLabel =
+          networks?.evm.find((n) => n.chainId === evmChainIdForRow)?.name ?? 'EVM';
+        shape = { kind: 'evm', row: qs.evm, chainId: evmChainIdForRow, networkLabel };
+      } else if (qs.kind === 'native') {
+        const railKey: 'sui' | 'solana' | 'aptos' | 'btcP2wpkh' | 'btcP2tr' = qs.isBtc
+          ? (qs.native.rowKey?.startsWith('btcP2tr')
+              ? 'btcP2tr'
+              : 'btcP2wpkh')
+          : (rail as 'sui' | 'solana' | 'aptos');
+        shape = { kind: 'native', row: qs.native, railKey, networkLabel: qs.native.name };
+      } else if (qs.kind === 'spl') {
+        shape = { kind: 'spl', row: qs.spl, networkLabel: 'Solana' };
+      } else if (qs.kind === 'pcToken') {
+        // pcToken hidden transfers stay on the dedicated form; skip bridging.
+        return;
+      }
+      if (!shape) return;
+      const sendRow = tableRowToSendTokenRow(shape, { ownerLabel, chainAddresses, dwalletId });
+      if (sendRow) onOpenSendForRow(sendRow);
+    },
+    [onOpenSendForRow, capWithAddrs, resolvedWalletTitle, secpCombined, portfolioEvmChainId, chainId, networks, rail],
+  );
+
   const inlineSendConfig =
     secpCombined && networks
       ? {
@@ -668,6 +724,7 @@ export function DWalletPortfolioPage({
 
   return (
     <div className="sp-page cp-portfolio dp-portfolio sp-page--dwalletHome">
+      <PolicyVaultBanner />
       <ReceiveAddressSheet
         open={receiveOpen && Boolean(receiveAddr)}
         onClose={() => setReceiveOpen(false)}
@@ -897,7 +954,32 @@ export function DWalletPortfolioPage({
           </div>
 
           <div className="dp-portfolioAssetsSlab">
-            {!secpCombined ? (
+            <div className="ap-tabRow" role="tablist" aria-label="dwallet sections" style={{ marginBottom: 10 }}>
+              {(['portfolio', 'nfts'] as const).map((id) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  className={`ap-tabBtn${innerTab === id ? ' ap-tabBtn--active' : ''}`}
+                  onClick={() => setInnerTab(id)}
+                >
+                  {id}
+                </button>
+              ))}
+              {showKiosks ? (
+                <button
+                  type="button"
+                  role="tab"
+                  className={`ap-tabBtn${innerTab === 'kiosks' ? ' ap-tabBtn--active' : ''}`}
+                  onClick={() => setInnerTab('kiosks')}
+                >
+                  kiosks
+                </button>
+              ) : null}
+            </div>
+            {innerTab === 'nfts' && <NftsCollectiblesPanel balances={balances} />}
+            {innerTab === 'kiosks' && showKiosks && <KioskPanel balances={balances} />}
+            {innerTab === 'portfolio' && !secpCombined ? (
               <div className="dp-chipRow" role="tablist" aria-label="chain" style={{ marginBottom: 10 }}>
                 {rails.map((r) => (
                   <button
@@ -913,7 +995,7 @@ export function DWalletPortfolioPage({
               </div>
             ) : null}
 
-            {secpCombined && networks ? (
+            {innerTab === 'portfolio' && secpCombined && networks ? (
               <div className="cp-portfolioSecpAssetStack">
                 <div className="cp-portfolioSectionHdr">BITCOIN:</div>
                 <PortfolioAssetTable
@@ -923,6 +1005,7 @@ export function DWalletPortfolioPage({
                   emptyHint="no bitcoin balance data yet."
                   inlineSend={inlineSendConfig}
                   hideSendWhenZeroBalance
+                  onQuickSend={handleQuickSend}
                 />
                 <div className="cp-portfolioSecpRule" aria-hidden />
                 <div className="cp-portfolioEvmHdrRow">
@@ -958,13 +1041,18 @@ export function DWalletPortfolioPage({
                   emptyHint="no balance on this network yet."
                   inlineSend={inlineSendConfig}
                   hideSendWhenZeroBalance
+                  onQuickSend={handleQuickSend}
                 />
               </div>
             ) : null}
-            {!secpCombined && rail === 'evm' && displayAddr ? (
-              <PortfolioAssetTable evmTokens={tokens} emptyHint="no balance data for this chain yet." />
+            {innerTab === 'portfolio' && !secpCombined && rail === 'evm' && displayAddr ? (
+              <PortfolioAssetTable
+                evmTokens={tokens}
+                emptyHint="no balance data for this chain yet."
+                onQuickSend={handleQuickSend}
+              />
             ) : null}
-            {!secpCombined && rail !== 'evm' && displayAddr ? (
+            {innerTab === 'portfolio' && !secpCombined && rail !== 'evm' && displayAddr ? (
               <PortfolioAssetTable
                 nativeRows={nativeRows}
                 splRows={isSolanaRail ? solanaSplRows : undefined}
@@ -973,6 +1061,7 @@ export function DWalletPortfolioPage({
                 loading={nativeLoading}
                 error={nativeErr}
                 emptyHint="no balance data for this chain yet."
+                onQuickSend={handleQuickSend}
               />
             ) : null}
           </div>

@@ -1,184 +1,87 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Search, X } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
-import { suiFromMist } from '@/lib/sui-amount';
-import type { Balances, Networks } from '@/ui/types';
-import { HiddenTransferForm } from '@/ui/components/HiddenTransferForm';
+import { formatUsd } from '@/lib/sui-amount';
 import { PolicyVaultBanner } from '@/ui/components/PolicyVaultBanner';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
 import { PreviewDisabledTooltip } from '@/ui/components/PreviewDisabledTooltip';
-import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
-import { buildSolanaExplorerUrl } from '@/config/explorers';
 import { activityTxExplorerHref } from '@/lib/explorer-href';
+import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
+import { useSendAmountInputMode } from '@/lib/use-send-amount-input-mode';
+import { AmountInputControl } from '@/ui/pages/send/AmountInputControl';
+import type { Balances, Networks } from '@/ui/types';
+import type {
+  SendPolicyLinkSnapshot,
+  SendTokenChain,
+  SendTokenNetworkFilter,
+  SendTokenRow,
+  SendTokenScope,
+} from '@/background/services/send-token-types';
 
-type PcMarketsList = Awaited<ReturnType<typeof trpc.listPcTokenMarkets.query>>;
-type PcMarket = PcMarketsList['markets'][number];
+type SendNav = import('@/ui/MainWalletShell').SendNav;
+type Stage = 'select-token' | 'select-recipient' | 'confirm' | 'status';
 
-const PC_ASSET_PREFIX = 'pc:';
+type AddressBookEntry = Awaited<ReturnType<typeof trpc.addressBookList.query>>['entries'][number];
+type RecentRecipient = Awaited<ReturnType<typeof trpc.recentRecipients.query>>['entries'][number];
 
-function amountToHex(amount: string, decimals = 18): string {
-  const [intPart = '0', fracPart = ''] = amount.split('.');
-  const frac = fracPart.slice(0, decimals).padEnd(decimals, '0');
-  const bigVal = BigInt(intPart) * BigInt(10 ** decimals) + BigInt(frac);
-  return '0x' + bigVal.toString(16);
-}
-
-/** "9N4..eU8a", keep mints recognizable in the dropdown without hogging width. */
-function shortMint(mint: string): string {
-  if (mint.length <= 12) return mint;
-  return `${mint.slice(0, 4)}…${mint.slice(-4)}`;
-}
-
-type SolanaSplOption = {
-  mint: string;
-  decimals: number;
-  balance: string;
-  balanceRaw: string;
+const SCOPE_LABELS: Record<SendTokenScope, string> = {
+  dwallet: 'Current dWallet',
+  vault: 'Current Vault / Fee-Payer',
+  everything: 'Entire Vault',
 };
 
-/** marker value for native SOL in the asset dropdown. kept distinct from any base58 mint. */
-const SOL_NATIVE = 'native:sol';
+const CHAIN_LABELS: Record<SendTokenChain, string> = {
+  evm: 'EVM',
+  sui: 'Sui',
+  solana: 'Solana',
+  btc: 'Bitcoin',
+  aptos: 'Aptos',
+};
+
+const NATIVES_PRICED_BY_POLICY_V0 = new Set(['ETH', 'SUI', 'SOL', 'MATIC']);
+
+// ---------------------------------------------------------------------------
+// page-level state machine
+// ---------------------------------------------------------------------------
 
 export function SendPage({
   balances,
   networks,
-  initialPcMarketId,
+  sendNav,
+  onSendNavConsumed,
 }: {
   balances: Balances | null;
   networks: Networks | null;
-  /** when set, jump straight to the Solana hidden-transfer form for this market. */
-  initialPcMarketId?: string;
+  sendNav?: SendNav | null;
+  onSendNavConsumed?: () => void;
 }) {
-  const explorerPrefs = useExplorerPreferences();
-  const [chain, setChain] = useState<'sui' | 'evm' | 'btc' | 'solana'>(
-    initialPcMarketId ? 'solana' : 'evm',
-  );
-  const [toAddress, setToAddress] = useState('');
-  const [amount, setAmount] = useState('');
-  const [sending, setSending] = useState(false);
-  const [txHash, setTxHash] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  void balances; // future: locked/balance gating per stage
+  const [stage, setStage] = useState<Stage>('select-token');
+  const [selectedToken, setSelectedToken] = useState<SendTokenRow | null>(null);
+  const [recipient, setRecipient] = useState<string>('');
+  const [amount, setAmount] = useState<string>('');
+  const [sendResult, setSendResult] = useState<
+    | { kind: 'pending' }
+    | { kind: 'submitted'; txid: string }
+    | { kind: 'failed'; message: string }
+    | null
+  >(null);
+  const [policyLinksByOwner, setPolicyLinksByOwner] = useState<Record<string, SendPolicyLinkSnapshot>>({});
 
-  // solana asset selector state. fetched on demand when chain switches to solana so users on
-  // EVM never pay the round-trip. asset key is one of:
-  //   - SOL_NATIVE sentinel
-  //   - raw SPL mint base58
-  //   - `pc:${marketId}` for a configured PC-Token market (hidden transfer)
-  const [solanaAsset, setSolanaAsset] = useState<string>(
-    initialPcMarketId ? `${PC_ASSET_PREFIX}${initialPcMarketId}` : SOL_NATIVE,
-  );
-  const [solanaSplOptions, setSolanaSplOptions] = useState<SolanaSplOption[]>([]);
-  const [solanaSplLoading, setSolanaSplLoading] = useState(false);
-  const [solanaSplError, setSolanaSplError] = useState<string | null>(null);
-  const [solanaOwner, setSolanaOwner] = useState<string | null>(null);
-  const [pcMarkets, setPcMarkets] = useState<PcMarket[]>([]);
-
+  // consume sendNav preselect on first mount: portfolio quick-send + PC-Token deep-link.
   useEffect(() => {
-    if (chain !== 'solana') return;
-    let cancelled = false;
-    setSolanaSplLoading(true);
-    setSolanaSplError(null);
-    void Promise.all([
-      trpc.listSolanaSplBalances.query(),
-      trpc.listPcTokenMarkets.query().catch(() => ({ markets: [], activeMarketId: null })),
-    ])
-      .then(([spl, mkts]) => {
-        if (cancelled) return;
-        setSolanaSplOptions(spl.tokens);
-        setSolanaOwner(spl.owner);
-        setPcMarkets(mkts.markets);
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        setSolanaSplError(e instanceof Error ? e.message : String(e));
-      })
-      .finally(() => {
-        if (!cancelled) setSolanaSplLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [chain]);
-
-  const selectedPcMarket = useMemo<PcMarket | null>(() => {
-    if (chain !== 'solana' || !solanaAsset.startsWith(PC_ASSET_PREFIX)) return null;
-    const id = solanaAsset.slice(PC_ASSET_PREFIX.length);
-    return pcMarkets.find((m) => m.id === id) ?? null;
-  }, [chain, solanaAsset, pcMarkets]);
-
-  const chainId = networks?.active?.evmChainId ?? 1;
-  const evmSymbol = networks?.evm.find((n) => n.chainId === chainId)?.symbol ?? 'ETH';
-  const selectedSpl =
-    chain === 'solana' && solanaAsset !== SOL_NATIVE
-      ? solanaSplOptions.find((t) => t.mint === solanaAsset) ?? null
-      : null;
-  const symbol =
-    chain === 'evm'
-      ? evmSymbol
-      : chain === 'btc'
-        ? 'BTC'
-        : chain === 'solana'
-          ? selectedSpl
-            ? shortMint(selectedSpl.mint)
-            : 'SOL'
-          : 'SUI';
-
-  async function onSend() {
-    setError(null);
-    setTxHash(null);
-    if (!toAddress.trim()) {
-      setError('enter a destination address');
-      return;
+    if (!sendNav) return;
+    if (sendNav.preselectedToken) {
+      setSelectedToken(sendNav.preselectedToken);
+      setStage(sendNav.initialStage ?? 'select-recipient');
+    } else if (sendNav.initialStage) {
+      setStage(sendNav.initialStage);
     }
-    if (!amount.trim() || Number(amount) <= 0) {
-      setError('enter an amount greater than zero');
-      return;
-    }
-
-    setSending(true);
-    try {
-      if (chain === 'evm') {
-        const value = amountToHex(amount, networks?.evm.find((n) => n.chainId === chainId)?.decimals ?? 18);
-        const r = await trpc.sendEvmTx.mutate({ to: toAddress.trim(), value });
-        setTxHash(r.txHash);
-        setToAddress('');
-        setAmount('');
-      } else if (chain === 'sui') {
-        const r = await trpc.sendSuiNative.mutate({ to: toAddress.trim(), amountSui: amount.trim() });
-        setTxHash(r.digest);
-        setToAddress('');
-        setAmount('');
-      } else if (chain === 'solana') {
-        if (selectedSpl) {
-          const r = await trpc.sendSplToken.mutate({
-            to: toAddress.trim(),
-            mint: selectedSpl.mint,
-            amount: amount.trim(),
-            decimals: selectedSpl.decimals,
-          });
-          setTxHash(r.signature);
-        } else {
-          const r = await trpc.sendSolanaNative.mutate({
-            to: toAddress.trim(),
-            amountSol: amount.trim(),
-          });
-          setTxHash(r.signature);
-        }
-        setToAddress('');
-        setAmount('');
-      } else if (chain === 'btc') {
-        const r = await trpc.sendBtcNative.mutate({ to: toAddress.trim(), amountBtc: amount.trim() });
-        setTxHash(r.txid);
-        setToAddress('');
-        setAmount('');
-      } else {
-        setError(`${chain} send coming soon — evm, sui, solana, and btc are live`);
-      }
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-    } finally {
-      setSending(false);
-    }
-  }
+    // PC-Token deep-link is no longer honored here; the dedicated `HiddenTransferForm`
+    // flow stays accessible from the portfolio row when needed.
+    onSendNavConsumed?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="sp-page">
@@ -186,225 +89,711 @@ export function SendPage({
 
       <PolicyVaultBanner />
 
-      <div className="sp-section" role="radiogroup" aria-label="select chain to send on">
-        <div className="sp-sectionTitle">chain</div>
+      {stage === 'select-token' && (
+        <SelectTokenStep
+          onPick={(row, linksByOwner) => {
+            setSelectedToken(row);
+            setPolicyLinksByOwner(linksByOwner);
+            setStage('select-recipient');
+          }}
+        />
+      )}
+
+      {stage === 'select-recipient' && selectedToken && (
+        <SelectRecipientStep
+          token={selectedToken}
+          recipient={recipient}
+          onRecipientChange={setRecipient}
+          onBack={() => setStage('select-token')}
+          onNext={() => setStage('confirm')}
+        />
+      )}
+
+      {stage === 'confirm' && selectedToken && (
+        <ConfirmStep
+          token={selectedToken}
+          recipient={recipient}
+          amount={amount}
+          onAmountChange={setAmount}
+          onBack={() => setStage('select-recipient')}
+          policyLink={policyLinksByOwner[selectedToken.ownerAddress]}
+          onConfirm={async () => {
+            setSendResult({ kind: 'pending' });
+            setStage('status');
+            try {
+              const r = await trpc.sendUnified.mutate({
+                row: {
+                  chain: selectedToken.chain,
+                  chainId: selectedToken.chainId,
+                  contractAddress: selectedToken.contractAddress,
+                  mint: selectedToken.mint,
+                  coinType: selectedToken.coinType,
+                  decimals: selectedToken.decimals,
+                  symbol: selectedToken.symbol,
+                  ownerDwalletId: selectedToken.ownerDwalletId,
+                },
+                to: recipient,
+                amount,
+              });
+              setSendResult({ kind: 'submitted', txid: r.txid });
+            } catch (e) {
+              setSendResult({ kind: 'failed', message: e instanceof Error ? e.message : String(e) });
+            }
+          }}
+        />
+      )}
+
+      {stage === 'status' && selectedToken && sendResult && (
+        <StatusStep
+          token={selectedToken}
+          result={sendResult}
+          networks={networks}
+          onClose={() => {
+            setStage('select-token');
+            setSelectedToken(null);
+            setRecipient('');
+            setAmount('');
+            setSendResult(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// step 1: select coin / token
+// ---------------------------------------------------------------------------
+
+function SelectTokenStep(props: {
+  onPick: (row: SendTokenRow, links: Record<string, SendPolicyLinkSnapshot>) => void;
+}) {
+  const [scope, setScope] = useState<SendTokenScope>('everything');
+  const [networkFilter, setNetworkFilter] = useState<SendTokenNetworkFilter>('all');
+  const [rows, setRows] = useState<SendTokenRow[]>([]);
+  const [partial, setPartial] = useState(false);
+  const [allowedCurves, setAllowedCurves] = useState<Array<'SECP256K1' | 'ED25519'>>([]);
+  const [policyLinks, setPolicyLinks] = useState<Record<string, SendPolicyLinkSnapshot>>({});
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    setError(null);
+    trpc.sendTokenList
+      .query({ scope, networkFilter })
+      .then((r) => {
+        if (cancelled) return;
+        setRows(r.rows);
+        setPartial(r.partial);
+        setAllowedCurves(r.allowedCurves);
+        setPolicyLinks(r.policyLinksByOwner);
+      })
+      .catch((e) => {
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [scope, networkFilter]);
+
+  const availableChains: SendTokenChain[] = useMemo(() => {
+    const all: SendTokenChain[] = ['evm', 'sui', 'solana', 'btc', 'aptos'];
+    if (allowedCurves.length === 0) return all;
+    // SECP256K1 covers EVM + BTC; ED25519 covers Sui + Solana + Aptos.
+    const has = (c: 'SECP256K1' | 'ED25519') => allowedCurves.includes(c);
+    return all.filter((chain) => {
+      if (chain === 'evm' || chain === 'btc') return has('SECP256K1');
+      return has('ED25519');
+    });
+  }, [allowedCurves]);
+
+  return (
+    <>
+      <h3 className="sp-sectionTitle" style={{ marginTop: 8 }}>Select Coin/Token</h3>
+
+      <div className="sp-section" role="radiogroup" aria-label="scope">
+        <div className="sp-sectionTitle">scope</div>
         <div className="sp-chipRow">
-          {(['evm', 'sui', 'btc', 'solana'] as const).map((c) => (
+          {(['dwallet', 'vault', 'everything'] as SendTokenScope[]).map((s) => (
             <button
-              key={c}
+              key={s}
               type="button"
               role="radio"
-              aria-checked={chain === c}
-              className={`sp-chip${chain === c ? ' sp-chipActive' : ''}`}
-              onClick={() => {
-                setChain(c);
-                setSolanaAsset(SOL_NATIVE);
-                setError(null);
-                setTxHash(null);
-              }}
+              aria-checked={scope === s}
+              className={`sp-chip${scope === s ? ' sp-chipActive' : ''}`}
+              onClick={() => setScope(s)}
             >
-              {c === 'evm' ? `evm (${chainId})` : c}
+              {SCOPE_LABELS[s]}
             </button>
           ))}
         </div>
       </div>
 
-      {chain === 'solana' && (
-        <div className="sp-section">
-          <label className="sp-sectionTitle" htmlFor="send-solana-asset">asset</label>
-          <select
-            id="send-solana-asset"
-            className="sp-input"
-            value={solanaAsset}
-            onChange={(e) => {
-              setSolanaAsset(e.target.value);
-              setError(null);
-              setTxHash(null);
-            }}
-            disabled={solanaSplLoading}
-            aria-label="select Solana asset to send"
+      <div className="sp-section" role="radiogroup" aria-label="network">
+        <div className="sp-sectionTitle">network</div>
+        <div className="sp-chipRow">
+          <button
+            type="button"
+            role="radio"
+            aria-checked={networkFilter === 'all'}
+            className={`sp-chip${networkFilter === 'all' ? ' sp-chipActive' : ''}`}
+            onClick={() => setNetworkFilter('all')}
           >
-            <option value={SOL_NATIVE}>SOL (native)</option>
-            {solanaSplOptions.map((t) => (
-              <option key={t.mint} value={t.mint}>
-                {shortMint(t.mint)} — {t.balance}
-              </option>
-            ))}
-            {pcMarkets.length > 0 &&
-              pcMarkets.map((m) => (
-                <option key={`pc:${m.id}`} value={`${PC_ASSET_PREFIX}${m.id}`}>
-                  🔒 pc{m.splSymbol} ({m.label}) — hidden
-                </option>
-              ))}
-          </select>
-          {solanaSplLoading && (
-            <div className="sp-muted" style={{ fontSize: 11, marginTop: 4 }}>
-              loading solana holdings…
-            </div>
-          )}
-          {solanaSplError && (
-            <div className="sp-error" style={{ fontSize: 11, marginTop: 4 }}>
-              could not load SPL holdings: {solanaSplError}
-            </div>
-          )}
-          {!solanaSplLoading && !solanaSplError && solanaSplOptions.length === 0 && pcMarkets.length === 0 && (
-            <div className="sp-muted" style={{ fontSize: 11, marginTop: 4 }}>
-              no SPL token holdings at this address
-            </div>
-          )}
-          {selectedSpl && (
-            <div className="sp-muted" style={{ fontSize: 11, marginTop: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>mint:</span>
-              <ExplorerValueRow
-                fullValue={selectedSpl.mint}
-                href={buildSolanaExplorerUrl(explorerPrefs, networks?.active.solNetworkId ?? 'sol-devnet', 'address', selectedSpl.mint)}
-                truncateMid={{ head: 6, tail: 6 }}
-                copyLabel="copy mint address"
-              />
-            </div>
-          )}
-          {solanaOwner && (
-            <div className="sp-muted" style={{ fontSize: 11, marginTop: 2, display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span>from:</span>
-              <ExplorerValueRow
-                fullValue={solanaOwner}
-                href={buildSolanaExplorerUrl(explorerPrefs, networks?.active.solNetworkId ?? 'sol-devnet', 'address', solanaOwner)}
-                truncateMid={{ head: 6, tail: 6 }}
-                copyLabel="copy sender address"
-              />
-            </div>
-          )}
+            All
+          </button>
+          {availableChains.map((c) => (
+            <button
+              key={c}
+              type="button"
+              role="radio"
+              aria-checked={networkFilter === c}
+              className={`sp-chip${networkFilter === c ? ' sp-chipActive' : ''}`}
+              onClick={() => setNetworkFilter(c)}
+            >
+              {CHAIN_LABELS[c]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {error && <div className="sp-error">{error}</div>}
+      {partial && !error && (
+        <div className="sp-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+          some balance probes failed - results may be incomplete.
         </div>
       )}
 
-      {selectedPcMarket && (
-        <HiddenTransferForm
-          marketId={selectedPcMarket.id}
-          marketLabel={selectedPcMarket.label}
-          splSymbol={selectedPcMarket.splSymbol}
-          splDecimals={selectedPcMarket.splDecimals}
-          onSent={(sig) => setTxHash(sig)}
+      {loading && rows.length === 0 ? (
+        <div className="sp-muted" style={{ fontSize: 12 }}>loading balances...</div>
+      ) : rows.length === 0 ? (
+        <div className="sp-muted" style={{ fontSize: 12 }}>
+          no coins or tokens found in this scope.
+        </div>
+      ) : (
+        <ul className="sp-tokenList" style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+          {rows.map((row) => (
+            <li key={row.key}>
+              <button
+                type="button"
+                className="sp-tokenRow"
+                onClick={() => props.onPick(row, policyLinks)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 10,
+                  width: '100%',
+                  textAlign: 'left',
+                  padding: 10,
+                  background: 'rgba(255,255,255,0.04)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 6,
+                  cursor: 'pointer',
+                }}
+              >
+                <TokenIcon row={row} />
+                <div style={{ minWidth: 0, flex: 1 }}>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'baseline', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 600 }}>{row.symbol}</span>
+                    <span className="sp-muted" style={{ fontSize: 10 }}>{row.networkLabel}</span>
+                  </div>
+                  <div className="sp-muted" style={{ fontSize: 11 }}>
+                    {row.balanceFormatted} {row.symbol}
+                    {row.pricePerTokenUsd != null
+                      ? ` - ${formatUsd(row.pricePerTokenUsd)} ea`
+                      : ''}
+                  </div>
+                  <div className="sp-muted" style={{ fontSize: 10 }}>
+                    {row.ownerLabel}
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', minWidth: 80 }}>
+                  {row.totalUsdValue != null ? formatUsd(row.totalUsdValue) : '-'}
+                </div>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}
+
+function TokenIcon({ row }: { row: SendTokenRow }) {
+  const fallback = row.symbol.slice(0, 2);
+  if (row.iconUrl) {
+    return (
+      <img
+        src={row.iconUrl}
+        alt=""
+        width={28}
+        height={28}
+        style={{ borderRadius: 999, background: 'rgba(255,255,255,0.06)' }}
+        onError={(e) => {
+          (e.currentTarget as HTMLImageElement).style.display = 'none';
+        }}
+      />
+    );
+  }
+  return (
+    <div
+      aria-hidden
+      style={{
+        width: 28,
+        height: 28,
+        borderRadius: 999,
+        background: 'rgba(255,255,255,0.06)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: 11,
+        fontWeight: 600,
+      }}
+    >
+      {fallback}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// step 2: pick recipient
+// ---------------------------------------------------------------------------
+
+function SelectRecipientStep(props: {
+  token: SendTokenRow;
+  recipient: string;
+  onRecipientChange: (r: string) => void;
+  onBack: () => void;
+  onNext: () => void;
+}) {
+  const [book, setBook] = useState<AddressBookEntry[]>([]);
+  const [recents, setRecents] = useState<RecentRecipient[]>([]);
+  const [showAdd, setShowAdd] = useState(false);
+  const [addName, setAddName] = useState('');
+  const [addError, setAddError] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+
+  useEffect(() => {
+    void trpc.addressBookList.query().then((r) => setBook(r.entries)).catch(() => setBook([]));
+    void trpc.recentRecipients
+      .query({ chain: props.token.chain })
+      .then((r) => setRecents(r.entries))
+      .catch(() => setRecents([]));
+  }, [props.token.chain]);
+
+  const filteredBook = useMemo(
+    () => book.filter((e) => e.chain === props.token.chain),
+    [book, props.token.chain],
+  );
+
+  async function saveAddress() {
+    if (!addName.trim()) {
+      setAddError('Name is required');
+      return;
+    }
+    setAdding(true);
+    setAddError(null);
+    try {
+      const entry = await trpc.addressBookAdd.mutate({
+        name: addName.trim(),
+        address: props.recipient.trim(),
+        chain: props.token.chain,
+      });
+      setBook((prev) => [...prev, entry]);
+      setShowAdd(false);
+      setAddName('');
+    } catch (e) {
+      setAddError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setAdding(false);
+    }
+  }
+
+  return (
+    <>
+      <button type="button" className="sp-backBtn" onClick={props.onBack}>
+        &lt;- back
+      </button>
+      <h3 className="sp-sectionTitle" style={{ marginTop: 8 }}>
+        Send {props.token.symbol} on {props.token.networkLabel}
+      </h3>
+      <div className="sp-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+        from {props.token.ownerLabel}
+      </div>
+
+      <div className="sp-section">
+        <label className="sp-sectionTitle" htmlFor="send-recipient">recipient address</label>
+        <input
+          id="send-recipient"
+          type="text"
+          className="sp-input"
+          placeholder={placeholderFor(props.token.chain)}
+          value={props.recipient}
+          onChange={(e) => props.onRecipientChange(e.target.value)}
+          autoComplete="off"
+          spellCheck={false}
+        />
+        {props.recipient.trim().length > 0 && (
+          <button
+            type="button"
+            className="sp-btn"
+            style={{ marginTop: 6, fontSize: 11, padding: '4px 8px' }}
+            onClick={() => setShowAdd(true)}
+          >
+            + Save to address book
+          </button>
+        )}
+      </div>
+
+      {showAdd && (
+        <div className="sp-section">
+          <label className="sp-sectionTitle" htmlFor="send-recipient-name">name for this address</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <input
+              id="send-recipient-name"
+              type="text"
+              className="sp-input"
+              value={addName}
+              onChange={(e) => setAddName(e.target.value)}
+              placeholder="Alice"
+              autoFocus
+            />
+            <button type="button" className="sp-btn sp-btnPrimary" disabled={adding} onClick={() => void saveAddress()}>
+              {adding ? 'saving...' : 'save'}
+            </button>
+            <button
+              type="button"
+              className="sp-btn"
+              onClick={() => {
+                setShowAdd(false);
+                setAddName('');
+                setAddError(null);
+              }}
+            >
+              <X size={14} />
+            </button>
+          </div>
+          {addError && <div className="sp-error" style={{ marginTop: 4, fontSize: 11 }}>{addError}</div>}
+        </div>
+      )}
+
+      {filteredBook.length > 0 && (
+        <RecipientGroup
+          title="Address book"
+          rows={filteredBook.map((e) => ({ id: e.id, label: e.name, address: e.address }))}
+          onPick={(addr) => props.onRecipientChange(addr)}
+        />
+      )}
+      {recents.length > 0 && (
+        <RecipientGroup
+          title="Recently sent to"
+          rows={recents.map((r) => ({ id: r.address, label: r.address, address: r.address }))}
+          onPick={(addr) => props.onRecipientChange(addr)}
         />
       )}
 
-      {!selectedPcMarket && (
-        <>
-          <div className="sp-section">
-            <label className="sp-sectionTitle" htmlFor="send-to-address">to address</label>
-            <input
-              id="send-to-address"
-              type="text"
-              className="sp-input"
-              placeholder={
-                chain === 'btc'
-                  ? 'bc1q…'
-                  : chain === 'solana'
-                    ? 'base58…'
-                    : chain === 'sui'
-                      ? '0x… (Sui address)'
-                      : '0x…'
-              }
-              value={toAddress}
-              onChange={(e) => setToAddress(e.target.value)}
-              aria-label={`recipient ${chain} address`}
-              autoComplete="off"
-              spellCheck={false}
-            />
-          </div>
+      <button
+        type="button"
+        className="sp-btn sp-btnPrimary sp-btnFull"
+        disabled={!props.recipient.trim()}
+        onClick={props.onNext}
+      >
+        Continue
+      </button>
+    </>
+  );
+}
 
-          <div className="sp-section">
-            <label className="sp-sectionTitle" htmlFor="send-amount">amount</label>
-            <div className="sp-amountRow">
-              <input
-                id="send-amount"
-                type="number"
-                className="sp-input sp-inputAmount"
-                placeholder="0.00"
-                min="0"
-                value={amount}
-                aria-label="send amount"
-                inputMode="decimal"
-                onChange={(e) => setAmount(e.target.value)}
-              />
-              <span className="sp-amountUnit">{symbol}</span>
-            </div>
-            {balances && !balances.locked && (
-              <div className="sp-muted" style={{ fontSize: 11, marginTop: 4 }}>
-                balance:{' '}
-                {chain === 'sui'
-                  ? `${suiFromMist(balances.sui).toFixed(4)} SUI (fee address)`
-                  : chain === 'evm'
-                    ? 'see token list'
-                    : chain === 'solana' && selectedSpl
-                      ? `${selectedSpl.balance} (raw ${selectedSpl.balanceRaw})`
-                      : '—'}
-              </div>
-            )}
-          </div>
+function placeholderFor(chain: SendTokenChain): string {
+  switch (chain) {
+    case 'evm':
+      return '0x...';
+    case 'sui':
+      return '0x... (Sui address, 64 hex chars)';
+    case 'solana':
+      return 'base58 address';
+    case 'btc':
+      return 'bc1... / tb1... / 1...';
+    case 'aptos':
+      return '0x...';
+  }
+}
 
-          {error && <div className="sp-error">{error}</div>}
-
-          {txHash && (
-            <div className="sp-successBox">
-              <div className="sp-successLabel">sent!</div>
-              <div className="sp-txHash">
-                <ExplorerValueRow
-                  fullValue={txHash}
-                  href={activityTxExplorerHref(
-                    explorerPrefs,
-                    networks,
-                    chain === 'btc' ? 'bitcoin' : chain,
-                    txHash,
-                  )}
-                  truncateMid={{ head: 12, tail: 8 }}
-                  copyLabel="copy transaction hash"
-                />
-              </div>
-            </div>
-          )}
-
-          {(() => {
-            const sendCtaLocked =
-              sending
-              || (chain !== 'evm' && chain !== 'sui' && chain !== 'solana' && chain !== 'btc')
-              || __CHROMATIKA_PREVIEW_IFRAME__;
-            const label = sending
-              ? chain === 'sui'
-                ? 'signing…'
-                : chain === 'btc'
-                  ? 'signing BTC via ika…'
-                  : 'signing via ika…'
-              : chain === 'evm'
-                ? 'review & send'
-                : chain === 'sui'
-                  ? 'send SUI'
-                  : chain === 'solana'
-                    ? selectedSpl
-                      ? `send ${shortMint(selectedSpl.mint)}`
-                      : 'send SOL'
-                    : chain === 'btc'
-                      ? 'send BTC'
-                      : `${chain} send coming soon`;
-            const btn = (
-              <button
-                type="button"
-                className="sp-btn sp-btnPrimary sp-btnFull"
-                disabled={sendCtaLocked}
-                onClick={onSend}
-              >
-                {label}
-              </button>
-            );
-            return __CHROMATIKA_PREVIEW_IFRAME__ ? (
-              <PreviewDisabledTooltip message="send - not available in live preview" layout="block">
-                {btn}
-              </PreviewDisabledTooltip>
-            ) : (
-              btn
-            );
-          })()}
-        </>
-      )}
+function RecipientGroup(props: {
+  title: string;
+  rows: Array<{ id: string; label: string; address: string }>;
+  onPick: (address: string) => void;
+}) {
+  return (
+    <div className="sp-section">
+      <div className="sp-sectionTitle">{props.title}</div>
+      <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {props.rows.map((r) => (
+          <li key={r.id}>
+            <button
+              type="button"
+              className="sp-btn"
+              onClick={() => props.onPick(r.address)}
+              style={{
+                width: '100%',
+                textAlign: 'left',
+                padding: 8,
+                background: 'rgba(255,255,255,0.04)',
+                border: '1px solid rgba(255,255,255,0.08)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+              title={r.address}
+            >
+              <Search size={12} aria-hidden />
+              <span style={{ minWidth: 0, flex: 1, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {r.label}
+              </span>
+              <span className="sp-muted" style={{ fontSize: 10 }}>
+                {shortAddress(r.address)}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
     </div>
   );
+}
+
+function shortAddress(a: string): string {
+  if (a.length <= 14) return a;
+  return `${a.slice(0, 6)}...${a.slice(-6)}`;
+}
+
+// ---------------------------------------------------------------------------
+// step 3: confirm (amount + fee + policy gauge)
+// ---------------------------------------------------------------------------
+
+function ConfirmStep(props: {
+  token: SendTokenRow;
+  recipient: string;
+  amount: string;
+  onAmountChange: (v: string) => void;
+  policyLink?: SendPolicyLinkSnapshot;
+  onBack: () => void;
+  onConfirm: () => void;
+}) {
+  const [mode] = useSendAmountInputMode();
+  const [feeEstimate, setFeeEstimate] = useState<{ feeFormatted: string; feeUsd: number | null } | null>(null);
+  // future: poll a real estimateSendFee tRPC; for now we show a placeholder "network fee" line.
+  useEffect(() => {
+    setFeeEstimate({ feeFormatted: 'network gas (estimate at send)', feeUsd: null });
+  }, [props.token, props.recipient, props.amount]);
+
+  const policyMaxTokenAmount = useMemo(() => {
+    if (!props.policyLink) return undefined;
+    if (props.policyLink.panicked) return '0';
+    const remainingMicros = BigInt(props.policyLink.remainingMicros);
+    if (remainingMicros <= 0n) return '0';
+    const pricedNatively = NATIVES_PRICED_BY_POLICY_V0.has(props.token.symbol.toUpperCase()) && !props.token.contractAddress && !props.token.mint;
+    if (!pricedNatively) return undefined;
+    const price = props.token.pricePerTokenUsd ?? 0;
+    if (price <= 0) return undefined;
+    const remainingUsd = Number(remainingMicros) / 1_000_000;
+    const maxTokens = remainingUsd / price;
+    return maxTokens.toFixed(Math.min(props.token.decimals, 8));
+  }, [props.policyLink, props.token]);
+
+  const policyClampApplies =
+    policyMaxTokenAmount != null && Number.parseFloat(policyMaxTokenAmount) >= 0;
+
+  const tokenAdvisoryText = (() => {
+    if (!props.policyLink) return null;
+    const isUnpricedToken = Boolean(props.token.contractAddress || props.token.mint);
+    if (isUnpricedToken) {
+      return 'Policy Vault v0 does not price tokens; the on-chain cap will not block this send.';
+    }
+    return null;
+  })();
+
+  const submitDisabled =
+    !props.amount.trim() ||
+    Number.parseFloat(props.amount) <= 0 ||
+    (props.policyLink?.panicked === true);
+
+  return (
+    <>
+      <button type="button" className="sp-backBtn" onClick={props.onBack}>
+        &lt;- back
+      </button>
+
+      <h3 className="sp-sectionTitle" style={{ marginTop: 8 }}>Confirm send</h3>
+
+      <div className="sp-section">
+        <div className="sp-muted" style={{ fontSize: 11, marginBottom: 4 }}>from</div>
+        <div style={{ fontSize: 12 }}>{props.token.ownerLabel}</div>
+        <ExplorerValueRow
+          fullValue={props.token.ownerAddress}
+          href={null}
+          truncateMid={{ head: 8, tail: 6 }}
+          copyLabel="copy from address"
+        />
+      </div>
+
+      <div className="sp-section">
+        <div className="sp-muted" style={{ fontSize: 11, marginBottom: 4 }}>to</div>
+        <ExplorerValueRow
+          fullValue={props.recipient}
+          href={null}
+          truncateMid={{ head: 8, tail: 6 }}
+          copyLabel="copy recipient"
+        />
+      </div>
+
+      <AmountInputControl
+        mode={mode}
+        tokenSymbol={props.token.symbol}
+        decimals={props.token.decimals}
+        balanceMax={props.token.balanceFormatted}
+        policyMaxTokenAmount={policyMaxTokenAmount}
+        gasReserveAmount={gasReserveForSend(props.token)}
+        pricePerTokenUsd={props.token.pricePerTokenUsd ?? null}
+        value={props.amount}
+        onChange={props.onAmountChange}
+      />
+
+      {tokenAdvisoryText && (
+        <div className="sp-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+          {tokenAdvisoryText}
+        </div>
+      )}
+      {policyClampApplies && !tokenAdvisoryText && (
+        <div className="sp-muted" style={{ fontSize: 11, marginBottom: 8 }}>
+          Policy Vault is clamping the maximum to {policyMaxTokenAmount} {props.token.symbol}.
+        </div>
+      )}
+
+      <div className="sp-section">
+        <div className="sp-muted" style={{ fontSize: 11 }}>
+          {feeEstimate?.feeFormatted ?? 'estimating fee...'}
+        </div>
+      </div>
+
+      {(() => {
+        const btn = (
+          <button
+            type="button"
+            className="sp-btn sp-btnPrimary sp-btnFull"
+            disabled={submitDisabled || __CHROMATIKA_PREVIEW_IFRAME__}
+            onClick={props.onConfirm}
+          >
+            {props.policyLink?.panicked ? 'Policy Vault panicked' : 'Confirm send'}
+          </button>
+        );
+        return __CHROMATIKA_PREVIEW_IFRAME__ ? (
+          <PreviewDisabledTooltip message="send - not available in live preview" layout="block">
+            {btn}
+          </PreviewDisabledTooltip>
+        ) : (
+          btn
+        );
+      })()}
+    </>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// step 4: status
+// ---------------------------------------------------------------------------
+
+function StatusStep(props: {
+  token: SendTokenRow;
+  result: { kind: 'pending' } | { kind: 'submitted'; txid: string } | { kind: 'failed'; message: string };
+  networks: Networks | null;
+  onClose: () => void;
+}) {
+  const explorerPrefs = useExplorerPreferences();
+  const txid = props.result.kind === 'submitted' ? props.result.txid : null;
+  const chainKey = activityChainForToken(props.token.chain);
+  const href = txid && chainKey ? activityTxExplorerHref(explorerPrefs, props.networks, chainKey, txid) : null;
+
+  return (
+    <>
+      <h3 className="sp-sectionTitle" style={{ marginTop: 8 }}>
+        {props.result.kind === 'pending'
+          ? 'Broadcasting...'
+          : props.result.kind === 'submitted'
+            ? 'Sent!'
+            : 'Send failed'}
+      </h3>
+
+      {props.result.kind === 'pending' && (
+        <div className="sp-muted" style={{ fontSize: 12 }}>
+          signing via ika and broadcasting to {props.token.networkLabel}...
+        </div>
+      )}
+
+      {props.result.kind === 'submitted' && txid && (
+        <div className="sp-successBox">
+          <div className="sp-successLabel">transaction submitted</div>
+          <div className="sp-txHash">
+            <ExplorerValueRow
+              fullValue={txid}
+              href={href}
+              truncateMid={{ head: 12, tail: 8 }}
+              copyLabel="copy transaction hash"
+            />
+          </div>
+          <div className="sp-muted" style={{ fontSize: 11, marginTop: 6 }}>
+            confirmation may take up to a minute. you can close this screen.
+          </div>
+        </div>
+      )}
+
+      {props.result.kind === 'failed' && (
+        <div className="sp-error" style={{ marginBottom: 8 }}>
+          {props.result.message}
+        </div>
+      )}
+
+      <button type="button" className="sp-btn sp-btnFull" onClick={props.onClose}>
+        Close
+      </button>
+    </>
+  );
+}
+
+function activityChainForToken(chain: SendTokenChain): 'sui' | 'evm' | 'solana' | 'bitcoin' | null {
+  switch (chain) {
+    case 'evm':
+      return 'evm';
+    case 'sui':
+      return 'sui';
+    case 'solana':
+      return 'solana';
+    case 'btc':
+      return 'bitcoin';
+    case 'aptos':
+      return null; // no explorer wired for Aptos sends today
+  }
+}
+
+/**
+ * decimal gas-reserve amount to leave behind when computing Max for a native-gas-asset send.
+ * mirrors backend constants:
+ *  - Sui from a dWallet's Sui address: 0.05 SUI for network gas on the send PTB
+ *    (see DWALLET_SUI_GAS_RESERVE_MIST in sui-send-from-dwallet.ts).
+ *  - Solana native SOL: roughly 0.00001 SOL for fee (~5000 lamports).
+ *  - others: no reservation since the token being sent isn't the gas asset.
+ * returns undefined when no reservation is needed (e.g. sending IKA, USDC, etc. - those don't
+ * pay gas themselves, so Max can be the full balance).
+ */
+function gasReserveForSend(token: SendTokenRow): string | undefined {
+  const isNativeSui =
+    token.chain === 'sui' &&
+    (token.coinType === '0x2::sui::SUI' ||
+      token.coinType === '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI');
+  if (isNativeSui && token.ownerDwalletId) return '0.05';
+  if (token.chain === 'solana' && !token.mint && token.ownerDwalletId) return '0.0001';
+  return undefined;
 }

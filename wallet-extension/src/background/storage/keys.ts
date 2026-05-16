@@ -92,6 +92,12 @@ export const STORAGE_KEYS = {
   // dwallet leaderboard (ChromaLab) - cross-owner index + per-dwallet portfolio cache + prefs
   DWALLET_INDEX_V1: 'chromatika_dwallet_index_v1',
   LEADERBOARD_PREFS_V1: 'chromatika_leaderboard_prefs_v1',
+
+  // send tab
+  /** global address book (chain-scoped entries with user-chosen names). chrome.storage.local. */
+  ADDRESS_BOOK_V1: 'chromatika_address_book_v1',
+  /** recently sent-to addresses (chain-scoped, capped). populated by `sendUnified`. chrome.storage.local. */
+  RECENT_RECIPIENTS_V1: 'chromatika_recent_recipients_v1',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
@@ -140,6 +146,13 @@ export const VAULT_SCOPED_KEYS = {
   /** per-vault flag: user dismissed the Home-screen "create your first dWallets" prompt. */
   dwalletCreatePromptDismissed: (vaultId: string) =>
     `chromatika_dwallet_create_prompt_dismissed_v1_${vaultId}` as const,
+  /** send-tab token list cache per scope, session-scoped, 5-min TTL. scope is one of
+   *  `'dwallet'` / `'vault'` / `'everything'`. selection key narrows further
+   *  (selectedDwalletId for `'dwallet'` scope; otherwise the literal `'_'`). */
+  sendTokenList: (vaultId: string, scope: string, selectionKey: string) =>
+    `chromatika_send_token_list_v1_${vaultId}_${scope}_${selectionKey}` as const,
+  /** prefix used to wipe every send-token-list cache row for a vault on switch/remove/add. */
+  sendTokenListPrefix: (vaultId: string) => `chromatika_send_token_list_v1_${vaultId}_` as const,
 } as const;
 
 /**

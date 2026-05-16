@@ -1,4 +1,5 @@
 import { blake2b } from '@noble/hashes/blake2.js';
+import * as ed25519 from '@noble/ed25519';
 import { toBase64 } from '@mysten/sui/utils';
 import { messageWithIntent, toSerializedSignature } from '@mysten/sui/cryptography';
 import { Ed25519PublicKey } from '@mysten/sui/keypairs/ed25519';
@@ -93,8 +94,43 @@ export async function signBuiltSuiTransactionBytes(
     publicKey: pub,
   });
 
+  // ---- DIAGNOSTIC LOGGING for "Invalid signature" debug ----
+  const _toHex = (u: Uint8Array): string => Array.from(u, (b) => b.toString(16).padStart(2, '0')).join('');
+  let localEd25519Verify: boolean | string = 'not run';
+  try {
+    localEd25519Verify = await ed25519.verify(sigBytes, digest, pubBytes);
+  } catch (e) {
+    localEd25519Verify = `threw: ${e instanceof Error ? e.message : String(e)}`;
+  }
+  console.warn('[sui-dapp-tx] pre-verify diag', {
+    edId,
+    address,
+    addressDerivedFromPub: new Ed25519PublicKey(pubBytes).toSuiAddress(),
+    addressesMatch: address === new Ed25519PublicKey(pubBytes).toSuiAddress(),
+    digestHex: '0x' + _toHex(digest),
+    sigHex: '0x' + _toHex(sigBytes),
+    pubHex: '0x' + _toHex(pubBytes),
+    sigLen: sigBytes.length,
+    pubLen: pubBytes.length,
+    serializedSigLen: serialized.length,
+    localEd25519Verify,
+  });
+  // ----------------------------------------------------------
+
   const txCopy = new Uint8Array(transactionBytes);
-  await verifyTransactionSignature(txCopy, serialized, { address });
+  try {
+    await verifyTransactionSignature(txCopy, serialized, { address });
+  } catch (verifyErr) {
+    console.warn('[sui-dapp-tx] verifyTransactionSignature THREW', {
+      errorMessage: verifyErr instanceof Error ? verifyErr.message : String(verifyErr),
+      errorName: verifyErr instanceof Error ? verifyErr.name : 'unknown',
+      errorStack: verifyErr instanceof Error ? verifyErr.stack?.slice(0, 600) : undefined,
+      txBytesLen: txCopy.length,
+      address,
+      localEd25519Verify,
+    });
+    throw verifyErr;
+  }
 
   return { signature: serialized, bytes: toBase64(transactionBytes) };
 }

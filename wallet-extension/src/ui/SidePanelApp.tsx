@@ -37,7 +37,7 @@ function SidePanelMain() {
     if (
       v === 'vault' ||
       v === 'dwallet' ||
-      v === 'assets' ||
+      v === 'send' ||
       v === 'activity' ||
       v === 'policy' ||
       v === 'ikaStake' ||
@@ -224,7 +224,7 @@ function SidePanelMain() {
   } = state;
 
   const [tab, setTab] = useState<Tab>(devMode ? devTab : 'vault');
-  type WalletOverlay = null | 'vaultMgmt' | 'dwalletMgmt' | 'send';
+  type WalletOverlay = null | 'vaultMgmt' | 'dwalletMgmt';
   const [walletOverlay, setWalletOverlay] = useState<WalletOverlay>(null);
   const [ikaGateLabDrawerOpen, setIkaGateLabDrawerOpen] = useState(false);
 

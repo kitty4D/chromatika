@@ -58,6 +58,7 @@ import {
 } from '@/background/encrypt/encrypt-constants';
 
 import { STORAGE_KEYS } from '@/background/storage';
+import { useSendAmountInputMode } from '@/lib/use-send-amount-input-mode';
 
 export type SettingsTab =
   | 'main'
@@ -174,6 +175,7 @@ export function SettingsPage({
 }) {
   const [stab, setStab] = useState<SettingsTab>(initialStab ?? 'main');
   const [networkTier, setNetworkTier] = useState<'vault' | 'dwallet'>('dwallet');
+  const [sendAmountMode, setSendAmountMode] = useSendAmountInputMode();
   const [safetyMode, setSafetyMode] = useState<MediaSafetyMode>('ipfs_arweave');
   const [consentMode, setConsentMode] = useState<'compat' | 'strict'>('compat');
   const [pilotHead, setPilotHead] = useState<RocketHeadId>(DEFAULT_PILOT_HEAD);
@@ -283,6 +285,32 @@ export function SettingsPage({
           </div>
           <div className="sp-muted" style={{ fontSize: 11, marginTop: 6 }}>
             separate from sui/solana base chain (header). more palette tuning later.
+          </div>
+        </div>
+
+        <div className="sp-section">
+          <div className="sp-sectionTitle">send: amount entry</div>
+          <div className="sp-chipRow">
+            <button
+              type="button"
+              className={`sp-chip${sendAmountMode === 'number' ? ' sp-chipActive' : ''}`}
+              onClick={() => setSendAmountMode('number')}
+              aria-pressed={sendAmountMode === 'number'}
+            >
+              number + Max
+            </button>
+            <button
+              type="button"
+              className={`sp-chip${sendAmountMode === 'slider' ? ' sp-chipActive' : ''}`}
+              onClick={() => setSendAmountMode('slider')}
+              aria-pressed={sendAmountMode === 'slider'}
+            >
+              slider
+            </button>
+          </div>
+          <div className="sp-muted" style={{ fontSize: 11, marginTop: 6 }}>
+            applies to the Send tab's Confirm step. slider mode clamps at the policy-vault cap when
+            one is active for the source dWallet.
           </div>
         </div>
 

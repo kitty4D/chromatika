@@ -247,7 +247,16 @@ function chromeFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Resp
     };
 
     const timeoutMs =
-      url.includes('/approveTxRequest') || url.includes('/executeSwap') || url.includes('/confirmAndExecuteSwap')
+      url.includes('/approveTxRequest')
+        || url.includes('/executeSwap')
+        || url.includes('/confirmAndExecuteSwap')
+        // sendUnified routes through ika MPC for dWallet sends. presign + sign + indexer wait
+        // is ~60-80s on a warm pool; with a signing-key recovery scan it climbs to ~120-150s.
+        // 300s gives the SW headroom while still bounding the UI promise.
+        || url.includes('/sendUnified')
+        // recovery direct-sign procedure - usually fast (<10s) but bumped for parity in case the
+        // user is sweeping many coin objects (each merge is a chain round trip).
+        || url.includes('/recoverFromInternalSigningKey')
         ? 300_000
         : url.includes('/getDwalletHomeGasMany')
           ? 240_000
@@ -320,3 +329,11 @@ export const trpc = createTRPCProxyClient<AppRouter>({
     }),
   ],
 });
+
+// expose the trpc client on the global object so developers / users can invoke procedures
+// straight from the side panel's DevTools console. used today by the internal-signing-key
+// recovery flow (`__trpc.probeInternalSigningKeyBalances.query()` etc.). harmless if the
+// page is closed because the global is per-extension-page, not shared with web pages.
+if (typeof globalThis !== 'undefined') {
+  (globalThis as unknown as { __trpc?: typeof trpc }).__trpc = trpc;
+}

@@ -137,20 +137,25 @@ function BannerContents({
         <div style={{ fontSize: 12, fontWeight: 600, color: tint.fg, lineHeight: 1.2 }}>
           {progress.title}
         </div>
-        <div
-          style={{
-            fontSize: 11,
-            color: tint.fg,
-            opacity: 0.85,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            lineHeight: 1.3,
-          }}
-          title={progress.stageMessage}
-        >
-          {progress.stageMessage}
-        </div>
+        {/* skip the subtitle when it duplicates the title - happens during the 'starting' stage
+         * because `beginOperation` defaults stageMessage to the title until a call site invokes
+         * `updateStage(...)`. without this guard the banner reads the same text twice. */}
+        {progress.stageMessage && progress.stageMessage !== progress.title ? (
+          <div
+            style={{
+              fontSize: 11,
+              color: tint.fg,
+              opacity: 0.85,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: 1.3,
+            }}
+            title={progress.stageMessage}
+          >
+            {progress.stageMessage}
+          </div>
+        ) : null}
       </div>
       {action ? (
         <button

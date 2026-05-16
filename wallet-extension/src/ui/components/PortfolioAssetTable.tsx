@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
 import { Interface, isAddress, parseUnits } from 'ethers';
-import { ArrowUpRight, Lock, ArrowDownToLine, ArrowUpFromLine } from 'lucide-react';
+import { ArrowUpRight, Lock, ArrowDownToLine, ArrowUpFromLine, Send } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import { evmTxExplorerUrl } from '@/lib/explorer-href';
 import { formatUsd } from '@/lib/sui-amount';
@@ -102,6 +102,20 @@ function rowHasPositiveBalance(row: Row): boolean {
   if (row.kind === 'spl') return parseBalanceAmount(row.spl.balanceFormatted) > 0;
   if (row.kind === 'pcToken') return !row.pcToken.isZero;
   return parseBalanceAmount(row.native.balanceFormatted) > 0;
+}
+
+function rowSymbol(row: Row): string {
+  if (row.kind === 'evm') return row.evm.symbol;
+  if (row.kind === 'spl') return row.spl.symbol;
+  if (row.kind === 'pcToken') return `pc${row.pcToken.splSymbol}`;
+  return row.native.symbol;
+}
+
+function quickSendPayload(row: Row): PortfolioQuickSendRow {
+  if (row.kind === 'evm') return { kind: 'evm', evm: row.evm };
+  if (row.kind === 'spl') return { kind: 'spl', spl: row.spl };
+  if (row.kind === 'pcToken') return { kind: 'pcToken', pcToken: row.pcToken };
+  return { kind: 'native', native: row.native, isBtc: row.isBtc };
 }
 
 function formatPcBaseUnits(baseUnits: string | null, decimals: number): string {
@@ -277,6 +291,19 @@ function portfolioExpandedSendContent(row: Row, inlineSend: PortfolioInlineSendC
   );
 }
 
+/**
+ * unified per-row Send-icon callback. when provided, every positive-balance row gets a small
+ * Send icon that bypasses the legacy `inlineSend` EVM expander and instead routes the row to
+ * the parent (typically `MainWalletShell.openSendForRow`) for jumping into the multi-step Send
+ * flow. variant-specific routing (EVM token vs native vs SPL vs pcToken) is the parent's job;
+ * pcToken rows still surface their dedicated hidden-transfer button alongside.
+ */
+export type PortfolioQuickSendRow =
+  | { kind: 'evm'; evm: EvmTokenRow }
+  | { kind: 'native'; native: NativeAssetRow; isBtc: boolean }
+  | { kind: 'spl'; spl: SolanaSplRow }
+  | { kind: 'pcToken'; pcToken: PcTokenAssetRow };
+
 export function PortfolioAssetTable({
   evmTokens,
   nativeRows,
@@ -288,6 +315,7 @@ export function PortfolioAssetTable({
   emptyHint,
   inlineSend,
   hideSendWhenZeroBalance,
+  onQuickSend,
 }: {
   evmTokens?: EvmTokenRow[];
   nativeRows?: NativeAssetRow[];
@@ -303,6 +331,8 @@ export function PortfolioAssetTable({
   inlineSend?: PortfolioInlineSendConfig;
   /** when set with `inlineSend`, omit send affordance for zero-balance rows. */
   hideSendWhenZeroBalance?: boolean;
+  /** new quick-send: jump straight to the Send tab's Recipient step with the row preselected. */
+  onQuickSend?: (row: PortfolioQuickSendRow) => void;
 }) {
   const evmChain = inlineSend?.evmChainId;
   const rows = useMemo((): Row[] => {
@@ -399,6 +429,17 @@ export function PortfolioAssetTable({
                   <div className="cp-tokUsd">{row.native.usdValue != null ? formatUsd(row.native.usdValue) : '—'}</div>
                 </>
               )}
+              {onQuickSend && rowHasPositiveBalance(row) ? (
+                <button
+                  type="button"
+                  className="ch-copyIconBtn ch-copyIconBtn--12"
+                  aria-label={`send ${rowSymbol(row)}`}
+                  title={`send ${rowSymbol(row)}`}
+                  onClick={() => onQuickSend(quickSendPayload(row))}
+                >
+                  <Send size={14} strokeWidth={2.25} />
+                </button>
+              ) : null}
               {row.kind === 'spl' && pcTokenConfig && row.spl.eligibleMarketIds.length > 0 ? (
                 <button
                   type="button"
@@ -439,7 +480,7 @@ export function PortfolioAssetTable({
                     <ArrowUpFromLine size={14} strokeWidth={2.25} />
                   </button>
                 </span>
-              ) : inlineSend ? (
+              ) : inlineSend && !onQuickSend ? (
                 showSendForRow(row) ? (
                   <button
                     type="button"

@@ -7,6 +7,7 @@ import {
 } from '@/background/keyring/hd';
 import { clearIkaFeeSettings } from '@/background/ika/fee-settings';
 import { clearVaultTotalCache } from '@/background/services/vault-total-cache';
+import { clearSendTokenListCacheForVault } from '@/background/services/send-token-list';
 import {
   type VaultRecord,
   type VaultPayloadV3,
@@ -153,6 +154,7 @@ export async function importVault(
   const payload: VaultPayloadV3 = { v: 3, vaults: [record], activeVaultId: id };
   await createInitialVaultBlob(password, payload);
   await clearVaultTotalCache(id).catch(() => {});
+  await clearSendTokenListCacheForVault(id).catch(() => {});
   return { vaultId: id };
 }
 
@@ -211,6 +213,7 @@ export async function addVault(
     void kickDiscoveryForVault(id);
   }
   await clearVaultTotalCache(id).catch(() => {});
+  await clearSendTokenListCacheForVault(id).catch(() => {});
   return {
     vaultId: id,
     ...(supplied ? {} : { mnemonic: words }),
@@ -340,6 +343,7 @@ export async function removeVault(password: string | undefined, vaultId: string)
   // possible in tests / dev profiles) doesn't inherit stale config.
   await clearIkaFeeSettings(vaultId).catch(() => {/* best-effort */});
   await clearVaultTotalCache(vaultId).catch(() => {});
+  await clearSendTokenListCacheForVault(vaultId).catch(() => {});
   {
     const { clearTeamFundingDecisionForVault } = await import('@/background/team-funding-offer');
     await clearTeamFundingDecisionForVault(vaultId).catch(() => {});
@@ -409,10 +413,12 @@ export async function switchVault(password: string | undefined, vaultId: string)
   void kickDiscoveryForVault(vaultId);
   if (previousActiveVaultId) {
     await clearVaultTotalCache(previousActiveVaultId).catch(() => {});
+    await clearSendTokenListCacheForVault(previousActiveVaultId).catch(() => {});
   }
   // also clear the incoming vault's cache so a >5-min-stale snapshot doesn't briefly
   // show in the gauge before the 60s poll catches up.
   await clearVaultTotalCache(vaultId).catch(() => {});
+  await clearSendTokenListCacheForVault(vaultId).catch(() => {});
 }
 
 // `finalizeUnlock` moved to `wallet-service-helpers.ts`; imported below alongside the other

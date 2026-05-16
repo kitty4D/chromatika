@@ -3,7 +3,7 @@ import type { trpc } from '@/lib/trpc';
 export type Tab =
   | 'vault'
   | 'dwallet'
-  | 'assets'
+  | 'send'
   | 'activity'
   | 'policy'
   | 'ikaStake'

@@ -39,6 +39,33 @@ export interface DWalletMeta {
   parentDwalletId?: string;
   dwalletId?: string;
   encryptedUserSecretKeyShareId?: string;
+  /**
+   * cached `(encryptionKeyIndex, legacy)` tuple + serialized key material that
+   * `signMessageSolCore`'s recovery scan matched for this dWallet's on-chain
+   * `encryption_key_address`. avoids both the 0..15 × {legacy, post-fix} scan AND the
+   * per-sign WASM classgroup keypair regeneration that `fromRootSeedKey` runs.
+   *
+   * - **`encryptionKeyIndex` + `legacy`** are the diagnostic identifiers (which seed index
+   *   was used, whether the curve-byte-0 legacy hash matched). useful for debugging and
+   *   for falling back to re-derivation if `serializedB64` is missing or stale.
+   * - **`serializedB64`** is the base64-encoded output of
+   *   `UserShareEncryptionKeys.toShareEncryptionKeysBytes()`. on subsequent signs we restore
+   *   with `fromShareEncryptionKeysBytes` (BCS deserialize, ~5ms) instead of re-running
+   *   `fromRootSeedKey*` (WASM classgroup keygen, ~15-20s in MV3 service worker).
+   *
+   * matters because Solana blockhashes expire in ~60-90s and ika MPC sign cycles run
+   * 30-100s; trimming ~17s off every sign by skipping the WASM regen is the difference
+   * between fitting inside the blockhash validity window and getting "Blockhash not found"
+   * at broadcast.
+   */
+  signingKeyDerivation?: {
+    encryptionKeyIndex: number;
+    /** true when the SDK 0.3.x curve-byte=0 derivation produced the match. */
+    legacy: boolean;
+    /** base64 of `UserShareEncryptionKeys.toShareEncryptionKeysBytes()`. lets us deserialize
+     * the matched keys directly without re-running `fromRootSeedKey*`. */
+    serializedB64?: string;
+  };
   /** base64 of `userPublicOutput` from DKG prep, required for `acceptEncryptedUserShare` after restart */
   dkgUserPublicOutputB64?: string;
   registeredEncryptionKey?: boolean;

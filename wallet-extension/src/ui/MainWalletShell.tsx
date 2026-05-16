@@ -26,7 +26,6 @@ import type { Tab, Balances, Networks } from '@/ui/types';
 
 const SendPage = lazy(() => import('@/ui/pages/SendPage').then((m) => ({ default: m.SendPage })));
 const ActivityPage = lazy(() => import('@/ui/pages/ActivityPage').then((m) => ({ default: m.ActivityPage })));
-const AssetsPage = lazy(() => import('@/ui/pages/AssetsPage').then((m) => ({ default: m.AssetsPage })));
 const SettingsPage = lazy(() => import('@/ui/pages/SettingsPage').then((m) => ({ default: m.SettingsPage })));
 const DWalletPortfolioPage = lazy(() =>
   import('@/ui/pages/DWalletPortfolioPage').then((m) => ({ default: m.DWalletPortfolioPage })),
@@ -55,7 +54,20 @@ function ShellRouteFallback() {
   );
 }
 
-export type WalletShellOverlay = null | 'vaultMgmt' | 'dwalletMgmt' | 'send';
+export type WalletShellOverlay = null | 'vaultMgmt' | 'dwalletMgmt';
+
+/**
+ * cross-tab preselect for the Send tab. set by the shell when (a) a legacy
+ * `openSendOverlay()` caller (vault home / dWallet portfolio) hands a PC-Token deep-link,
+ * or (b) a portfolio row's Send icon hands a fully resolved token row so the user lands
+ * directly on the Recipient step with the asset already chosen. SendPage reads it on mount
+ * and calls `onConsumed()` to clear it after wiring its own internal state.
+ */
+export type SendNav = {
+  initialStage?: 'select-token' | 'select-recipient';
+  preselectedToken?: import('@/background/services/send-token-types').SendTokenRow;
+  initialPcMarketId?: string;
+};
 
 export type MainWalletShellProps = {
   ikaMode: IkaBaseMode;
@@ -136,8 +148,11 @@ export function MainWalletShell({
    * so clicking the ED25519 card or dropdown row appears to do nothing.
    */
   const [selectedDwalletId, setSelectedDwalletId] = useState<string | undefined>(undefined);
-  /** optional pre-selected pcToken market when the Send overlay opens via "Send" on a pcToken Portfolio row. */
-  const [sendInitialPcMarketId, setSendInitialPcMarketId] = useState<string | undefined>(undefined);
+  /**
+   * preselect target for the Send tab. set by callers like the WalletPage / DWalletPortfolioPage
+   * "Send" buttons + portfolio row Send icons; consumed by SendPage on mount, then cleared.
+   */
+  const [sendNav, setSendNav] = useState<SendNav | null>(null);
   const vaultNameHints = useVaultNameHints(vaultSummaries);
 
   useEffect(() => {
@@ -145,8 +160,15 @@ export function MainWalletShell({
   }, [balances?.locked, onSessionLockDetected]);
 
   function openSendOverlay(opts?: { pcMarketId?: string }) {
-    setSendInitialPcMarketId(opts?.pcMarketId);
-    setWalletOverlay('send');
+    setSendNav(opts?.pcMarketId ? { initialPcMarketId: opts.pcMarketId } : null);
+    setWalletOverlay(null);
+    setTab('send');
+  }
+
+  function openSendForRow(preselectedToken: import('@/background/services/send-token-types').SendTokenRow) {
+    setSendNav({ initialStage: 'select-recipient', preselectedToken });
+    setWalletOverlay(null);
+    setTab('send');
   }
 
   useLayoutEffect(() => {
@@ -287,26 +309,6 @@ export function MainWalletShell({
                   <ShellRouteFallback />
                 </div>
               )
-            ) : walletOverlay === 'send' ? (
-              <div className="sp-page">
-                <button
-                  type="button"
-                  className="sp-backBtn"
-                  onClick={() => {
-                    setWalletOverlay(null);
-                    setSendInitialPcMarketId(undefined);
-                  }}
-                >
-                  ← back
-                </button>
-                <Suspense fallback={<ShellRouteFallback />}>
-                  <SendPage
-                    balances={balances}
-                    networks={networks}
-                    initialPcMarketId={sendInitialPcMarketId}
-                  />
-                </Suspense>
-              </div>
             ) : (
               // AnimatePresence + Suspense + lazy children was a known-bad combination here:
               // when the parent (App.tsx) unmounted MainWalletShell on the gate flip
@@ -347,14 +349,16 @@ export function MainWalletShell({
                         networks={networks}
                         balances={balances}
                         onOpenSend={openSendOverlay}
+                        onOpenSendForRow={openSendForRow}
                       />
                     </div>
                   )}
-                  {tab === 'assets' && (
-                    <AssetsPage
+                  {tab === 'send' && (
+                    <SendPage
                       balances={balances}
                       networks={networks}
-                      onOpenDwalletTab={(id) => void activateDwalletThenRefresh(id)}
+                      sendNav={sendNav}
+                      onSendNavConsumed={() => setSendNav(null)}
                     />
                   )}
                   {tab === 'activity' && (
