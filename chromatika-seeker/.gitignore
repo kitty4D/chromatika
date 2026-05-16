@@ -1,0 +1,24 @@
+.gradle/
+build/
+.idea/
+*.iml
+local.properties
+.cxx/
+captures/
+.externalNativeBuild/
+
+# secrets - never commit
+*.keystore
+*.jks
+keystore.properties
+google-services.json
+
+# ika-js build outputs
+ika-js/dist/
+ika-js/node_modules/
+app/src/main/assets/ika-js/
+
+# misc
+.DS_Store
+Thumbs.db
+*.log

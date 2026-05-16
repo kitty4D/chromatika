@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">chromatika</string>
+    <string name="app_tagline">multi-chain seeker wallet</string>
+    <string name="pre_alpha_disclaimer">solana ika base is devnet-only pre-alpha. signatures come from a single mock signer, not distributed MPC. do not submit real-value transactions through ika-on-solana. mainnet solana sends use seed vault directly.</string>
+</resources>
