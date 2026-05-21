@@ -1,11 +1,15 @@
-/**
- * optional hooks for hardware signing diagnostics (no network IO by default).
- * wire to product analytics when Chromatika ships telemetry consent.
- */
+import { captureException } from '@/background/analytics/sentry';
 
-export function reportLedgerSignFailure(reason: string, context?: Record<string, string>): void {
-  void context;
+export function reportLedgerSignFailure(
+  reason: string,
+  context?: Record<string, string>,
+): void {
   if (import.meta.env?.DEV) {
     console.warn('[chromatika][ledger]', reason);
   }
+  captureException(new Error(`Ledger sign failure: ${reason}`), {
+    feature: 'hardware',
+    chain: context?.chain ?? 'unknown',
+    ...context,
+  });
 }

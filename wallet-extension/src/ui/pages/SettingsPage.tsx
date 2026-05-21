@@ -15,6 +15,7 @@ import {
   Wrench,
   EyeOff,
   Boxes,
+  Bell,
 } from 'lucide-react';
 import { trpc } from '@/lib/trpc';
 import {
@@ -36,8 +37,10 @@ import { PcTokenMarketsPanel } from '@/ui/components/PcTokenMarketsPanel';
 import { DeSoPanel } from '@/ui/components/DeSoPanel';
 import { X402ReceiptsSection } from '@/ui/components/X402ReceiptsSection';
 import { PreviewDisabledTooltip } from '@/ui/components/PreviewDisabledTooltip';
+import { AnalyticsConsentToggle } from '@/ui/components/AnalyticsConsentToggle';
 import { DAppsPage } from '@/ui/pages/DAppsPage';
 import { NetworkSelectorPage } from '@/ui/pages/NetworkSelectorPage';
+import { NotificationSettingsPage } from '@/ui/pages/NotificationSettingsPage';
 import {
   DEFAULT_EXPLORER_PREFERENCES,
   SOLANA_EXPLORER_OPTIONS,
@@ -71,7 +74,8 @@ export type SettingsTab =
   | 'dapps'
   | 'hardware'
   | 'help'
-  | 'advanced';
+  | 'advanced'
+  | 'notifications';
 
 const PILOT_KEY = STORAGE_KEYS.ROCKET_PILOT_HEAD_V1;
 const PASSENGER_KEY = STORAGE_KEYS.ROCKET_PASSENGER_HEAD_V1;
@@ -437,6 +441,8 @@ export function SettingsPage({
         </div>
 
         <DismissedPromptsSection />
+
+        <HiddenAssetsSection />
       </div>
     );
   }
@@ -728,6 +734,11 @@ export function SettingsPage({
           </div>
         </div>
 
+        <div className="sp-section">
+          <div className="sp-sectionTitle">error reporting</div>
+          <AnalyticsConsentToggle />
+        </div>
+
         {advanced && (
           <div className="sp-section" style={{ opacity: 0.72 }}>
             <div className="sp-sectionTitle">nested dWallets - chain parent sync</div>
@@ -744,6 +755,10 @@ export function SettingsPage({
         {advanced && <GraphqlPaginationDebugPanel />}
       </div>
     );
+  }
+
+  if (stab === 'notifications') {
+    return <NotificationSettingsPage onBack={() => setStab('main')} />;
   }
 
   // ----- main menu landing ----- //
@@ -791,6 +806,15 @@ export function SettingsPage({
             title="privacy & safety"
             desc={`alerts · biometric unlock · media: ${safetyLabel}`}
             onClick={() => setStab('safety')}
+          />,
+        )}
+
+        {gateSettingsMainMenuRow(
+          <MenuRow
+            icon={<Bell size={16} strokeWidth={2} />}
+            title="notifications"
+            desc="incoming tx, price alerts, confirmations"
+            onClick={() => setStab('notifications')}
           />,
         )}
 
@@ -978,6 +1002,78 @@ function DismissedPromptsSection() {
         onChange={toggleCreateDwallet}
       />
 
+      {err && (
+        <div className="sp-error" style={{ marginTop: 6, fontSize: 11 }}>
+          {err}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function HiddenAssetsSection() {
+  const [hiddenKeys, setHiddenKeys] = useState<string[]>([]);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    trpc.getHiddenAssets
+      .query()
+      .then((r) => {
+        if (!cancelled) setHiddenKeys(r.keys);
+      })
+      .catch((e) => {
+        if (!cancelled) setErr(e instanceof Error ? e.message : String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  async function unhide(key: string) {
+    const prev = hiddenKeys;
+    setHiddenKeys((ks) => ks.filter((k) => k !== key));
+    try {
+      await trpc.unhideAsset.mutate({ key });
+    } catch (e) {
+      setHiddenKeys(prev);
+      setErr(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  if (hiddenKeys.length === 0 && !err) return null;
+
+  return (
+    <div className="sp-section">
+      <div className="sp-sectionTitle">hidden portfolio tokens</div>
+      <p className="sp-muted" style={{ fontSize: 11, lineHeight: 1.45, margin: '0 0 8px 0' }}>
+        tokens you hid from the portfolio table. unhide to restore them.
+      </p>
+      {hiddenKeys.map((key) => (
+        <div
+          key={key}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            gap: 8,
+            padding: '5px 0',
+            fontSize: 12,
+          }}
+        >
+          <span className="mono" style={{ fontSize: 11, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+            {key}
+          </span>
+          <button
+            type="button"
+            className="sp-btn"
+            style={{ flexShrink: 0, fontSize: 11, padding: '3px 10px' }}
+            onClick={() => void unhide(key)}
+          >
+            unhide
+          </button>
+        </div>
+      ))}
       {err && (
         <div className="sp-error" style={{ marginTop: 6, fontSize: 11 }}>
           {err}

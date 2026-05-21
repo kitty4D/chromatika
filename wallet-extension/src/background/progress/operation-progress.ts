@@ -19,6 +19,7 @@
  * stale entry it sees with `finishedAtMs` older than ~10s.
  */
 import { STORAGE_KEYS } from '@/background/storage';
+import { maybeFireNotification } from '@/background/services/notifications/notify-chrome';
 
 const STORAGE_KEY = STORAGE_KEYS.OP_PROGRESS_V1;
 
@@ -161,6 +162,14 @@ export function beginOperation(title: string): OperationHandle {
         startedAtMs,
         finishedAtMs,
       });
+      const lcTitle = title.toLowerCase();
+      if (lcTitle.includes('dwallet') || lcTitle.includes('dkg') || lcTitle.includes('sign') || lcTitle.includes('presign')) {
+        void maybeFireNotification('ikaEvents', {
+          id: `chromatika-ika-${id}`,
+          title: finalMessage ?? 'Operation completed',
+          message: title,
+        });
+      }
       scheduleClear(id, SUCCESS_GRACE_MS);
     },
     async fail(error, opts) {
@@ -177,6 +186,14 @@ export function beginOperation(title: string): OperationHandle {
         error,
         ...(opts?.action ? { action: opts.action } : null),
       });
+      const lcTitle = title.toLowerCase();
+      if (lcTitle.includes('dwallet') || lcTitle.includes('dkg') || lcTitle.includes('sign') || lcTitle.includes('presign')) {
+        void maybeFireNotification('ikaEvents', {
+          id: `chromatika-ika-${id}`,
+          title: 'Operation failed',
+          message: `${title} - ${error}`,
+        });
+      }
       // banner with a recovery action stays visible until the user clicks or dismisses it; no
       // auto-clear so we don't disappear the affordance before they read it.
       if (!opts?.action) scheduleClear(id, FAILURE_GRACE_MS);

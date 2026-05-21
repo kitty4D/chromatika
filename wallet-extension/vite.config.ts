@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import { defineConfig, type Plugin } from 'vite';
 import react from '@vitejs/plugin-react';
 import webExtension from 'vite-plugin-web-extension';
+import { sentryVitePlugin } from '@sentry/vite-plugin';
 
 const REPO_ROOT = fileURLToPath(new URL('.', import.meta.url));
 const buildStamp = new Date().toISOString();
@@ -142,6 +143,16 @@ export default defineConfig({
     chromatikaWatchAll(),
     chromatikaUnderscoreSafeChunks(),
     chromatikaSwBootstrap(),
+    ...(process.env.SENTRY_AUTH_TOKEN
+      ? [
+          sentryVitePlugin({
+            authToken: process.env.SENTRY_AUTH_TOKEN,
+            org: process.env.SENTRY_ORG,
+            project: process.env.SENTRY_PROJECT,
+            sourcemaps: { filesToDeleteAfterUpload: ['./dist/**/*.map'] },
+          }),
+        ]
+      : []),
     react(),
     webExtension({
       manifest: './src/manifest.json',

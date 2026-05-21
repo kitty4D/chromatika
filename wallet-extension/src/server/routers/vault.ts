@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { captureException } from '@/background/analytics/sentry';
 import { publicProcedure } from '../trpc';
 import {
   addDwalletAnchoredVault,
@@ -687,7 +688,12 @@ export const vaultProcedures = {
     )
     .mutation(async ({ input }) => {
       const autoLockMinutes = input.autoLockMinutes ?? 30;
-      await unlockVault(input.password, autoLockMinutes);
+      try {
+        await unlockVault(input.password, autoLockMinutes);
+      } catch (err) {
+        captureException(err, { feature: 'vault', chain: 'none' });
+        throw err;
+      }
       clearLockSchedule();
       scheduleLock(autoLockMinutes);
       try {

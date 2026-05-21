@@ -7,6 +7,7 @@
  */
 
 import { Contract, JsonRpcProvider } from 'ethers';
+import { captureException } from '@/background/analytics/sentry';
 import { getPricePreferences } from '@/background/price-preferences';
 import type { PriceSourceId } from '@/config/price-sources';
 import {
@@ -17,16 +18,12 @@ import {
   PYTH_FEED_IDS,
 } from '@/config/price-feed-registry';
 
-type CachedPrice = { priceUsd: number; fetchedAtMs: number };
+type CachedPrice = { priceUsd: number; changePercent24h: number | null; fetchedAtMs: number };
+
+export type PriceWithChange = { usd: number; changePercent24h: number | null };
 
 const cache = new Map<string, CachedPrice>();
 const providerCache = new Map<string, JsonRpcProvider>();
-// in-flight dedupe: concurrent callers for the same symbol share one fetch
-// rather than each running the full waterfall. matters when ChromaLab's
-// leaderboard fans out N dwallets x M chains and many balance probes hit
-// `getPrice('eth')` at the same instant - without this, every caller pays
-// full waterfall latency until the first one populates `cache`.
-const inflight = new Map<string, Promise<number>>();
 const CACHE_TTL_MS = 60_000;
 const CHAINLINK_STALE_AFTER_MS = 24 * 60 * 60 * 1000;
 
@@ -51,21 +48,26 @@ function getProvider(rpcUrl: string): JsonRpcProvider {
 
 // --- waterfall helpers ---
 
-async function tryCoingecko(symbol: string): Promise<number | null> {
+type WaterfallResult = { price: number; change24h: number | null } | null;
+
+async function tryCoingecko(symbol: string): Promise<WaterfallResult> {
   const cgId = COINGECKO_IDS[symbol.toUpperCase()];
   if (!cgId) return null;
   try {
-    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(cgId)}&vs_currencies=usd`;
+    const url = `https://api.coingecko.com/api/v3/simple/price?ids=${encodeURIComponent(cgId)}&vs_currencies=usd&include_24hr_change=true`;
     const r = await fetch(url, { signal: AbortSignal.timeout(5_000) });
     if (!r.ok) return null;
-    const data = await r.json() as Record<string, { usd?: number }>;
-    return data[cgId]?.usd ?? null;
+    const data = await r.json() as Record<string, { usd?: number; usd_24h_change?: number }>;
+    const entry = data[cgId];
+    if (entry?.usd == null) return null;
+    const ch = typeof entry.usd_24h_change === 'number' && Number.isFinite(entry.usd_24h_change) ? entry.usd_24h_change : null;
+    return { price: entry.usd, change24h: ch };
   } catch {
     return null;
   }
 }
 
-async function tryDefiLlama(symbol: string): Promise<number | null> {
+async function tryDefiLlama(symbol: string): Promise<WaterfallResult> {
   const cgId = COINGECKO_IDS[symbol.toUpperCase()];
   if (!cgId) return null;
   try {
@@ -74,14 +76,14 @@ async function tryDefiLlama(symbol: string): Promise<number | null> {
     const r = await fetch(url, { signal: AbortSignal.timeout(5_000) });
     if (!r.ok) return null;
     const data = await r.json() as { coins: Record<string, { price?: number }> };
-    return data.coins[key]?.price ?? null;
+    const p = data.coins[key]?.price;
+    return p != null ? { price: p, change24h: null } : null;
   } catch {
     return null;
   }
 }
 
-/** CoinMarketCap Pro `/v1/cryptocurrency/quotes/latest`: needs `VITE_CMC_API_KEY` at build time. */
-async function tryCoinmarketcap(symbol: string): Promise<number | null> {
+async function tryCoinmarketcap(symbol: string): Promise<WaterfallResult> {
   const apiKey = import.meta.env.VITE_CMC_API_KEY ?? '';
   if (!apiKey) return null;
   try {
@@ -92,18 +94,19 @@ async function tryCoinmarketcap(symbol: string): Promise<number | null> {
     });
     if (!r.ok) return null;
     const data = (await r.json()) as {
-      data?: Record<string, { quote?: { USD?: { price?: number } } }>;
+      data?: Record<string, { quote?: { USD?: { price?: number; percent_change_24h?: number } } }>;
     };
     const row = data.data?.[symbol.toUpperCase()];
     const p = row?.quote?.USD?.price;
-    return typeof p === 'number' && Number.isFinite(p) ? p : null;
+    if (typeof p !== 'number' || !Number.isFinite(p)) return null;
+    const ch = row?.quote?.USD?.percent_change_24h;
+    return { price: p, change24h: typeof ch === 'number' && Number.isFinite(ch) ? ch : null };
   } catch {
     return null;
   }
 }
 
-/** Chainlink proxy feeds for major EVM assets. */
-async function tryChainlink(symbol: string): Promise<number | null> {
+async function tryChainlink(symbol: string): Promise<WaterfallResult> {
   const feed = CHAINLINK_FEEDS[symbol.toUpperCase()];
   if (!feed) return null;
   try {
@@ -117,14 +120,13 @@ async function tryChainlink(symbol: string): Promise<number | null> {
     if (!Number.isFinite(updatedAtMs) || updatedAtMs <= 0) return null;
     if (Date.now() - updatedAtMs > CHAINLINK_STALE_AFTER_MS) return null;
     if (roundData.answer <= 0n) return null;
-    return Number(roundData.answer) / 10 ** Number(decimals);
+    return { price: Number(roundData.answer) / 10 ** Number(decimals), change24h: null };
   } catch {
     return null;
   }
 }
 
-/** last-resort DEX fallback via GeckoTerminal top-pool price routing. */
-async function tryDexTwap(symbol: string): Promise<number | null> {
+async function tryDexTwap(symbol: string): Promise<WaterfallResult> {
   const route = DEX_PRICE_ROUTES[symbol.toUpperCase()];
   if (!route) return null;
   try {
@@ -143,13 +145,13 @@ async function tryDexTwap(symbol: string): Promise<number | null> {
       ?? data.data?.attributes?.token_prices?.[route.tokenAddress.toLowerCase()];
     if (!rawPrice) return null;
     const parsed = Number(rawPrice);
-    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+    return Number.isFinite(parsed) && parsed > 0 ? { price: parsed, change24h: null } : null;
   } catch {
     return null;
   }
 }
 
-async function tryPyth(symbol: string): Promise<number | null> {
+async function tryPyth(symbol: string): Promise<WaterfallResult> {
   const feedId = PYTH_FEED_IDS[symbol.toUpperCase()];
   if (!feedId) return null;
   try {
@@ -161,8 +163,7 @@ async function tryPyth(symbol: string): Promise<number | null> {
     };
     const parsed = data.parsed?.[0]?.price;
     if (!parsed?.price || parsed.expo === undefined) return null;
-    // price = mantissa * 10^expo
-    return parseFloat(parsed.price) * Math.pow(10, parsed.expo);
+    return { price: parseFloat(parsed.price) * Math.pow(10, parsed.expo), change24h: null };
   } catch {
     return null;
   }
@@ -170,9 +171,11 @@ async function tryPyth(symbol: string): Promise<number | null> {
 
 // --- public API ---
 
-async function runPriceWaterfall(key: string): Promise<number> {
+const inflight2 = new Map<string, Promise<CachedPrice>>();
+
+async function runPriceWaterfall(key: string): Promise<CachedPrice> {
   const order = await loadPriceOrder();
-  const runners: Record<PriceSourceId, () => Promise<number | null>> = {
+  const runners: Record<PriceSourceId, () => Promise<WaterfallResult>> = {
     coingecko: () => tryCoingecko(key),
     defillama: () => tryDefiLlama(key),
     coinmarketcap: () => tryCoinmarketcap(key),
@@ -181,36 +184,43 @@ async function runPriceWaterfall(key: string): Promise<number> {
     dextwap: () => tryDexTwap(key),
   };
 
-  let price: number | null = null;
+  let result: WaterfallResult = null;
   for (const id of order) {
     const fn = runners[id];
     if (!fn) continue;
-    price = await fn();
-    if (price !== null) break;
+    result = await fn();
+    if (result !== null) break;
   }
 
-  if (price === null) throw new Error(`No price found for ${key}`);
+  if (result === null) {
+    const err = new Error(`No price found for ${key}`);
+    captureException(err, { feature: 'price', chain: 'none' });
+    throw err;
+  }
 
-  cache.set(key, { priceUsd: price, fetchedAtMs: Date.now() });
-  return price;
+  const entry: CachedPrice = { priceUsd: result.price, changePercent24h: result.change24h, fetchedAtMs: Date.now() };
+  cache.set(key, entry);
+  return entry;
+}
+
+async function resolvePrice(symbol: string): Promise<CachedPrice> {
+  const key = symbol.toUpperCase();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.fetchedAtMs < CACHE_TTL_MS) return hit;
+
+  const pending = inflight2.get(key);
+  if (pending) return pending;
+
+  const promise = runPriceWaterfall(key).finally(() => {
+    inflight2.delete(key);
+  });
+  inflight2.set(key, promise);
+  return promise;
 }
 
 /** returns USD price for a symbol (e.g. 'ETH', 'BTC'). throws if all sources fail. */
 export async function getPrice(symbol: string): Promise<number> {
-  const key = symbol.toUpperCase();
-  const hit = cache.get(key);
-  if (hit && Date.now() - hit.fetchedAtMs < CACHE_TTL_MS) return hit.priceUsd;
-
-  const pending = inflight.get(key);
-  if (pending) return pending;
-
-  // failed promises are removed in .finally so the next caller retries from scratch
-  // rather than re-resolving the cached rejection.
-  const promise = runPriceWaterfall(key).finally(() => {
-    inflight.delete(key);
-  });
-  inflight.set(key, promise);
-  return promise;
+  return (await resolvePrice(symbol)).priceUsd;
 }
 
 /** batch price fetch. missing symbols get null (no throw). */
@@ -221,9 +231,23 @@ export async function getPrices(symbols: string[]): Promise<Record<string, numbe
   );
 }
 
+/** returns USD price + 24h change for a symbol. throws if all sources fail. */
+export async function getPriceWithChange(symbol: string): Promise<PriceWithChange> {
+  const entry = await resolvePrice(symbol);
+  return { usd: entry.priceUsd, changePercent24h: entry.changePercent24h };
+}
+
+/** batch fetch with 24h change. missing symbols get null (no throw). */
+export async function getPricesWithChange(symbols: string[]): Promise<Record<string, PriceWithChange | null>> {
+  const results = await Promise.allSettled(symbols.map((s) => getPriceWithChange(s)));
+  return Object.fromEntries(
+    symbols.map((s, i) => [s, results[i]?.status === 'fulfilled' ? (results[i] as PromiseFulfilledResult<PriceWithChange>).value : null]),
+  );
+}
+
 /** evict the cache (e.g. on network switch or settings change). */
 export function clearPriceCache(): void {
   cache.clear();
   prefsCache = null;
-  inflight.clear();
+  inflight2.clear();
 }

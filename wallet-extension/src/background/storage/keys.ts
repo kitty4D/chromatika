@@ -33,6 +33,7 @@ export const STORAGE_KEYS = {
   // app modes + appearance
   ADVANCED_MODE_V1: 'chromatika_advanced_mode_v1',
   APPEARANCE_V1: 'chromatika_appearance_v1',
+  BALANCE_PRIVACY_V1: 'chromatika_balance_privacy_v1',
   IKA_BASE_MODE_V1: 'chromatika_ika_base_mode_v1',
   MEDIA_SAFETY_V1: 'chromatika_media_safety_v1',
   EXPLORER_PREFERENCES_V1: 'chromatika_explorer_preferences_v1',
@@ -64,6 +65,9 @@ export const STORAGE_KEYS = {
   X402_RECEIPTS_V1: 'chromatika_x402_receipts_v1',
   X402_PRIVATE_RECEIPTS_V1: 'chromatika_x402_private_receipts_v1',
   X402_RECEIPTS_RETENTION_V1: 'chromatika_x402_receipts_retention_v1',
+
+  // analytics + error tracking consent
+  ANALYTICS_CONSENT_V1: 'chromatika_analytics_consent_v1',
 
   // mcp agent surface
   MCP_V1: 'chromatika_mcp_v1',
@@ -98,6 +102,11 @@ export const STORAGE_KEYS = {
   ADDRESS_BOOK_V1: 'chromatika_address_book_v1',
   /** recently sent-to addresses (chain-scoped, capped). populated by `sendUnified`. chrome.storage.local. */
   RECENT_RECIPIENTS_V1: 'chromatika_recent_recipients_v1',
+
+  // notifications
+  NOTIFY_PREFS_V1: 'chromatika_notify_prefs_v1',
+  NOTIFY_CURSORS_V1: 'chromatika_notify_cursors_v1',
+  PRICE_ALERTS_V1: 'chromatika_price_alerts_v1',
 } as const;
 
 export type StorageKey = (typeof STORAGE_KEYS)[keyof typeof STORAGE_KEYS];
@@ -146,6 +155,15 @@ export const VAULT_SCOPED_KEYS = {
   /** per-vault flag: user dismissed the Home-screen "create your first dWallets" prompt. */
   dwalletCreatePromptDismissed: (vaultId: string) =>
     `chromatika_dwallet_create_prompt_dismissed_v1_${vaultId}` as const,
+  /** per-vault flag: user dismissed the welcome/onboarding banner. */
+  welcomeBannerDismissed: (vaultId: string) =>
+    `chromatika_welcome_banner_dismissed_v1_${vaultId}` as const,
+  /** per-vault pinned asset row keys (portfolio ordering). */
+  pinnedAssets: (vaultId: string) => `chromatika_pinned_assets_v1_${vaultId}` as const,
+  /** per-vault hidden asset row keys (spam/noise removal). */
+  hiddenAssets: (vaultId: string) => `chromatika_hidden_assets_v1_${vaultId}` as const,
+  /** per-vault flag: user dismissed the staking prompt banner. */
+  stakingPromptDismissed: (vaultId: string) => `chromatika_staking_prompt_dismissed_v1_${vaultId}` as const,
   /** send-tab token list cache per scope, session-scoped, 5-min TTL. scope is one of
    *  `'dwallet'` / `'vault'` / `'everything'`. selection key narrows further
    *  (selectedDwalletId for `'dwallet'` scope; otherwise the literal `'_'`). */

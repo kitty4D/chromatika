@@ -1,5 +1,9 @@
 import '@/background/service-worker-document-shim';
 import '@/buffer-polyfill';
+import { maybeInitSentry } from '@/background/analytics/sentry';
+import { handleNotifyPollAlarm } from '@/background/services/notifications/notify-service';
+import { NOTIFY_ALARM_NAME, NOTIFY_ALARM_PERIOD_MIN } from '@/background/services/notifications/types';
+import { clearNotification } from '@/background/services/notifications/notify-chrome';
 import { fetchRequestHandler } from '@trpc/server/adapters/fetch';
 import { appRouter } from '@/server/router';
 import '@/background/lock-manager';
@@ -173,6 +177,10 @@ chrome.alarms.onAlarm.addListener((alarm) => {
       await handleAlertRuleExpiryAlarm(alarm.name);
     })();
   }
+  if (alarm.name === NOTIFY_ALARM_NAME) {
+    void handleNotifyPollAlarm();
+    return;
+  }
   if (alarm.name === 'chromatika-media-cache-idle') {
     void (async () => {
       const { maybeCloseIdleOffscreenDoc } = await import('@/background/media-cache-bridge');
@@ -184,6 +192,18 @@ chrome.alarms.onAlarm.addListener((alarm) => {
 // notification click -> open the side panel scoped to the clicked alert id.
 if (typeof chrome.notifications?.onClicked?.addListener === 'function') {
   chrome.notifications.onClicked.addListener((notificationId) => {
+    if (
+      notificationId.startsWith('chromatika-incoming-') ||
+      notificationId.startsWith('chromatika-confirmed-') ||
+      notificationId.startsWith('chromatika-price-') ||
+      notificationId.startsWith('chromatika-ika-')
+    ) {
+      clearNotification(notificationId);
+      void chrome.windows.getLastFocused({ populate: false }, (win) => {
+        if (win?.id != null) void chrome.sidePanel.open({ windowId: win.id }).catch(() => {});
+      });
+      return;
+    }
     if (!notificationId.startsWith('chromatika-alert-')) return;
     const alertId = notificationId.slice('chromatika-alert-'.length);
     void (async () => {
@@ -251,6 +271,7 @@ async function bootstrapPcTokenSurface(): Promise<void> {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
+  void maybeInitSentry();
   void syncPhishingRules();
   void refreshPhishingRulesFromRemote();
   registerDefaultSidePanel();
@@ -259,11 +280,14 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.alarms.create('chromatika-media-cache-idle', { periodInMinutes: 1 });
   chrome.alarms.create(LEADERBOARD_INDEX_ALARM, { periodInMinutes: LEADERBOARD_INDEX_INTERVAL_MIN });
   chrome.alarms.create(LEADERBOARD_PORTFOLIO_ALARM, { periodInMinutes: LEADERBOARD_PORTFOLIO_INTERVAL_MIN });
+  chrome.alarms.create(NOTIFY_ALARM_NAME, { periodInMinutes: NOTIFY_ALARM_PERIOD_MIN });
   void maybeReconnectMcpHost();
   void bootstrapAlertsSurface();
   void bootstrapPcTokenSurface();
+  void bootstrapPendingTxReconciler();
 });
 chrome.runtime.onStartup.addListener(() => {
+  void maybeInitSentry();
   void syncPhishingRules();
   void refreshPhishingRulesFromRemote();
   registerDefaultSidePanel();
@@ -283,10 +307,36 @@ chrome.runtime.onStartup.addListener(() => {
   chrome.alarms.get(LEADERBOARD_PORTFOLIO_ALARM, (existing) => {
     if (!existing) chrome.alarms.create(LEADERBOARD_PORTFOLIO_ALARM, { periodInMinutes: LEADERBOARD_PORTFOLIO_INTERVAL_MIN });
   });
+  chrome.alarms.get(NOTIFY_ALARM_NAME, (existing) => {
+    if (!existing) chrome.alarms.create(NOTIFY_ALARM_NAME, { periodInMinutes: NOTIFY_ALARM_PERIOD_MIN });
+  });
   void maybeReconnectMcpHost();
   void bootstrapAlertsSurface();
   void bootstrapPcTokenSurface();
+  void bootstrapPendingTxReconciler();
 });
+
+/** kick the pending-tx reconciler on SW start so any rows left in the index from a prior
+ * session (broadcast right before the SW died) resume polling. no-op if there's no
+ * active vault yet (unlock will trigger the reconciler via the wallet-service hook). */
+async function bootstrapPendingTxReconciler(): Promise<void> {
+  try {
+    const { getSession } = await import('@/background/session');
+    const s = getSession();
+    if (!s?.activeVaultId) return;
+    const { listIndexedTxsByStatus } = await import('@/background/services/activity-index');
+    const pending = await listIndexedTxsByStatus(s.activeVaultId, 'pending');
+    if (pending.length === 0) return;
+    const { startReconcilerOnDemand } = await import('@/background/services/pending-tx-reconciler');
+    startReconcilerOnDemand(s.activeVaultId);
+    console.warn('[pending-tx] resumed reconciler after SW startup', {
+      vaultId: s.activeVaultId,
+      pendingCount: pending.length,
+    });
+  } catch (e) {
+    console.warn('[pending-tx] bootstrap failed', e);
+  }
+}
 
 type TrpcBridgePayload = {
   url: string;

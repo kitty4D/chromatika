@@ -20,6 +20,8 @@ import { policyVaultProcedures } from './routers/policy-vault';
 import { scanProcedures } from './routers/scan';
 import { onboardingProcedures } from './routers/onboarding';
 import { dwalletLeaderboardProcedures } from './routers/dwallet-leaderboard';
+import { analyticsProcedures } from './routers/analytics';
+import { notificationProcedures } from './routers/notifications';
 
 /**
  * tRPC root router, flat namespace built from per-domain procedure groups.
@@ -48,6 +50,8 @@ export const appRouter = router({
   ...scanProcedures,
   ...onboardingProcedures,
   ...dwalletLeaderboardProcedures,
+  ...analyticsProcedures,
+  ...notificationProcedures,
 });
 
 export type AppRouter = typeof appRouter;
