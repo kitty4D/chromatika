@@ -22,3 +22,7 @@ app/src/main/assets/ika-js/
 .DS_Store
 Thumbs.db
 *.log
+
+# local AI session notes (per-developer, never checked in)
+CLAUDE.local.md
+*.local.md

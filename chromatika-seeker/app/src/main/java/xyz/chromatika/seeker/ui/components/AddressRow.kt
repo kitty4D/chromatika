@@ -24,9 +24,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import xyz.chromatika.seeker.ui.theme.ChromaMonoFamily
 
 /**
  * copyable monospace address row. mirrors the extension's `ExplorerValueRow` semantics
@@ -64,7 +64,7 @@ fun AddressRow(
             )
             Text(
                 text = truncate(value),
-                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = FontFamily.Monospace),
+                style = MaterialTheme.typography.bodyMedium.copy(fontFamily = ChromaMonoFamily),
                 color = MaterialTheme.colorScheme.onSurface,
                 overflow = TextOverflow.Ellipsis,
                 maxLines = 1,

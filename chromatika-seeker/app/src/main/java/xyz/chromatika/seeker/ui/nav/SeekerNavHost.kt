@@ -3,6 +3,7 @@ package xyz.chromatika.seeker.ui.nav
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
+import androidx.compose.material3.NavigationBarDefaults
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -12,6 +13,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -23,9 +25,9 @@ import xyz.chromatika.seeker.ChromatikaApp
 import xyz.chromatika.seeker.ui.screens.ActivityScreen
 import xyz.chromatika.seeker.ui.screens.NftsScreen
 import xyz.chromatika.seeker.ui.screens.PlaceholderDetailScreen
-import xyz.chromatika.seeker.ui.screens.SendScreen
-import xyz.chromatika.seeker.ui.screens.SettingsScreen
 import xyz.chromatika.seeker.ui.screens.WalletScreen
+import xyz.chromatika.seeker.ui.send.SendScreen
+import xyz.chromatika.seeker.ui.settings.SettingsScreen
 import xyz.chromatika.seeker.ui.setup.VaultSetupScreen
 import xyz.chromatika.seeker.ui.unlock.UnlockScreen
 
@@ -67,6 +69,8 @@ fun SeekerNavHost() {
     val showBottomBar = NavDestination.all.any { it.route == currentRoute }
 
     Scaffold(
+        // transparent so the underlying ChromaSurface (ambient + grain + ribbon) shows through.
+        containerColor = Color.Transparent,
         bottomBar = {
             if (showBottomBar) BottomBar(navController, backStack?.destination?.route)
         },
@@ -159,7 +163,10 @@ fun SeekerNavHost() {
 
 @Composable
 private fun BottomBar(navController: NavHostController, currentRoute: String?) {
-    NavigationBar {
+    // slightly translucent so the ambient peeks through the bottom strip too.
+    NavigationBar(
+        containerColor = NavigationBarDefaults.containerColor.copy(alpha = 0.72f),
+    ) {
         NavDestination.all.forEach { dest ->
             val selected = navController.currentBackStackEntry?.destination?.hierarchy?.any { it.route == dest.route } == true
             NavigationBarItem(

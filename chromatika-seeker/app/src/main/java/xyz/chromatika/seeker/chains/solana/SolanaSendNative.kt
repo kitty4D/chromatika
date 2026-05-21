@@ -1,48 +1,128 @@
 package xyz.chromatika.seeker.chains.solana
 
+import android.util.Base64
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
 import xyz.chromatika.seeker.identity.SeedVaultIdentity
 
 /**
- * planned native SOL transfer via seed vault. **today this file is a contract sketch**:
- * it declares the call shape so the rest of the app can depend on it, but throws
- * `NotImplementedError` until the next iteration wires it against a real seeker / saga
- * (or seed vault simulator on android 12+).
+ * native SOL transfer orchestrator. ports the rough shape of
+ * `wallet-extension/src/background/chains/solana-send-native.ts` for kotlin.
  *
- * the right wiring needs three things we can only verify against a device:
- *   1. the actual `com.solanamobile:rpc-solana` artifact (or the rolled-up
- *      `com.solanamobile:solana-kotlin` BoM, when published). `rpc-core` 0.2.11 ships only
- *      json-rpc primitives, not the higher-level `SolanaRpcClient` we want here.
- *   2. the `com.solana.transaction.Transaction` signing path against
- *      `com.solana.programs.SystemProgram.transfer(...)`. the wire layout for a signed
- *      legacy tx is well-defined but the SDK's fluent builder is the spot the kotlin team
- *      is iterating fastest on; lock it in once we've smoke-tested the round-trip.
- *   3. the seed vault sign intent flow end-to-end (we exercise it through [SeedVaultIdentity]
- *      already, but only validation against a real device confirms tx-bytes parity).
+ * flow:
+ *  1. fetch latest blockhash from [SolanaRpc.getLatestBlockhash].
+ *  2. build the transfer message via [SystemProgram.transfer] + [buildMessage].
+ *  3. ask the [SeedVaultIdentity] to sign the serialized message bytes (ed25519, 64 bytes out).
+ *  4. assemble the signed transaction via [assembleSignedTransaction].
+ *  5. base64-encode and submit via [SolanaRpc.sendTransaction].
+ *  6. (optional) poll [SolanaRpc.getSignatureStatuses] for confirmation.
  *
- * importing this class from compose / UI today is fine; the build compiles. **calling**
- * [send] throws and surfaces the operation-progress banner with an actionable error so the
- * user knows we're not silently swallowing.
+ * **safety**: this path signs against whatever [SeedVaultIdentity] the caller hands in. for
+ * the password-only vault that's an in-vault ed25519 keypair; for a seeker device it's a seed
+ * vault-backed sign. either way, the byte you sign is the canonical solana message + the
+ * validator can verify it the same way `solana-keygen sign-data` produces.
  */
-class SolanaSendNative(
-    @Suppress("unused") private val cluster: SolanaCluster = SolanaCluster.Devnet,
-) {
+class SolanaSendNative(private val rpc: SolanaRpc) {
 
     /**
-     * intended contract: build a native SOL transfer, ask [identity] to sign the message
-     * bytes via seed vault, broadcast through the solana rpc client, return the base58
-     * signature for the explorer link.
-     *
-     * @throws NotImplementedError today, until phase 3 of the port pass.
+     * build, sign, and broadcast a native SOL transfer. returns the broadcast signature
+     * (base58). caller can compose [SolanaCluster.txExplorerUrl] for an explorer link.
      */
-    @Suppress("UNUSED_PARAMETER")
     suspend fun send(
         identity: SeedVaultIdentity,
         recipientBase58: String,
         lamports: Long,
-    ): String {
-        throw NotImplementedError(
-            "SolanaSendNative.send lands in phase 3 after the kotlin sdk lockdown + a real " +
-                "seeker round-trip. tracking: docs/ARCHITECTURE.md phase 3 chain clients table.",
+    ): SendResult = withContext(Dispatchers.IO) {
+        require(lamports > 0) { "amount must be positive" }
+
+        val from = identity.solanaPublicKey()
+        require(from.size == 32) { "identity pubkey must be 32 bytes" }
+        val to = try {
+            Base58.decode(recipientBase58)
+        } catch (e: Throwable) {
+            throw SendValidationException("invalid recipient address: ${e.message ?: "parse failed"}")
+        }
+        if (to.size != 32) throw SendValidationException("recipient must be a 32-byte solana address (got ${to.size} bytes)")
+
+        val blockhashInfo = rpc.getLatestBlockhash(Commitment.Confirmed)
+        val blockhash = Base58.decode(blockhashInfo.blockhash)
+        require(blockhash.size == 32) { "blockhash must be 32 bytes after base58 decode" }
+
+        val ix = SystemProgram.transfer(from = from, to = to, lamports = lamports)
+        val message = buildMessage(
+            feePayer = from,
+            instructions = listOf(ix),
+            recentBlockhash = blockhash,
+        )
+        val messageBytes = message.serialize()
+
+        val signature = identity.signMessage(messageBytes)
+        require(signature.size == 64) { "ed25519 signature must be 64 bytes (got ${signature.size})" }
+
+        val signedTx = assembleSignedTransaction(message, listOf(signature))
+        val signedB64 = Base64.encodeToString(signedTx, Base64.NO_WRAP)
+        val sentSignature = rpc.sendTransaction(signedB64, skipPreflight = false)
+
+        SendResult(
+            signatureBase58 = sentSignature,
+            explorerUrl = rpc.cluster.txExplorerUrl(sentSignature),
+            lastValidBlockHeight = blockhashInfo.lastValidBlockHeight,
         )
     }
+
+    /**
+     * poll [SolanaRpc.getSignatureStatuses] until the signature reaches at least the requested
+     * commitment, or until [timeoutMs] elapses. returns the final status. throws if the tx
+     * landed on chain with an error (`status.err != null`).
+     */
+    suspend fun awaitConfirmation(
+        signatureBase58: String,
+        target: Commitment = Commitment.Confirmed,
+        timeoutMs: Long = 45_000L,
+        pollIntervalMs: Long = 1_500L,
+    ): SignatureStatus = withContext(Dispatchers.IO) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (true) {
+            val statuses = rpc.getSignatureStatuses(listOf(signatureBase58))
+            val s = statuses.firstOrNull()
+            if (s != null) {
+                if (s.err != null) throw SendOnchainException("tx landed with error: ${s.err}", s)
+                val reached = matchesOrExceeds(s.confirmationStatus, target)
+                if (reached) return@withContext s
+            }
+            if (System.currentTimeMillis() > deadline) {
+                throw SendTimeoutException(
+                    "tx not ${target.wire} after ${timeoutMs}ms (signature=$signatureBase58)",
+                )
+            }
+            delay(pollIntervalMs)
+        }
+        @Suppress("UNREACHABLE_CODE")
+        error("unreachable")
+    }
+
+    private fun matchesOrExceeds(actual: String?, target: Commitment): Boolean {
+        val ordering = listOf(Commitment.Processed, Commitment.Confirmed, Commitment.Finalized)
+        val actualIdx = ordering.indexOfFirst { it.wire == actual }
+        val targetIdx = ordering.indexOf(target)
+        return actualIdx >= 0 && actualIdx >= targetIdx
+    }
 }
+
+/** result of a successful [SolanaSendNative.send] call. */
+data class SendResult(
+    val signatureBase58: String,
+    val explorerUrl: String,
+    /** the block-height beyond which the broadcast tx is dead even if it never landed. */
+    val lastValidBlockHeight: Long,
+)
+
+/** user-supplied input was invalid (bad recipient, etc). UI should surface inline. */
+class SendValidationException(message: String) : RuntimeException(message)
+
+/** tx made it on chain but ran into a runtime error. surface to user with the err string. */
+class SendOnchainException(message: String, val status: SignatureStatus) : RuntimeException(message)
+
+/** poll deadline expired without the tx reaching the target commitment. */
+class SendTimeoutException(message: String) : RuntimeException(message)
