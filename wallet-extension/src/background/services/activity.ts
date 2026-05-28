@@ -23,9 +23,10 @@ import {
   queryTransactionBlocksGraphQL,
 } from '@/background/sui-client';
 import { getSignedTxsMap } from '@/background/services/tx-record';
+import type { IndexedTxKind } from '@/background/services/activity-index';
 
 export type ActivityItemType = 'sent' | 'received' | 'contract' | 'unknown';
-export type ActivityItemStatus = 'success' | 'failure';
+export type ActivityItemStatus = 'success' | 'failure' | 'pending';
 export type ActivityChain = 'sui' | 'evm' | 'solana' | 'bitcoin';
 
 export type ActivityItem = {
@@ -64,6 +65,22 @@ export type ActivityItem = {
    * vs regular sends. `undefined` for explorer-only rows.
    */
   recordKind?: string;
+  /**
+   * semantic tx kind overlaid from the indexed-activity store (`activity-index`). `undefined`
+   * or `'unknown'` until the per-chain classifier has run; the UI guards every read.
+   */
+  kind?: IndexedTxKind;
+  /** swap leg metadata overlaid from the index when `kind === 'swap'`. */
+  swapMeta?: {
+    fromSymbol: string | null;
+    fromAmountRaw: string | null;
+    toSymbol: string | null;
+    toAmountRaw: string | null;
+  };
+  /** chain-native memo (Solana Memo Program / Aptos note / etc.) overlaid from the index. */
+  memo?: string | null;
+  /** EVM numeric chain id, when known - used for the tx-detail deep fetch + explorer link. */
+  chainId?: number;
 };
 
 function txLabel(kind: string | null, type: ActivityItemType): string {

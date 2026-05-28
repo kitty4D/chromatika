@@ -1339,11 +1339,11 @@ export const sendProcedures = {
           } else if (!row.mint) {
             const lamports = parseDecimalSolToLamports(amount);
             if (lamports <= 0n) throw new Error('Amount must be positive');
-            txid = await sendSolanaNativeTransfer(trimmed, lamports, { memo });
+            txid = await sendSolanaNativeTransfer(trimmed, lamports);
           } else {
             const baseUnits = parseDecimalSplToBaseUnits(amount, row.decimals);
             if (baseUnits <= 0n) throw new Error('Amount must be positive');
-            txid = await sendSolanaSplTransfer(trimmed, row.mint, baseUnits, { memo });
+            txid = await sendSolanaSplTransfer(trimmed, row.mint, baseUnits);
           }
           break;
         }

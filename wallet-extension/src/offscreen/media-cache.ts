@@ -31,6 +31,17 @@ export type CacheGetResult =
   | { ok: true; contentType: string; bytes: ArrayBuffer }
   | { ok: false; reason: FailureReason };
 
+/**
+ * what actually crosses `chrome.runtime.sendMessage`. ArrayBuffer does NOT survive
+ * Chrome's default JSON message serialization (it arrives as `{}`), so the bytes ride
+ * as base64 and `media-cache-client` decodes them back to an ArrayBuffer. (Chrome 148+
+ * could opt into structured-clone messaging via a manifest key, but that's unreleased +
+ * version-gated, so base64 keeps this working on all current Chrome.)
+ */
+export type CacheGetWireResult =
+  | { ok: true; contentType: string; bytesB64: string }
+  | { ok: false; reason: FailureReason };
+
 const inflight = new Map<string, Promise<CacheGetResult>>();
 const negativeCache = new Map<string, { failedAtMs: number; reason: FailureReason }>();
 
@@ -209,6 +220,24 @@ async function getMediaBytes(sourceUrl: string): Promise<CacheGetResult> {
   }
 }
 
+/** ArrayBuffer -> base64, chunked so a large image doesn't overflow the call stack on
+ * `String.fromCharCode(...)`. runs in the offscreen document; `btoa` is available there. */
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = '';
+  const CHUNK = 0x8000;
+  for (let i = 0; i < bytes.length; i += CHUNK) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + CHUNK));
+  }
+  return btoa(binary);
+}
+
+function toWire(r: CacheGetResult): CacheGetWireResult {
+  return r.ok
+    ? { ok: true, contentType: r.contentType, bytesB64: arrayBufferToBase64(r.bytes) }
+    : r;
+}
+
 chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
   if (message?.type !== 'media-cache:get') return undefined;
   const sourceUrl = typeof message.sourceUrl === 'string' ? message.sourceUrl : '';
@@ -216,6 +245,6 @@ chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     sendResponse({ ok: false, reason: 'fetch-failed' satisfies FailureReason });
     return undefined;
   }
-  void getMediaBytes(sourceUrl).then((r) => sendResponse(r));
+  void getMediaBytes(sourceUrl).then((r) => sendResponse(toWire(r)));
   return true; // keep the channel open for async sendResponse
 });

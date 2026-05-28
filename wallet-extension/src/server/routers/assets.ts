@@ -11,6 +11,10 @@ import {
 } from '@/background/services/nft';
 import { getKioskData, getOwnedKiosks } from '@/background/services/sui-kiosk';
 import { getMediaSafetyMode } from '@/background/services/media-safety';
+import { getChartData } from '@/background/services/price-history';
+import { getMarketData } from '@/background/services/market-data';
+import { loadHiddenAssets, saveHiddenAssets } from '@/background/asset-pin-storage';
+import { getActiveVaultId } from '@/background/wallet-service';
 
 export const assetsProcedures = {
   getPrice: publicProcedure
@@ -68,4 +72,32 @@ export const assetsProcedures = {
   getKioskData: publicProcedure
     .input(z.object({ kioskId: z.string() }))
     .query(({ input }) => getKioskData(input.kioskId)),
+
+  // --- asset detail: price chart + market stats ---
+
+  getChartData: publicProcedure
+    .input(z.object({ symbol: z.string(), days: z.number() }))
+    .query(({ input }) => getChartData(input.symbol, input.days)),
+
+  getMarketData: publicProcedure
+    .input(z.object({ symbol: z.string() }))
+    .query(({ input }) => getMarketData(input.symbol)),
+
+  // --- hidden portfolio assets (per active vault) ---
+
+  getHiddenAssets: publicProcedure.query(async () => {
+    const vid = getActiveVaultId();
+    if (!vid) return { keys: [] as string[] };
+    return { keys: await loadHiddenAssets(vid) };
+  }),
+
+  unhideAsset: publicProcedure
+    .input(z.object({ key: z.string() }))
+    .mutation(async ({ input }) => {
+      const vid = getActiveVaultId();
+      if (!vid) throw new Error('Wallet locked');
+      const keys = await loadHiddenAssets(vid);
+      await saveHiddenAssets(vid, keys.filter((k) => k !== input.key));
+      return { ok: true as const };
+    }),
 };

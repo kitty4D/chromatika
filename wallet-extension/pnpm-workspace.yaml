@@ -1,1 +1,36 @@
-patchedDependencies: {}
+# pnpm 11+ reads project settings from here, NOT the package.json "pnpm" field
+# (which pnpm 11 ignores). see https://pnpm.io/settings. overrides + build-script
+# approval + patches all live in this file now.
+
+# dependency version pins. why each one (see wallet-extension/CLAUDE.md "non-obvious"):
+#  - @mysten/sui 2.16.2: single hoisted 2.x copy shared by app + @ika.xyz/sdk.
+#  - @ika.xyz/sdk>@mysten/sui: force the nested copy to the same 2.16.2.
+#  - @mysten/bcs 2.0.5: must match what @mysten/sui declares, else two BcsType
+#    siblings install and $inferType collapses to `never` (TS2488/TS2339).
+#  - @types/node ^22: @types/node@25 strict-types Buffer as non-assignable to
+#    Uint8Array and breaks ~17 Solana/Ledger/encrypt call sites.
+#  - @ledgerhq/live-network: local stub (upstream does top-level require("https")
+#    that crashes in the MV3 service worker; we never call its functions).
+overrides:
+  '@mysten/sui': '2.16.2'
+  '@ika.xyz/sdk>@mysten/sui': '2.16.2'
+  '@ledgerhq/live-network': 'link:./stubs/ledger-live-network'
+  '@types/node': '^22'
+  '@mysten/bcs': '2.0.5'
+
+# replaces the removed `onlyBuiltDependencies` list (pnpm 11). these deps are
+# allowed to run install/build scripts (native addons + binaries).
+allowBuilds:
+  '@reown/appkit': false
+  '@sentry/cli': false
+  '@stellar/stellar-sdk': false
+  blake-hash: false
+  bufferutil: true
+  esbuild: true
+  keccak: true
+  protobufjs: true
+  sharp: true
+  spawn-sync: true
+  tiny-secp256k1: true
+  usb: false
+  utf-8-validate: true

@@ -38,6 +38,9 @@ import {
 } from '@/background/explorer-preferences';
 import { getPricePreferences, setPricePreferences } from '@/background/price-preferences';
 import { clearPriceCache } from '@/background/services/price';
+import { getBalancePrivacy, setBalancePrivacy } from '@/background/balance-privacy';
+import { isStakingPromptDismissed, dismissStakingPrompt } from '@/background/staking-prompt';
+import { isWelcomeBannerDismissed, dismissWelcomeBanner } from '@/background/welcome-banner';
 
 export const networkProcedures = {
   getNetworks: publicProcedure.query(async () => {
@@ -265,4 +268,42 @@ export const networkProcedures = {
       clearPriceCache();
       return { ok: true as const };
     }),
+
+  // --- balance privacy + dismissible prompts ---
+
+  getBalancePrivacy: publicProcedure.query(() => getBalancePrivacy()),
+
+  setBalancePrivacy: publicProcedure
+    .input(z.object({ hidden: z.boolean() }))
+    .mutation(async ({ input }) => {
+      await setBalancePrivacy(input.hidden);
+      return { ok: true as const };
+    }),
+
+  getStakingPromptDismissed: publicProcedure.query(async () => {
+    const vid = getActiveVaultId();
+    // locked => no active vault to scope the flag to; treat as dismissed so the banner stays hidden.
+    if (!vid) return { dismissed: true };
+    return { dismissed: await isStakingPromptDismissed(vid) };
+  }),
+
+  dismissStakingPrompt: publicProcedure.mutation(async () => {
+    const vid = getActiveVaultId();
+    if (!vid) throw new Error('Wallet locked');
+    await dismissStakingPrompt(vid);
+    return { ok: true as const };
+  }),
+
+  getWelcomeBannerDismissed: publicProcedure.query(async () => {
+    const vid = getActiveVaultId();
+    if (!vid) return { dismissed: true };
+    return { dismissed: await isWelcomeBannerDismissed(vid) };
+  }),
+
+  dismissWelcomeBanner: publicProcedure.mutation(async () => {
+    const vid = getActiveVaultId();
+    if (!vid) throw new Error('Wallet locked');
+    await dismissWelcomeBanner(vid);
+    return { ok: true as const };
+  }),
 };

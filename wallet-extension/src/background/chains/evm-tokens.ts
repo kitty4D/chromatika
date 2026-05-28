@@ -9,6 +9,7 @@ import { getCustomNetworks } from '@/background/network/custom-networks';
 import { sendEvmRpcWithRetry } from '@/background/chains/evm-send';
 import { getPrice } from '@/background/services/price';
 import { listWatchedEvmTokensForWallet } from '@/background/network/evm-watched-tokens';
+import { evmTokenLogoUrl } from '@/background/services/token-metadata';
 
 export type EvmTokenBalanceRow = {
   contractAddress: string | null;
@@ -151,6 +152,7 @@ export async function fetchEvmTokenBalances(walletAddress: string, chainId: numb
       balanceRaw: nativeBal.toString(),
       balanceFormatted: formatted,
       usdValue: usd,
+      iconUrl: evmTokenLogoUrl(chainId, null),
     });
   }
 
@@ -172,6 +174,7 @@ export async function fetchEvmTokenBalances(walletAddress: string, chainId: numb
         balanceRaw: bal.toString(),
         balanceFormatted: formatted,
         usdValue: usd,
+        iconUrl: evmTokenLogoUrl(chainId, item.contractAddress),
       });
     }
   } else if (chainId === 42161) {
@@ -190,6 +193,7 @@ export async function fetchEvmTokenBalances(walletAddress: string, chainId: numb
         balanceRaw: bal.toString(),
         balanceFormatted: formatted,
         usdValue: usd,
+        iconUrl: evmTokenLogoUrl(chainId, t.address),
       });
     }
   }
@@ -220,7 +224,7 @@ export async function fetchEvmTokenBalances(walletAddress: string, chainId: numb
       balanceRaw: bal.toString(),
       balanceFormatted: formatted,
       usdValue: usd,
-      iconUrl: w.image,
+      iconUrl: w.image ?? evmTokenLogoUrl(chainId, w.contractAddress),
     });
   }
 

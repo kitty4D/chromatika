@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.1",
   "type": "module",
-  "packageManager": "pnpm@10.33.0",
+  "packageManager": "pnpm@11.2.2",
   "scripts": {
     "prepare": "node scripts/setup-hooks-path.mjs",
     "postinstall": "node scripts/postinstall-rm-nested-mysten.mjs",
@@ -72,6 +72,7 @@
     "@scure/base": "^2.2.0",
     "@scure/bip32": "^2.2.0",
     "@scure/bip39": "^2.2.0",
+    "@sentry/browser": "^10.54.0",
     "@solana-mobile/mobile-wallet-adapter-protocol": "^2.2.8",
     "@solana-mobile/mobile-wallet-adapter-protocol-web3js": "^2.2.8",
     "@solana/kit": "^5.5.1",
@@ -104,33 +105,10 @@
     "webextension-polyfill": "^0.12.0",
     "zod": "^4.4.3"
   },
-  "overrides": {
-    "@mysten/sui": "2.16.2",
-    "@ika.xyz/sdk": {
-      "@mysten/sui": "2.16.2"
-    },
-    "@ledgerhq/live-network": "2.4.3"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "bufferutil",
-      "esbuild",
-      "keccak",
-      "protobufjs",
-      "sharp",
-      "spawn-sync",
-      "tiny-secp256k1",
-      "utf-8-validate"
-    ],
-    "overrides": {
-      "@ledgerhq/live-network": "link:./stubs/ledger-live-network",
-      "@types/node": "^22",
-      "@mysten/bcs": "2.0.5"
-    }
-  },
   "devDependencies": {
     "@eslint/js": "^9.37.0",
     "@playwright/test": "^1.59.1",
+    "@sentry/vite-plugin": "^5.3.0",
     "@types/chrome": "^0.1.42",
     "@types/qrcode": "^1.5.6",
     "@types/react": "^19.2.14",

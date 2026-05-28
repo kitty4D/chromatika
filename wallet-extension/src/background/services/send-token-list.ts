@@ -32,6 +32,7 @@ import { fetchEvmTokenBalances } from '@/background/chains/evm-tokens';
 import { fetchPortfolioRailNativeRows } from '@/background/portfolio-rail-balances';
 import { listSolanaSplBalances } from '@/background/chains/solana-list-spl';
 import { getPrice } from '@/background/services/price';
+import { solanaTokenLogoUrl, suiNativeLogoUrl } from '@/background/services/token-metadata';
 import { listPolicyVaultLinks } from '@/background/policy-vault/policy-vault-storage';
 import { readPolicyVaultSnapshot } from '@/background/policy-vault/policy-vault-read';
 import type {
@@ -284,6 +285,7 @@ async function probeSuiForSource(
         name: r.name,
         decimals,
         coinType,
+        iconUrl: coinType === NATIVE_SUI_COIN_TYPE ? suiNativeLogoUrl() : undefined,
         balanceRaw: r.balanceRaw,
         balanceFormatted: r.balanceFormatted,
         pricePerTokenUsd,
@@ -321,6 +323,7 @@ async function probeSolanaForSource(
         symbol: r.symbol,
         name: r.name,
         decimals: 9,
+        iconUrl: solanaTokenLogoUrl(null),
         balanceRaw: r.balanceRaw,
         balanceFormatted: r.balanceFormatted,
         pricePerTokenUsd,
@@ -366,6 +369,7 @@ async function probeSolanaForSource(
         name,
         decimals: r.decimals,
         mint: r.mint,
+        iconUrl: solanaTokenLogoUrl(r.mint),
         balanceRaw: r.balanceRaw,
         balanceFormatted: r.balance,
         pricePerTokenUsd,
