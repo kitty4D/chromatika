@@ -26,6 +26,7 @@ export function WalletPage({
   balanceError,
   onRefresh,
   vaultLabel,
+  activeVaultId,
   networks,
   onViewPortfolio,
   onOpenDWalletMgmt,
@@ -38,6 +39,9 @@ export function WalletPage({
   balanceError?: string | null;
   onRefresh: (opts?: { clearStaleBalanceError?: boolean }) => void;
   vaultLabel?: string;
+  /** active vault id - needed by the cockpit BTTF time-circuits panel to subscribe
+   *  to the snapshot via `useVaultTotalSnapshot`. */
+  activeVaultId: string | null;
   networks: Networks | null;
   onViewPortfolio: (dwalletId: string) => void;
   onOpenDWalletMgmt: () => void;
@@ -260,7 +264,9 @@ export function WalletPage({
         balances={balances}
         network={balances.network}
         networks={networks}
+        vaultId={activeVaultId}
         vaultLabel={vaultLabel}
+        showHelpOverlay={uiHelpHints}
         onBalancesRefresh={() => {
           onRefresh();
           void refreshCaps();
@@ -274,20 +280,6 @@ export function WalletPage({
           balances.feePayerAddress ? () => setReceiveOpen(true) : undefined
         }
       />
-      <HelpBubble show={uiHelpHints}>
-        <p className="cd-helpBubble-text">
-          Your <strong>dWallet Vault</strong> is the owner keyring that pays fees.{' '}
-          {ikaBaseSolana ? (
-            <>
-              The <strong>SOL</strong> and <strong>ika</strong> gauges on this card are for the active vault only.
-            </>
-          ) : (
-            <>
-              The <strong>SUI</strong> and <strong>IKA</strong> gauges on this card are for the active vault only.
-            </>
-          )}
-        </p>
-      </HelpBubble>
       {balances.feePayerAddress ? (
         <ReceiveAddressSheet
           open={receiveOpen}

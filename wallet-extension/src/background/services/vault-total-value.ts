@@ -37,11 +37,14 @@ export async function computeVaultTotalWithDeps(
     return {
       vaultId,
       usdMicros: 0n,
+      mainnetUsdMicros: 0n,
+      testnetUsdMicros: 0n,
       partial: true,
       lastFetchedMs: deps.nowMs(),
       perChain: [
         {
           chainKey: '_orchestrator',
+          tier: 'mainnet',
           usdMicros: 0n,
           ok: false,
           reason: err instanceof Error ? err.message : String(err),
@@ -49,12 +52,18 @@ export async function computeVaultTotalWithDeps(
       ],
     };
   }
-  let total = 0n;
-  for (const p of probes) total += p.usdMicros;
+  let mainnetTotal = 0n;
+  let testnetTotal = 0n;
+  for (const p of probes) {
+    if (p.tier === 'testnet') testnetTotal += p.usdMicros;
+    else mainnetTotal += p.usdMicros;
+  }
   const partial = probes.some((p) => !p.ok);
   return {
     vaultId,
-    usdMicros: total,
+    usdMicros: mainnetTotal + testnetTotal,
+    mainnetUsdMicros: mainnetTotal,
+    testnetUsdMicros: testnetTotal,
     partial,
     lastFetchedMs: deps.nowMs(),
     perChain: probes,

@@ -25,9 +25,16 @@ type AddressBookEntry = Awaited<ReturnType<typeof trpc.addressBookList.query>>['
 type RecentRecipient = Awaited<ReturnType<typeof trpc.recentRecipients.query>>['entries'][number];
 
 const SCOPE_LABELS: Record<SendTokenScope, string> = {
-  dwallet: 'Current dWallet',
-  vault: 'Current Vault / Fee-Payer',
-  everything: 'Entire Vault',
+  dwallet: 'This dWallet only',
+  vault: 'Vault owner (fee payer)',
+  everything: 'All of this Vault',
+};
+
+/** companion tooltip explainers for each scope - same keys as `SCOPE_LABELS`. */
+export const SCOPE_TOOLTIPS: Record<SendTokenScope, string> = {
+  dwallet: 'Send from the dWallet you have selected. This is the identity dapps see.',
+  vault: 'Send from the vault owner account (the fee payer). This is the keyring that pays network gas.',
+  everything: 'Show every sendable balance across this Vault (the owner + all its dWallets).',
 };
 
 const CHAIN_LABELS: Record<SendTokenChain, string> = {

@@ -180,6 +180,24 @@ export function NetworkSelectorPage({
         {tierTitle}
       </div>
 
+      <details className="sp-networkTierExplainer" data-help-toggle="networks-tier-explainer" style={{
+        marginBottom: 12,
+        padding: '8px 12px',
+        borderRadius: 8,
+        border: '1px solid rgba(255,255,255,0.08)',
+        background: 'rgba(255,255,255,0.03)',
+      }}>
+        <summary style={{ cursor: 'pointer', fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.86)' }}>
+          Two network tiers - what's the difference?
+        </summary>
+        <p style={{ fontSize: 11, lineHeight: 1.5, color: 'rgba(255,255,255,0.7)', margin: '8px 0 0' }}>
+          <strong>Vault tier</strong> is where your owner keyring lives and pays gas - the account that funds your dWallet's
+          fee payer. <strong>dWallet tier</strong> is where signed transactions land for dapps - the network each chain in
+          your dWallet actually talks to. They're independent: you can have a Sui-base Vault on mainnet while pointing your
+          dWallet's Solana signing to devnet for testing.
+        </p>
+      </details>
+
       {error && <div className="sp-error">{error}</div>}
       {networkWarning && (
         <div className="sp-muted" style={{ marginBottom: 10, fontSize: 12, color: 'rgba(251, 191, 36, 0.95)' }}>

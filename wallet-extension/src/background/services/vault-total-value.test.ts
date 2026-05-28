@@ -5,8 +5,14 @@ import {
   type ChainBalanceProbe,
 } from './vault-total-value';
 
-function makeProbe(chainKey: string, usdMicros: bigint, ok = true, reason?: string): ChainBalanceProbe {
-  return { chainKey, usdMicros, ok, reason };
+function makeProbe(
+  chainKey: string,
+  usdMicros: bigint,
+  ok = true,
+  reason?: string,
+  tier: 'mainnet' | 'testnet' = 'mainnet',
+): ChainBalanceProbe {
+  return { chainKey, tier, usdMicros, ok, reason };
 }
 
 function depsWithProbes(probes: ChainBalanceProbe[]): VaultTotalDeps {
@@ -88,7 +94,32 @@ describe('computeVaultTotalWithDeps', () => {
     expect(snap.usdMicros).toBe(0n);
     expect(snap.partial).toBe(true);
     expect(snap.perChain).toEqual([
-      { chainKey: '_orchestrator', usdMicros: 0n, ok: false, reason: 'boom' },
+      { chainKey: '_orchestrator', tier: 'mainnet', usdMicros: 0n, ok: false, reason: 'boom' },
     ]);
+  });
+
+  describe('mainnet vs testnet split', () => {
+    it('routes mainnet rows into mainnetUsdMicros and testnet rows into testnetUsdMicros', async () => {
+      const deps = depsWithProbes([
+        makeProbe('sui', 100_000_000n, true, undefined, 'mainnet'),
+        makeProbe('eth', 250_000_000n, true, undefined, 'mainnet'),
+        makeProbe('sol', 75_000_000n, true, undefined, 'testnet'),
+      ]);
+      const snap = await computeVaultTotalWithDeps('vault-a', deps);
+      expect(snap.mainnetUsdMicros).toBe(350_000_000n);
+      expect(snap.testnetUsdMicros).toBe(75_000_000n);
+      expect(snap.usdMicros).toBe(425_000_000n);
+    });
+
+    it('mainnet + testnet both zero when no probes', async () => {
+      const deps: VaultTotalDeps = {
+        listVaultDwalletAddresses: vi.fn(async () => []),
+        probeAllChainsForVault: vi.fn(async () => []),
+        nowMs: () => 1_700_000_000_000,
+      };
+      const snap = await computeVaultTotalWithDeps('vault-empty', deps);
+      expect(snap.mainnetUsdMicros).toBe(0n);
+      expect(snap.testnetUsdMicros).toBe(0n);
+    });
   });
 });

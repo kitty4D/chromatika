@@ -38,14 +38,16 @@ beforeEach(() => {
 const SAMPLE: VaultTotalSnapshot = {
   vaultId: 'vault-a',
   usdMicros: 1_234_560_000n,
+  mainnetUsdMicros: 1_234_560_000n,
+  testnetUsdMicros: 0n,
   partial: false,
   lastFetchedMs: 1_700_000_000_000,
-  perChain: [{ chainKey: 'sui', usdMicros: 1_234_560_000n, ok: true }],
+  perChain: [{ chainKey: 'sui', tier: 'mainnet', usdMicros: 1_234_560_000n, ok: true }],
 };
 
 describe('vault-total-cache', () => {
   it('vaultTotalCacheKey is namespaced + versioned', () => {
-    expect(vaultTotalCacheKey('vault-a')).toBe('chromatika_vault_total_v1_vault-a');
+    expect(vaultTotalCacheKey('vault-a')).toBe('chromatika_vault_total_v2_vault-a');
   });
 
   it('round-trips a snapshot through chrome.storage.session', async () => {
@@ -100,14 +102,39 @@ describe('vault-total-cache', () => {
       const wire = {
         vaultId: 'vault-a',
         usdMicros: '1234560000',
+        mainnetUsdMicros: '1234560000',
+        testnetUsdMicros: '0',
         partial: false,
         lastFetchedMs: 1_700_000_000_000,
-        perChain: [{ chainKey: 'sui', usdMicros: '1234560000', ok: true }],
+        perChain: [{ chainKey: 'sui', tier: 'mainnet', usdMicros: '1234560000', ok: true }],
       };
       const snap = parseStoredWireSnapshot(wire);
       expect(snap).not.toBeNull();
       expect(snap!.usdMicros).toBe(1_234_560_000n);
+      expect(snap!.mainnetUsdMicros).toBe(1_234_560_000n);
+      expect(snap!.testnetUsdMicros).toBe(0n);
       expect(snap!.perChain[0]!.usdMicros).toBe(1_234_560_000n);
+      expect(snap!.perChain[0]!.tier).toBe('mainnet');
+    });
+
+    it('splits mainnet vs testnet across perChain rows', () => {
+      const wire = {
+        vaultId: 'vault-a',
+        usdMicros: '500000000',
+        mainnetUsdMicros: '300000000',
+        testnetUsdMicros: '200000000',
+        partial: false,
+        lastFetchedMs: 1_700_000_000_000,
+        perChain: [
+          { chainKey: 'sui', tier: 'mainnet', usdMicros: '300000000', ok: true },
+          { chainKey: 'sol', tier: 'testnet', usdMicros: '200000000', ok: true },
+        ],
+      };
+      const snap = parseStoredWireSnapshot(wire);
+      expect(snap).not.toBeNull();
+      expect(snap!.mainnetUsdMicros).toBe(300_000_000n);
+      expect(snap!.testnetUsdMicros).toBe(200_000_000n);
+      expect(snap!.perChain[1]!.tier).toBe('testnet');
     });
 
     it('returns null for malformed input', () => {

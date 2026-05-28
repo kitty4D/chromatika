@@ -16,6 +16,14 @@ const BASE_LABEL: Record<BaseChain, string> = {
   solana: 'Solana',
 };
 
+/** group-header label is "<base>-base dWallet Vaults" so the user understands that
+ *  one picker row = one Vault (not a base chain or a dWallet). prevents the audit
+ *  finding where users read "Sui vaults" as "vaults on the Sui chain". */
+const VAULTS_GROUP_LABEL: Record<BaseChain, string> = {
+  sui: 'Sui-base dWallet Vaults',
+  solana: 'Solana-base dWallet Vaults',
+};
+
 export function vaultAvatarUrl(v: VaultSummary, h?: VaultNameHint): string | null {
   if (!h) return null;
   if (v.baseChain === 'solana') return h.snsAvatarUrl;
@@ -175,7 +183,7 @@ export function VaultPicker({
           {err && <div className="sp-error" style={{ padding: '6px 10px' }}>{err}</div>}
           {/* primary group: active chain's vaults */}
           <div className="sp-vaultPickerGroup" role="presentation">
-            <div className="sp-vaultPickerGroupLabel">{BASE_LABEL[activeChain]} vaults</div>
+            <div className="sp-vaultPickerGroupLabel">{VAULTS_GROUP_LABEL[activeChain]}</div>
             {primaryVaults.map((v) => (
               <VaultPickerItem
                 key={v.id}
@@ -190,7 +198,7 @@ export function VaultPicker({
           <div className="sp-vaultPickerDivider" role="presentation" />
           {/* secondary group: other chain's vaults OR a CTA when empty */}
           <div className="sp-vaultPickerGroup" role="presentation">
-            <div className="sp-vaultPickerGroupLabel">{BASE_LABEL[otherChain]} vaults</div>
+            <div className="sp-vaultPickerGroupLabel">{VAULTS_GROUP_LABEL[otherChain]}</div>
             {secondaryVaults.length > 0 ? (
               secondaryVaults.map((v) => (
                 <VaultPickerItem
@@ -212,11 +220,11 @@ export function VaultPicker({
                 }}
               >
                 <Plus size={14} strokeWidth={2} aria-hidden />
-                <span>Create a dWallet vault on {BASE_LABEL[otherChain]}</span>
+                <span>Create a dWallet Vault on {BASE_LABEL[otherChain]}</span>
                 <span className="sp-vaultPickerCtaArrow" aria-hidden>→</span>
               </button>
             ) : (
-              <div className="sp-vaultPickerEmpty">no {BASE_LABEL[otherChain]} vaults</div>
+              <div className="sp-vaultPickerEmpty">no {BASE_LABEL[otherChain]}-base Vaults</div>
             )}
           </div>
         </div>

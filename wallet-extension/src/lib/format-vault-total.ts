@@ -38,3 +38,23 @@ export function formatVaultTotalUsd(
   const body = format === 'compact' ? compactFormat(input.usdMicros) : exactFormat(input.usdMicros);
   return input.partial ? `~${body}` : body;
 }
+
+export type VaultTieredTotalsInput = {
+  mainnetUsdMicros: bigint;
+  testnetUsdMicros: bigint;
+  partial: boolean;
+};
+
+/** format the mainnet + testnet rows for the BTTF time-circuits readout. */
+export function formatVaultTieredTotals(
+  input: VaultTieredTotalsInput,
+  format: VaultTotalFormat,
+): { mainnetText: string; testnetText: string } {
+  const fmt = (m: bigint) => (format === 'compact' ? compactFormat(m) : exactFormat(m));
+  const mainnetBody = fmt(input.mainnetUsdMicros);
+  const testnetBody = fmt(input.testnetUsdMicros);
+  return {
+    mainnetText: input.partial ? `~${mainnetBody}` : mainnetBody,
+    testnetText: input.partial ? `~${testnetBody}` : testnetBody,
+  };
+}

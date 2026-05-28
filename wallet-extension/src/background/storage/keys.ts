@@ -150,8 +150,9 @@ export const VAULT_SCOPED_KEYS = {
   policyAuditPrefix: (vaultId: string) => `chromatika_policy_audit_v1_${vaultId}_` as const,
   /** deso owner public key link for a vault. */
   desoOwnerLink: (vaultId: string) => `chromatika_deso_owner_link_v1_${vaultId}` as const,
-  /** per-vault USD aggregate snapshot for the rocket-gauge total + VaultPicker rows. session-scoped, 5-min TTL. */
-  vaultTotal: (vaultId: string) => `chromatika_vault_total_v1_${vaultId}` as const,
+  /** per-vault USD aggregate snapshot for the rocket-gauge total + VaultPicker rows. session-scoped, 5-min TTL.
+   *  v2 added per-row `tier: 'mainnet' | 'testnet'` + headline split (`mainnetUsdMicros` / `testnetUsdMicros`). */
+  vaultTotal: (vaultId: string) => `chromatika_vault_total_v2_${vaultId}` as const,
   /** per-vault flag: user dismissed the Home-screen "create your first dWallets" prompt. */
   dwalletCreatePromptDismissed: (vaultId: string) =>
     `chromatika_dwallet_create_prompt_dismissed_v1_${vaultId}` as const,

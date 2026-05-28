@@ -2,6 +2,7 @@ import { useState, type CSSProperties } from 'react';
 import type { WalletSetupSurface } from '../internal';
 import type { WalletSetupHook } from '../use-wallet-setup';
 import { hardwareConnectOptionLabels } from '../hardware-connect-preview';
+import { GlossaryTerm } from '@/ui/components/GlossaryTerm';
 
 /**
  * choose step: primary onboarding entry point.
@@ -106,8 +107,14 @@ export function ChooseStep({
       </div>
       {mode !== 'addVault' && (
         <p className="ws-choose-lead">
-          Pick how you want to sign in. Each option creates a <strong>dWallet Vault</strong>: the container you'll
-          use to create dWallets across the chains Chromatika supports.
+          Pick how you want to sign in. We'll create your owner account, which holds keys for sending and
+          receiving across every chain Chromatika supports.{' '}
+          <GlossaryTerm
+            term="dWallet Vault"
+            definition="Your 'owner account' on Chromatika. It pays the network fees and holds all your dWallets (one identity that spans multiple chains). One Chromatika install can have many dWallet Vaults; you switch between them like accounts in Metamask."
+          >
+            What's a "dWallet Vault"?
+          </GlossaryTerm>
         </p>
       )}
 

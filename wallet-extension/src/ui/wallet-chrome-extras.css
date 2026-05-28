@@ -1609,15 +1609,36 @@ html[data-appearance='light'] .cv-baseCard-faucetLink:focus-visible {
 
 /* Tier-2 hero treatment for the active dWallet card (one per screen rule).
  * combine border highlight + halo radial behind + the website's hit-card lift on hover.
- */
+ * audit fix: ring is now visibly stronger (was too faint) and a small colored dot in the
+ * top-right marks the card as ACTIVE without adding word noise. */
 .cd-card--active {
   position: relative;
   isolation: isolate;
-  border-color: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 55%, transparent);
+  border-color: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 80%, transparent);
   box-shadow:
-    0 0 0 1px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 25%, transparent),
+    0 0 0 2px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 55%, transparent),
+    0 0 18px -2px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 50%, transparent),
     0 1px 0 oklch(1 0 0 / 0.08) inset,
     var(--shadow-float, 0 12px 40px oklch(0.1 0.06 280 / 0.45));
+}
+
+.cd-card--active::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 100%, transparent);
+  box-shadow: 0 0 8px color-mix(in oklch, var(--accent-2, oklch(0.72 0.18 290)) 70%, transparent);
+  z-index: 1;
+  pointer-events: none;
+}
+
+html[data-ika-chain='solana'] .cd-card--active::after {
+  background: oklch(0.78 0.22 152);
+  box-shadow: 0 0 8px oklch(0.78 0.22 152 / 0.7);
 }
 
 .cd-card--active::before {
@@ -3064,7 +3085,8 @@ html[data-ika-chain='solana'] .dp-receiveSheet {
   border: 1px solid rgba(252, 165, 165, 0.4);
 }
 
-/* vault total line — cv-vaultTotal* */
+/* vault total line - small mainnet-only pill in VaultContextHeader for non-home tabs.
+   the home tab shows the full BTTF time-circuits readout inside the cockpit. */
 
 .cv-vaultTotalRow {
   display: flex;
@@ -3072,27 +3094,294 @@ html[data-ika-chain='solana'] .dp-receiveSheet {
   padding: 4px 0 2px;
 }
 
-.cv-vaultTotal {
-  background: transparent;
-  border: 0;
-  padding: 0;
-  font: inherit;
-  color: var(--cv-text, #f5f5f5);
-  font-size: 18px;
+.cv-headerTotalPill {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 3px 10px 4px;
+  border-radius: 999px;
+  background: rgba(255, 105, 0, 0.08);
+  border: 1px solid rgba(255, 105, 0, 0.18);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.cv-headerTotalPill-kicker {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(255, 168, 110, 0.7);
+}
+
+.cv-headerTotalPill-amt {
+  font-size: 13px;
   font-weight: 600;
-  letter-spacing: -0.01em;
-  cursor: pointer;
+  color: rgba(255, 200, 150, 0.92);
 }
 
-.cv-vaultTotal:hover {
-  opacity: 0.85;
-}
-
-.cv-vaultTotal--pending {
+.cv-headerTotalPill--pending {
   animation: vault-total-pulse 1.4s ease-in-out infinite;
 }
 
 @keyframes vault-total-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }
+}
+
+/* DSEG7-Classic - bundled segmented-LED webfont (SIL OFL 1.1).
+   place `DSEG7Classic-Regular.woff2` at `wallet-extension/public/fonts/`.
+   if missing, the @font-face errors silently and the fallback (ui-monospace + tabular-nums)
+   still gives a credible LED dashboard feel because we layer the glow + ghost segments on top. */
+@font-face {
+  font-family: 'DSEG7-Classic';
+  src: url('/fonts/DSEG7Classic-Regular.woff2') format('woff2');
+  font-display: swap;
+  font-style: normal;
+  font-weight: 400;
+}
+
+/* BTTF Time Circuits panel - three-row segmented-LED readout above the cockpit.
+   row 1 = mainnet (orange-red, biggest), row 2 = testnet (amber), row 3 = clock (green).
+   sits inside `.cv-cockpitAndCard` above `<RocketSeatGauge>`. */
+
+.cv-timeCircuits {
+  display: grid;
+  gap: 4px;
+  padding: 10px 14px;
+  margin: 0 0 8px;
+  border-radius: 10px;
+  background: linear-gradient(180deg, #1a0d05 0%, #0a0500 100%);
+  border: 1px solid #2a1408;
+  box-shadow: inset 0 1px 0 rgba(255, 140, 40, 0.06), 0 2px 6px rgba(0, 0, 0, 0.4);
+}
+
+.cv-timeCircuits-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 2px 4px;
+  gap: 12px;
+}
+
+.cv-timeCircuits-row--mainnet {
+  background: transparent;
+  border: 0;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+}
+
+.cv-timeCircuits-row--mainnet:hover .cv-timeCircuits-digits--lg {
+  filter: brightness(1.08);
+}
+
+.cv-timeCircuits-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #8a4a1c;
+  white-space: nowrap;
+}
+
+.cv-timeCircuits-row--testnet .cv-timeCircuits-label {
+  color: #8a6a1c;
+}
+
+.cv-timeCircuits-row--clock .cv-timeCircuits-label {
+  color: #2a6a2a;
+}
+
+.cv-timeCircuits-digits {
+  font-family: 'DSEG7-Classic', ui-monospace, 'Courier New', monospace;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.04em;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.cv-timeCircuits-digits--lg {
+  font-size: 26px;
+  color: #ff6900;
+  text-shadow:
+    0 0 6px rgba(255, 105, 0, 0.55),
+    0 0 14px rgba(240, 60, 0, 0.32);
+}
+
+.cv-timeCircuits-digits--md {
+  font-size: 18px;
+  color: #ffc000;
+  text-shadow:
+    0 0 5px rgba(255, 192, 0, 0.55),
+    0 0 12px rgba(240, 170, 0, 0.28);
+}
+
+.cv-timeCircuits-digits--sm {
+  font-size: 14px;
+  color: #5cd653;
+  text-shadow:
+    0 0 4px rgba(92, 214, 83, 0.55),
+    0 0 10px rgba(60, 200, 50, 0.28);
+}
+
+.cv-timeCircuits[data-funded='false'] .cv-timeCircuits-digits {
+  color: #4a3a2a;
+  text-shadow: none;
+  filter: saturate(0.4);
+}
+
+/* burn-on-change flash; one-shot 600ms */
+.cv-timeCircuits-digits[data-flashing='true'] {
+  animation: cv-timeCircuits-burn 600ms ease-out;
+}
+
+@keyframes cv-timeCircuits-burn {
+  0%   { filter: brightness(1.6) saturate(1.4); }
+  60%  { filter: brightness(1.2) saturate(1.1); }
+  100% { filter: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cv-timeCircuits-digits[data-flashing='true'] {
+    animation: none;
+  }
+}
+
+/* cockpit help overlay - frosted strip across the bottom of the cockpit when
+   `uiHelpHints` is on. parent `.cv-cockpitAndCard` is already `position: relative`
+   so this anchors to it. */
+
+.cv-cockpitHelpOverlay {
+  position: absolute;
+  bottom: 0;
+  left: 4%;
+  right: 4%;
+  padding: 8px 12px;
+  border-radius: 10px 10px 0 0;
+  background: rgba(20, 14, 30, 0.65);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: none;
+  z-index: 3;
+  pointer-events: none;
+}
+
+.cv-cockpitHelpOverlay-icon {
+  color: rgba(255, 168, 110, 0.7);
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.cv-cockpitHelpOverlay-text {
+  font-size: 11px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.86);
+  margin: 0;
+}
+
+.cv-cockpitHelpOverlay strong {
+  color: rgba(255, 200, 150, 0.95);
+  font-weight: 700;
+}
+
+@supports not (backdrop-filter: blur(8px)) {
+  .cv-cockpitHelpOverlay {
+    background: rgba(12, 8, 18, 0.92);
+  }
+}
+
+/* GlossaryTerm chip - shared primitive for explaining chromatika-native jargon
+   inline. small click-toggle popover; no portal, no positioning library. */
+
+.cd-glossary {
+  position: relative;
+  display: inline-flex;
+  align-items: baseline;
+  vertical-align: baseline;
+}
+
+.cd-glossary-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(124, 92, 252, 0.1);
+  border: 1px solid rgba(124, 92, 252, 0.28);
+  color: rgba(216, 180, 254, 0.96);
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 0.85em;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.cd-glossary-chip:hover,
+.cd-glossary-chip:focus-visible {
+  background: rgba(124, 92, 252, 0.2);
+  border-color: rgba(124, 92, 252, 0.55);
+  outline: none;
+}
+
+.cd-glossary-chipMark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: rgba(124, 92, 252, 0.4);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 9px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.cd-glossary-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 30;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 10px 12px;
+  background: rgba(20, 20, 28, 0.97);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.55);
+  width: max-content;
+  max-width: 260px;
+  font-size: 11px;
+  line-height: 1.45;
+  font-weight: 400;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.cd-glossary-popTitle {
+  font-size: 11px;
+  font-weight: 700;
+  color: rgba(216, 180, 254, 0.95);
+  letter-spacing: 0.02em;
+}
+
+.cd-glossary-popBody {
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.cd-glossary-popLink {
+  font-size: 10px;
+  color: rgba(124, 92, 252, 0.9);
+  text-decoration: underline;
+  margin-top: 4px;
+}
+
+.cd-glossary-popLink:hover {
+  color: rgba(216, 180, 254, 1);
 }

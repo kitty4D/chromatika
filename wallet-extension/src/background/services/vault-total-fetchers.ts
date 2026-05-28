@@ -37,24 +37,35 @@ import {
 import { getCustomNetworks } from '@/background/network/custom-networks';
 import { getDeSoNodeUrl } from '@/background/chains/deso/deso-node-client';
 import type { ChainBalanceProbe, VaultDwalletAddresses } from '@/background/services/vault-total-value';
+import type { NetworkTier } from '@/background/services/vault-total-cache';
 
 /**
- * resolved set of mainnet endpoints used by every chain probe.
+ * resolved set of endpoints used by every chain probe + the tier each resolved chain
+ * sits on (mainnet vs testnet/devnet).
  *
  * shared shape between the per-vault path (where each field is resolved from the vault's
  * stored network preference) and the leaderboard path (where the active vault's preference
  * is the default for ALL probes regardless of which dwallet we're aggregating). lifted to a
  * dedicated type so `probeAllChainsForAddresses` is a pure function of `(addresses, bundle)`
  * and can be reused from outside the vault context.
+ *
+ * tiers are stamped onto each `ChainBalanceProbe` so the aggregator can split the headline
+ * total: testnet balances priced against the mainnet oracle don't get swept into the
+ * "real money" number.
  */
 export type ChainProbeNetworkBundle = {
   suiNetwork: SuiNetworkId;
   suiGraphqlUrl: string;
+  suiTier: NetworkTier;
   solRpcUrl: string | null;
+  solTier: NetworkTier;
   btcEsplora: string | null;
+  btcTier: NetworkTier;
   aptFullnode: string | null;
+  aptTier: NetworkTier;
   desoNodeUrl: string | null;
-  evmChains: EvmNetwork[];
+  /** evm rows tagged per-row since user-added custom rows can be either tier. */
+  evmChains: Array<{ net: EvmNetwork; tier: NetworkTier }>;
 };
 
 // ---------------------------------------------------------------------------
@@ -173,10 +184,17 @@ const _evmProbeFailedUntil = new Map<string, number>();
 const EVM_PROBE_FAIL_COOLDOWN_MS = 10 * 60_000; // 10 min backoff on failure
 const EVM_PROBE_TIMEOUT_MS = 15_000;
 
-async function probeEvm(addr: string, rpcUrl: string, chainKey: string, nativeSymbol: string, chainId: number): Promise<ChainBalanceProbe> {
+async function probeEvm(
+  addr: string,
+  rpcUrl: string,
+  chainKey: string,
+  nativeSymbol: string,
+  chainId: number,
+  tier: NetworkTier,
+): Promise<ChainBalanceProbe> {
   const cooldownEnd = _evmProbeFailedUntil.get(chainKey);
   if (cooldownEnd && Date.now() < cooldownEnd) {
-    return { chainKey, usdMicros: 0n, ok: false, reason: 'cooldown-after-failure' };
+    return { chainKey, tier, usdMicros: 0n, ok: false, reason: 'cooldown-after-failure' };
   }
   try {
     // staticNetwork with explicit chain id kills the eth_chainId preflight round-trip
@@ -192,15 +210,20 @@ async function probeEvm(addr: string, rpcUrl: string, chainKey: string, nativeSy
     const amount = Number(formatEther(wei));
     const price = await getPrice(nativeSymbol.toLowerCase());
     _evmProbeFailedUntil.delete(chainKey);
-    if (price <= 0) return { chainKey, usdMicros: 0n, ok: false, reason: 'no-price' };
-    return { chainKey, usdMicros: toMicrosUsd(amount, price), ok: true };
+    if (price <= 0) return { chainKey, tier, usdMicros: 0n, ok: false, reason: 'no-price' };
+    return { chainKey, tier, usdMicros: toMicrosUsd(amount, price), ok: true };
   } catch (e) {
     _evmProbeFailedUntil.set(chainKey, Date.now() + EVM_PROBE_FAIL_COOLDOWN_MS);
-    return { chainKey, usdMicros: 0n, ok: false, reason: errMsg(e) };
+    return { chainKey, tier, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
 
-async function probeSui(addr: string, graphqlUrl: string, network: 'mainnet' | 'testnet'): Promise<ChainBalanceProbe> {
+async function probeSui(
+  addr: string,
+  graphqlUrl: string,
+  network: 'mainnet' | 'testnet',
+  tier: NetworkTier,
+): Promise<ChainBalanceProbe> {
   try {
     // fresh SuiGraphQLClient (not the shared session one) is intentional - we only call
     // listCoins here, which doesn't need the installGetObjectsChunking wrapper. probing
@@ -230,25 +253,25 @@ async function probeSui(addr: string, graphqlUrl: string, network: 'mainnet' | '
       if (!res.hasNextPage) break;
       cursor = res.cursor ?? null;
     }
-    return { chainKey: 'sui', usdMicros: totalUsdMicros, ok: true };
+    return { chainKey: 'sui', tier, usdMicros: totalUsdMicros, ok: true };
   } catch (e) {
-    return { chainKey: 'sui', usdMicros: 0n, ok: false, reason: errMsg(e) };
+    return { chainKey: 'sui', tier, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
 
-async function probeSolana(addr: string, rpcUrl: string): Promise<ChainBalanceProbe> {
+async function probeSolana(addr: string, rpcUrl: string, tier: NetworkTier): Promise<ChainBalanceProbe> {
   try {
     const conn = new Connection(rpcUrl, 'confirmed');
     const lamports = await conn.getBalance(new PublicKey(addr));
     const sol = lamports / 1_000_000_000;
     const price = await getPrice('sol');
-    return { chainKey: 'sol', usdMicros: toMicrosUsd(sol, price), ok: true };
+    return { chainKey: 'sol', tier, usdMicros: toMicrosUsd(sol, price), ok: true };
   } catch (e) {
-    return { chainKey: 'sol', usdMicros: 0n, ok: false, reason: errMsg(e) };
+    return { chainKey: 'sol', tier, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
 
-async function probeSolanaSpl(addr: string, rpcUrl: string): Promise<ChainBalanceProbe> {
+async function probeSolanaSpl(addr: string, rpcUrl: string, tier: NetworkTier): Promise<ChainBalanceProbe> {
   try {
     const { listSolanaSplBalances } = await import('@/background/chains/solana-list-spl');
     const conn = new Connection(rpcUrl, 'confirmed');
@@ -262,13 +285,13 @@ async function probeSolanaSpl(addr: string, rpcUrl: string): Promise<ChainBalanc
       if (!price || price <= 0) continue;
       totalUsdMicros += toMicrosUsd(amount, price);
     }
-    return { chainKey: 'sol-spl', usdMicros: totalUsdMicros, ok: true };
+    return { chainKey: 'sol-spl', tier, usdMicros: totalUsdMicros, ok: true };
   } catch (e) {
-    return { chainKey: 'sol-spl', usdMicros: 0n, ok: false, reason: errMsg(e) };
+    return { chainKey: 'sol-spl', tier, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
 
-async function probeBtc(addr: string, esploraBase: string): Promise<ChainBalanceProbe> {
+async function probeBtc(addr: string, esploraBase: string, tier: NetworkTier): Promise<ChainBalanceProbe> {
   try {
     const r = await fetch(`${esploraBase}/address/${addr}`);
     if (!r.ok) throw new Error(`esplora ${r.status}`);
@@ -278,13 +301,15 @@ async function probeBtc(addr: string, esploraBase: string): Promise<ChainBalance
     const sats = json.chain_stats.funded_txo_sum - json.chain_stats.spent_txo_sum;
     const btc = sats / 100_000_000;
     const price = await getPrice('btc');
-    return { chainKey: 'btc', usdMicros: toMicrosUsd(btc, price), ok: true };
+    return { chainKey: 'btc', tier, usdMicros: toMicrosUsd(btc, price), ok: true };
   } catch (e) {
-    return { chainKey: 'btc', usdMicros: 0n, ok: false, reason: errMsg(e) };
+    return { chainKey: 'btc', tier, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
 
 async function probeDeSo(addr: string, nodeUrl: string): Promise<ChainBalanceProbe> {
+  // deso has no canonical testnet, always tag mainnet.
+  const tier: NetworkTier = 'mainnet';
   try {
     const r = await fetch(`${nodeUrl.replace(/\/$/, '')}/api/v0/get-users-stateless`, {
       method: 'POST',
@@ -296,13 +321,13 @@ async function probeDeSo(addr: string, nodeUrl: string): Promise<ChainBalancePro
     const nanos = json.UserList?.[0]?.BalanceNanos ?? 0;
     const deso = nanos / 1_000_000_000;
     const price = await getPrice('deso');
-    return { chainKey: 'deso', usdMicros: toMicrosUsd(deso, price), ok: true };
+    return { chainKey: 'deso', tier, usdMicros: toMicrosUsd(deso, price), ok: true };
   } catch (e) {
-    return { chainKey: 'deso', usdMicros: 0n, ok: false, reason: errMsg(e) };
+    return { chainKey: 'deso', tier, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
 
-async function probeAptos(addr: string, fullnodeUrl: string): Promise<ChainBalanceProbe> {
+async function probeAptos(addr: string, fullnodeUrl: string, tier: NetworkTier): Promise<ChainBalanceProbe> {
   try {
     // lazy-import to keep the SW cold-load bundle lean.
     const { Aptos, AptosConfig, Network } = await import('@aptos-labs/ts-sdk');
@@ -311,9 +336,9 @@ async function probeAptos(addr: string, fullnodeUrl: string): Promise<ChainBalan
     const balance = await aptos.getAccountAPTAmount({ accountAddress: addr });
     const apt = Number(balance) / 100_000_000;
     const price = await getPrice('apt');
-    return { chainKey: 'apt', usdMicros: toMicrosUsd(apt, price), ok: true };
+    return { chainKey: 'apt', tier, usdMicros: toMicrosUsd(apt, price), ok: true };
   } catch (e) {
-    return { chainKey: 'apt', usdMicros: 0n, ok: false, reason: errMsg(e) };
+    return { chainKey: 'apt', tier, usdMicros: 0n, ok: false, reason: errMsg(e) };
   }
 }
 
@@ -323,18 +348,24 @@ async function probeAptos(addr: string, fullnodeUrl: string): Promise<ChainBalan
 
 const TESTNET_NAME_KEYWORDS = ['testnet', 'goerli', 'sepolia', 'holesky', 'mumbai', 'devnet', 'fuji', 'alfajores'];
 
+function evmTierByName(net: EvmNetwork): NetworkTier {
+  const nameLower = net.name.toLowerCase();
+  return TESTNET_NAME_KEYWORDS.some((kw) => nameLower.includes(kw)) ? 'testnet' : 'mainnet';
+}
+
 /**
- * returns all EVM networks worth probing for mainnet balance (built-ins + custom,
- * testnets filtered out). built-in EVM rows are all mainnet so the name-keyword
- * check is really just a safety net for custom user-added rows.
+ * returns all EVM networks worth probing tagged with their tier. built-in EVM rows are
+ * all mainnet; custom rows can be either tier and are detected via name keywords (the
+ * user's row label is what we have to go on - no explicit `isTestnet` flag).
+ *
+ * unlike the old `evmChainsToProbe`, this does NOT drop testnet rows - they're handed
+ * to the probe with `tier: 'testnet'` so the aggregator can sum them into the testnet
+ * total. mainnet-only consumers can filter on `.tier === 'mainnet'`.
  */
-async function evmChainsToProbe(): Promise<EvmNetwork[]> {
+async function evmChainsToProbeAllTiers(): Promise<Array<{ net: EvmNetwork; tier: NetworkTier }>> {
   const customEvms = await getCustomNetworks().then((s) => s.evm).catch(() => [] as EvmNetwork[]);
   const merged = mergeEvmNetworksWithCustom(customEvms);
-  return merged.filter((n) => {
-    const nameLower = n.name.toLowerCase();
-    return !TESTNET_NAME_KEYWORDS.some((kw) => nameLower.includes(kw));
-  });
+  return merged.map((net) => ({ net, tier: evmTierByName(net) }));
 }
 
 // ---------------------------------------------------------------------------
@@ -371,10 +402,11 @@ export async function probeAllChainsForAddresses(
     }
   }
 
-  // --- EVM: fan out over all mainnet chains, cap at 4 parallel probes per dwallet ---
+  // --- EVM: fan out across every row in bundle.evmChains (mainnet + user-added testnets),
+  //     cap at 4 parallel probes per dwallet to avoid hammering public RPCs ---
   if (addresses.evm) {
-    const evmProbes: Promise<ChainBalanceProbe>[] = bundle.evmChains.map((net) =>
-      probeEvm(addresses.evm!, net.rpcUrl, net.id, net.symbol, net.chainId),
+    const evmProbes: Promise<ChainBalanceProbe>[] = bundle.evmChains.map(({ net, tier }) =>
+      probeEvm(addresses.evm!, net.rpcUrl, net.id, net.symbol, net.chainId, tier),
     );
     await runBatched(evmProbes, 4);
   }
@@ -383,24 +415,28 @@ export async function probeAllChainsForAddresses(
   const otherProbes: Promise<ChainBalanceProbe>[] = [];
 
   if (addresses.sui) {
-    otherProbes.push(probeSui(addresses.sui, bundle.suiGraphqlUrl, bundle.suiNetwork));
+    otherProbes.push(probeSui(addresses.sui, bundle.suiGraphqlUrl, bundle.suiNetwork, bundle.suiTier));
   }
 
   if (addresses.solana && bundle.solRpcUrl) {
-    otherProbes.push(probeSolana(addresses.solana, bundle.solRpcUrl));
-    otherProbes.push(probeSolanaSpl(addresses.solana, bundle.solRpcUrl));
+    otherProbes.push(probeSolana(addresses.solana, bundle.solRpcUrl, bundle.solTier));
+    otherProbes.push(probeSolanaSpl(addresses.solana, bundle.solRpcUrl, bundle.solTier));
   }
 
   if (addresses.btcP2wpkh && bundle.btcEsplora) {
-    otherProbes.push(probeBtc(addresses.btcP2wpkh, bundle.btcEsplora).then((p) => ({ ...p, chainKey: 'btc-p2wpkh' })));
+    otherProbes.push(
+      probeBtc(addresses.btcP2wpkh, bundle.btcEsplora, bundle.btcTier).then((p) => ({ ...p, chainKey: 'btc-p2wpkh' })),
+    );
   }
 
   if (addresses.btcP2tr && bundle.btcEsplora) {
-    otherProbes.push(probeBtc(addresses.btcP2tr, bundle.btcEsplora).then((p) => ({ ...p, chainKey: 'btc-p2tr' })));
+    otherProbes.push(
+      probeBtc(addresses.btcP2tr, bundle.btcEsplora, bundle.btcTier).then((p) => ({ ...p, chainKey: 'btc-p2tr' })),
+    );
   }
 
   if (addresses.aptos && bundle.aptFullnode) {
-    otherProbes.push(probeAptos(addresses.aptos, bundle.aptFullnode));
+    otherProbes.push(probeAptos(addresses.aptos, bundle.aptFullnode, bundle.aptTier));
   }
 
   if (addresses.deso && bundle.desoNodeUrl) {
@@ -417,6 +453,9 @@ export async function probeAllChainsForAddresses(
  * the ChromaLab leaderboard uses this since the dWallets it aggregates may belong
  * to ANY owner - there's no per-dwallet network preference to honor, so we just
  * use chromatika's built-in mainnet defaults.
+ *
+ * every tier is `'mainnet'` and the EVM list is filtered to mainnet-only rows;
+ * the leaderboard intentionally only sums mainnet for the public score.
  */
 export async function resolveDefaultNetworkBundle(): Promise<ChainProbeNetworkBundle> {
   const suiNetwork: SuiNetworkId = 'mainnet';
@@ -442,14 +481,20 @@ export async function resolveDefaultNetworkBundle(): Promise<ChainProbeNetworkBu
 
   const desoNodeUrl = await getDeSoNodeUrl().catch(() => null);
 
-  const evmChains = await evmChainsToProbe();
+  const allTiers = await evmChainsToProbeAllTiers();
+  // leaderboard path: mainnet-only EVM rows
+  const evmChains = allTiers.filter((r) => r.tier === 'mainnet');
 
   return {
     suiNetwork,
     suiGraphqlUrl,
+    suiTier: 'mainnet',
     solRpcUrl,
+    solTier: 'mainnet',
     btcEsplora,
+    btcTier: 'mainnet',
     aptFullnode,
+    aptTier: 'mainnet',
     desoNodeUrl,
     evmChains,
   };
@@ -497,25 +542,35 @@ export async function probeAllChainsForVaultDefault(
   // resolve non-EVM endpoint strings using the vault's stored prefs.
   const suiNetwork: SuiNetworkId = registrySuiIdToSuiNetworkId(dwNet.suiNetworkId);
   const suiGraphqlUrl = graphqlUrlForNetwork(suiNetwork);
+  const suiTier: NetworkTier = dwNet.suiNetworkId === 'sui-mainnet' ? 'mainnet' : 'testnet';
   const solRpcUrl = resolveSolanaRpcUrl(dwNet.solana);
+  const solTier: NetworkTier = dwNet.solana.solNetworkId === 'sol-mainnet' ? 'mainnet' : 'testnet';
 
   const btcNet = BUILTIN_BITCOIN.find((n) => n.id === dwNet.btcNetworkId);
   const btcEsplora = btcNet?.esploraUrl ?? null;
+  const btcTier: NetworkTier = dwNet.btcNetworkId === 'btc-mainnet' ? 'mainnet' : 'testnet';
 
   const aptNet = BUILTIN_APTOS.find((n) => n.id === dwNet.aptNetworkId);
   const aptFullnode = aptNet?.rpcUrl ?? null;
+  const aptTier: NetworkTier = dwNet.aptNetworkId === 'apt-mainnet' ? 'mainnet' : 'testnet';
 
   const desoNodeUrl = await getDeSoNodeUrl().catch(() => null);
 
-  // build the list of mainnet EVM networks once, shared across all dwallets.
-  const evmChains = await evmChainsToProbe();
+  // build the list of EVM networks once, shared across all dwallets. user-added
+  // testnet rows get included with `tier: 'testnet'` so the aggregator can sum
+  // them into the testnet headline.
+  const evmChains = await evmChainsToProbeAllTiers();
 
   const bundle: ChainProbeNetworkBundle = {
     suiNetwork,
     suiGraphqlUrl,
+    suiTier,
     solRpcUrl,
+    solTier,
     btcEsplora,
+    btcTier,
     aptFullnode,
+    aptTier,
     desoNodeUrl,
     evmChains,
   };
@@ -524,15 +579,20 @@ export async function probeAllChainsForVaultDefault(
   // we use a map so that if both SECP256K1 and ED25519 expose a sui address, we sum them.
   // EVM: a dWallet has one address on all chains (same secp256k1-derived address), so each
   // (address, evmChain) pair gets a unique chainKey like "evm-1", "evm-8453", etc.
-  const chainTotals = new Map<string, { usdMicros: bigint; ok: boolean; reason?: string }>();
+  // tier is captured on first sight per chainKey - all rows for a given chain are the same tier.
+  const chainTotals = new Map<
+    string,
+    { tier: NetworkTier; usdMicros: bigint; ok: boolean; reason?: string }
+  >();
 
   function mergeProbe(p: ChainBalanceProbe) {
     const existing = chainTotals.get(p.chainKey);
     if (!existing) {
-      chainTotals.set(p.chainKey, { usdMicros: p.usdMicros, ok: p.ok, reason: p.reason });
+      chainTotals.set(p.chainKey, { tier: p.tier, usdMicros: p.usdMicros, ok: p.ok, reason: p.reason });
       return;
     }
     chainTotals.set(p.chainKey, {
+      tier: existing.tier,
       usdMicros: existing.usdMicros + p.usdMicros,
       ok: existing.ok && p.ok,
       reason: existing.reason ?? p.reason,
@@ -546,6 +606,7 @@ export async function probeAllChainsForVaultDefault(
 
   return Array.from(chainTotals.entries()).map(([chainKey, v]) => ({
     chainKey,
+    tier: v.tier,
     usdMicros: v.usdMicros,
     ok: v.ok,
     reason: v.reason,

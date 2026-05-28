@@ -836,7 +836,7 @@ export function SettingsPage({
           <MenuRow
             icon={<Boxes size={16} strokeWidth={2} />}
             title="vault network"
-            desc="fee payer / owner chains for the active vault"
+            desc="Owner chains - the account that pays gas for your vault"
             onClick={() => {
               setNetworkTier('vault');
               setStab('networks');

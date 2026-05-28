@@ -79,8 +79,12 @@ function fromWire(w: WireSnapshot): DWalletPortfolioSnapshot {
     usdMicros: BigInt(w.usdMicros),
     partial: w.partial,
     lastFetchedMs: w.lastFetchedMs,
+    // leaderboard probes are always mainnet (see resolveDefaultNetworkBundle), so the
+    // wire format drops `tier` and we re-stamp on read. if this ever needs to honor
+    // testnet rows, add tier to the wire format here.
     perChain: w.perChain.map((p) => ({
       chainKey: p.chainKey,
+      tier: 'mainnet' as const,
       usdMicros: BigInt(p.usdMicros),
       ok: p.ok,
       reason: p.reason,

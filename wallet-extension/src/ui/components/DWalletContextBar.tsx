@@ -75,9 +75,10 @@ function NetworkSwitcherPill({
         type="button"
         onClick={() => setOpen(!open)}
         disabled={busy}
-        title={`switch ${ikaMode} dWallet network`}
+        title={`Signing network for this dWallet (where dapp transactions land). Separate from your Vault's fee-payer network. Current: ${active?.name ?? 'unknown'}.`}
         aria-haspopup="listbox"
         aria-expanded={open}
+        aria-label={`signing network: ${active?.name ?? 'unknown'} (click to change)`}
         style={{
           fontSize: 10,
           padding: '2px 8px',
@@ -91,7 +92,7 @@ function NetworkSwitcherPill({
           whiteSpace: 'nowrap',
         }}
       >
-        {active?.name ?? 'network'} {open ? '▴' : '▾'}
+        signing: {active?.name ?? 'network'} {open ? '▴' : '▾'}
       </button>
       {open && (
         <div

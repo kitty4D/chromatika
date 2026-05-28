@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { ArrowDownLeft, ArrowLeftRight, ArrowUpRight, CircleHelp, RefreshCw } from 'lucide-react';
 import { RocketSeatGauge, type VaultHealthVisual } from '@/ui/components/RocketSeatGauge';
 import { ActionBtn } from '@/ui/components/ActionBtn';
+import { VaultTimeCircuits } from '@/ui/components/VaultTimeCircuits';
 import { ikaFromBaseUnits, suiFromMist } from '@/lib/sui-amount';
 import type { Balances, Networks } from '@/ui/types';
 import {
@@ -52,7 +53,9 @@ export function VaultBaseCard({
   balances,
   network,
   networks,
+  vaultId,
   vaultLabel,
+  showHelpOverlay,
   onBalancesRefresh,
   onSwapClick,
   swapOpen,
@@ -62,7 +65,12 @@ export function VaultBaseCard({
   balances: Balances;
   network: string;
   networks: Networks | null;
+  /** active vault id - needed by the BTTF time-circuits panel to subscribe to the snapshot. */
+  vaultId: string | null;
   vaultLabel?: string;
+  /** when true, the cockpit-bottom help-text overlay is rendered. gated by the
+   *  `uiHelpHints` settings toggle. */
+  showHelpOverlay?: boolean;
   onBalancesRefresh?: () => void;
   onSwapClick?: () => void;
   swapOpen?: boolean;
@@ -140,6 +148,7 @@ export function VaultBaseCard({
 
   return (
     <div className="cv-cockpitAndCard">
+      <VaultTimeCircuits vaultId={vaultId} />
       <RocketSeatGauge
         suiFillPct={funded ? gaugeFill(sHealth) : 0}
         ikaFillPct={funded ? gaugeFill(iHealth) : 0}
@@ -154,9 +163,30 @@ export function VaultBaseCard({
         baseChain={isSolanaPreAlpha ? 'solana' : 'sui'}
       />
 
+      {showHelpOverlay ? (
+        <aside className="cv-cockpitHelpOverlay" role="note" aria-label="cockpit tip">
+          <span className="cv-cockpitHelpOverlay-icon" aria-hidden>
+            <CircleHelp size={14} strokeWidth={2} />
+          </span>
+          <p className="cv-cockpitHelpOverlay-text">
+            Your <strong>dWallet Vault</strong> is the owner keyring that pays fees.{' '}
+            {isSolanaPreAlpha ? (
+              <>
+                <strong>SOL</strong> pays solana network gas; <strong>ika</strong> pays the MPC signing network.
+              </>
+            ) : (
+              <>
+                <strong>SUI</strong> pays sui network gas; <strong>IKA</strong> pays the MPC signing network.
+              </>
+            )}{' '}
+            Both gauges are for the active vault only.
+          </p>
+        </aside>
+      ) : null}
+
       {solanaRpcMissing ? (
         <div className="sp-error" role="alert" style={{ marginTop: 8 }}>
-          solana RPC not configured — balance may be stale; check session / devnet settings.
+          solana RPC not configured - balance may be stale; check session / devnet settings.
         </div>
       ) : null}
       {solanaBalanceWarning ? (
@@ -166,7 +196,7 @@ export function VaultBaseCard({
       ) : null}
       {!funded && !isSolanaPreAlpha ? (
         <div className="cv-fundingPill" role="status">
-          wallet must be funded with SUI and IKA before ika or dWallet transactions can run
+          Add <strong>SUI</strong> (for sui gas) and <strong>IKA</strong> (for MPC signing) before this vault can run.
         </div>
       ) : null}
 

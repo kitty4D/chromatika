@@ -23,6 +23,7 @@ import {
   type SolanaSplRow,
 } from '@/ui/components/PortfolioAssetTable';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
+import { GlossaryTerm } from '@/ui/components/GlossaryTerm';
 import { PolicyVaultBanner } from '@/ui/components/PolicyVaultBanner';
 import { WrapPcTokenModal } from '@/ui/components/WrapPcTokenModal';
 import { UnwrapPcTokenModal } from '@/ui/components/UnwrapPcTokenModal';
@@ -823,11 +824,29 @@ export function DWalletPortfolioPage({
               </div>
             ) : null}
             <p className="sp-muted" style={{ fontSize: 11, margin: '4px 0 10px', lineHeight: 1.45 }}>
-              {cap.curve === 'SECP256K1'
-                ? '[BTC · EVM] dWallet'
-                : cap.curve === 'ED25519'
-                  ? '[SOL · SUI · APT] dWallet'
-                  : 'dWallet'}{' '}
+              {cap.curve === 'SECP256K1' ? (
+                <>
+                  [BTC · EVM] dWallet{' '}
+                  <GlossaryTerm
+                    term="SECP256K1 dWallet"
+                    definition="Uses the SECP256K1 elliptic curve. Same key shape as Bitcoin and Ethereum, so one dWallet gives you addresses on BTC + every EVM chain (Ethereum, Arbitrum, Base, etc)."
+                  >
+                    secp256k1
+                  </GlossaryTerm>
+                </>
+              ) : cap.curve === 'ED25519' ? (
+                <>
+                  [SOL · SUI · APT] dWallet{' '}
+                  <GlossaryTerm
+                    term="ED25519 dWallet"
+                    definition="Uses the ED25519 elliptic curve. Different key shape from your SECP256K1 dWallet, but the same dWallet pattern. Gives you addresses on Sui, Solana, and Aptos from one key."
+                  >
+                    ed25519
+                  </GlossaryTerm>
+                </>
+              ) : (
+                'dWallet'
+              )}{' '}
               · tail {dwalletTailHex(cap.dwalletId)}
             </p>
             <div className="dp-capIdRows" style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 10 }}>

@@ -52,6 +52,7 @@ function partialSnapshot(
     perChain: [
       {
         chainKey: '_orchestrator',
+        tier: 'mainnet',
         usdMicros: 0n,
         ok: false,
         reason,
@@ -120,6 +121,7 @@ export async function computeDWalletPortfolio(dwalletId: string): Promise<DWalle
       perChain: [
         {
           chainKey: '_orchestrator',
+          tier: 'mainnet',
           usdMicros: 0n,
           ok: false,
           reason: err instanceof Error ? err.message : String(err),

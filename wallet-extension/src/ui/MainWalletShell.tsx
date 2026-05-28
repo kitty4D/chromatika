@@ -333,6 +333,7 @@ export function MainWalletShell({
                       vaultLabel={
                         vaultSummaries?.find((v) => v.id === activeVaultId)?.label ?? vaultLabelFallback ?? undefined
                       }
+                      activeVaultId={activeVaultId}
                       networks={networks}
                       onViewPortfolio={(id) => void activateDwalletThenRefresh(id)}
                       onOpenDWalletMgmt={() => setWalletOverlay('dwalletMgmt')}

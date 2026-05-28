@@ -74,7 +74,7 @@ function pendingHintForCap(cap: OwnedCap): string | null {
       return 'EVM and Bitcoin addresses still need a devnet read for this Solana-based dWallet. The Solana ID here is the program account, not a deposit address.';
     }
     if (cap.needsZeroTrustCompletion) {
-      return 'Finish zero-trust to see EVM and Bitcoin deposit addresses.';
+      return 'Setting up your dWallet - encryption keys still need to be confirmed by the network. Usually takes 30 to 60 seconds after creation, after which EVM and Bitcoin addresses appear.';
     }
     return 'EVM/Bitcoin balances could not be shown (network read failed). Signing may still work.';
   }
@@ -85,7 +85,7 @@ function pendingHintForCap(cap: OwnedCap): string | null {
       return 'Sui, Solana, and Aptos addresses still need a devnet read for this Solana-based dWallet. The Solana ID here is the program account, not an address you send to.';
     }
     if (cap.needsZeroTrustCompletion) {
-      return 'Finish zero-trust to see Sui, Solana, and Aptos deposit addresses.';
+      return 'Setting up your dWallet - encryption keys still need to be confirmed by the network. Usually takes 30 to 60 seconds after creation, after which Sui, Solana, and Aptos addresses appear.';
     }
     return 'Sui/Sol/Aptos balances could not be shown (network read failed). Signing may still work.';
   }

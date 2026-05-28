@@ -7,7 +7,7 @@ import type { Balances, Networks } from '@/ui/types';
 import { useExplorerPreferences } from '@/lib/use-explorer-preferences';
 import { evmAddressExplorerUrl, feePayerExplorerHref } from '@/lib/explorer-href';
 import { ExplorerValueRow } from '@/ui/components/ExplorerValueRow';
-import { VaultTotalLine } from '@/ui/components/VaultTotalLine';
+import { VaultHeaderTotalPill } from '@/ui/components/VaultHeaderTotalPill';
 
 type DappCtx = Awaited<ReturnType<typeof trpc.vaultHeaderDappContext.query>>;
 
@@ -125,7 +125,7 @@ export function VaultContextHeader({
       <div className="cv-contextHeader cv-contextHeader--withDapp">
         {vaultRow}
         <div className="cv-vaultTotalRow">
-          <VaultTotalLine vaultId={activeVaultId} />
+          <VaultHeaderTotalPill vaultId={activeVaultId} />
         </div>
         <div className="cv-contextDivider" role="presentation" />
         <div className="cv-contextDapp">
@@ -158,7 +158,7 @@ export function VaultContextHeader({
     <div className="cv-contextHeader cv-contextHeader--disconnected">
       {vaultRow}
       <div className="cv-vaultTotalRow">
-        <VaultTotalLine vaultId={activeVaultId} />
+        <VaultHeaderTotalPill vaultId={activeVaultId} />
       </div>
     </div>
   );
