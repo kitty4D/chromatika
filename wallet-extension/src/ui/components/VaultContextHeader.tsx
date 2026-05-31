@@ -19,6 +19,7 @@ export function VaultContextHeader({
   onVaultSwitched,
   nameHints,
   onAddVault,
+  beginner = false,
 }: {
   balances: Balances | null;
   networks: Networks | null;
@@ -28,6 +29,8 @@ export function VaultContextHeader({
   nameHints?: Map<string, VaultNameHint>;
   /** click handler for the vault picker's "create a dWallet vault on <chain>" CTA. */
   onAddVault?: (baseChain: 'sui' | 'solana') => void;
+  /** beginner tier: hide the raw fee-payer address row + use plain "Account" wording. */
+  beginner?: boolean;
 }) {
   const explorerPrefs = useExplorerPreferences();
   const [dapp, setDapp] = useState<DappCtx | null>(null);
@@ -64,7 +67,7 @@ export function VaultContextHeader({
         )
       : null;
   const activeVault = vaultSummaries?.find((v) => v.id === activeVaultId);
-  const vaultLabel = activeVault?.label ?? 'Vault';
+  const vaultLabel = activeVault?.label ?? (beginner ? 'Account' : 'Vault');
   const singleVaultAvatar =
     vaultSummaries?.length === 1 && activeVault
       ? vaultAvatarUrl(activeVault, nameHints?.get(activeVault.id))
@@ -80,6 +83,7 @@ export function VaultContextHeader({
             onSwitched={onVaultSwitched}
             nameHints={nameHints}
             onAddVault={onAddVault}
+            beginner={beginner}
           />
         ) : (
           <div className="cv-contextVaultName cv-contextVaultName--withAvatar">
@@ -93,14 +97,21 @@ export function VaultContextHeader({
           </div>
         )}
       </div>
-      <ExplorerValueRow
-        fullValue={fee}
-        href={feeHref}
-        truncateMid={{ head: 10, tail: 6 }}
-        copyLabel="copy fee address"
-        className="cv-contextFeeExplorer"
-        linkClassName="cd-explorerMonoLink cv-contextBaseAddr cv-contextBaseAddr--inline"
-      />
+      {beginner ? (
+        // beginner: the single balance lives here, right-aligned next to the account selector.
+        <span className="cv-contextHeaderTotalInline">
+          <VaultHeaderTotalPill vaultId={activeVaultId} hideKicker />
+        </span>
+      ) : (
+        <ExplorerValueRow
+          fullValue={fee}
+          href={feeHref}
+          truncateMid={{ head: 10, tail: 6 }}
+          copyLabel="copy fee address"
+          className="cv-contextFeeExplorer"
+          linkClassName="cd-explorerMonoLink cv-contextBaseAddr cv-contextBaseAddr--inline"
+        />
+      )}
     </div>
   );
 
@@ -124,9 +135,11 @@ export function VaultContextHeader({
     return (
       <div className="cv-contextHeader cv-contextHeader--withDapp">
         {vaultRow}
-        <div className="cv-vaultTotalRow">
-          <VaultHeaderTotalPill vaultId={activeVaultId} />
-        </div>
+        {!beginner && (
+          <div className="cv-vaultTotalRow">
+            <VaultHeaderTotalPill vaultId={activeVaultId} />
+          </div>
+        )}
         <div className="cv-contextDivider" role="presentation" />
         <div className="cv-contextDapp">
           <div className="cv-contextDappHead">
@@ -157,9 +170,11 @@ export function VaultContextHeader({
   return (
     <div className="cv-contextHeader cv-contextHeader--disconnected">
       {vaultRow}
-      <div className="cv-vaultTotalRow">
-        <VaultHeaderTotalPill vaultId={activeVaultId} />
-      </div>
+      {!beginner && (
+        <div className="cv-vaultTotalRow">
+          <VaultHeaderTotalPill vaultId={activeVaultId} />
+        </div>
+      )}
     </div>
   );
 }

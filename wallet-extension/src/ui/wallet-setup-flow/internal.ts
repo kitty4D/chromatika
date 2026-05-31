@@ -19,6 +19,7 @@ export type WalletSetupMode = 'bootstrap' | 'addVault';
  *   don't have to drill through "use hardware wallet → mwa → seeker."
  */
 export type WalletSetupStep =
+  | 'tier'
   | 'choose'
   | 'password'
   | 'backup'

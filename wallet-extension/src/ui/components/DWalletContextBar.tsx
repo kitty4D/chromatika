@@ -251,6 +251,7 @@ export function DWalletContextBar({
   onNavigateDwallet,
   onSwitched,
   recordingStubCaps,
+  beginner = false,
 }: {
   balances: Balances | null;
   networks: Networks | null;
@@ -263,6 +264,8 @@ export function DWalletContextBar({
   onSwitched?: () => void;
   /** dev urls: bypass `listOwnedDWalletCaps` so the switcher renders without session */
   recordingStubCaps?: Cap[];
+  /** beginner tier: plain "account" wording instead of dWallet jargon. */
+  beginner?: boolean;
 }) {
   const explorerPrefs = useExplorerPreferences();
   const [caps, setCaps] = useState<Cap[] | null>(null);
@@ -347,8 +350,8 @@ export function DWalletContextBar({
 
   const activeLabel =
     active && (active.curve === 'SECP256K1' || active.curve === 'ED25519')
-      ? resolveDwalletLabel(active.dwalletId, active.curve as DwalletCurve, nameMap, indexMap)
-      : 'dWallet';
+      ? resolveDwalletLabel(active.dwalletId, active.curve as DwalletCurve, nameMap, indexMap, beginner)
+      : beginner ? 'Account' : 'dWallet';
 
   const activeOrigins =
     active && (active.curve === 'SECP256K1' || active.curve === 'ED25519')
@@ -377,7 +380,7 @@ export function DWalletContextBar({
   if (!caps || caps.length === 0) {
     return (
       <div className="cv-dwalletBar cv-dwalletBar--empty">
-        <span className="cv-dwalletBar-muted">no dWallet yet</span>
+        <span className="cv-dwalletBar-muted">{beginner ? 'no account yet' : 'no dWallet yet'}</span>
       </div>
     );
   }
@@ -418,7 +421,7 @@ export function DWalletContextBar({
               onPointerDown={(e) => e.stopPropagation()}
               onKeyDown={(e) => e.stopPropagation()}
             >
-              <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
+              {!beginner && <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />}
             </span>
           </div>
           <div className="cv-dwalletBar-row2">
@@ -476,7 +479,7 @@ export function DWalletContextBar({
         aria-disabled={busy}
       >
         <div className="cv-dwalletBar-row1">
-          <span className="cv-dwalletBar-label">{active ? activeLabel : 'dWallet'}</span>
+          <span className="cv-dwalletBar-label">{active ? activeLabel : (beginner ? 'Account' : 'dWallet')}</span>
           <div className="cv-dwalletBar-row1-spacer" />
           <span
             className="cv-dwalletBar-inlineGuard"
@@ -484,7 +487,7 @@ export function DWalletContextBar({
             onPointerDown={(e) => e.stopPropagation()}
             onKeyDown={(e) => e.stopPropagation()}
           >
-            <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />
+            {!beginner && <NetworkSwitcherPill networks={networks} ikaMode={ikaMode} onSwitched={onSwitched} />}
           </span>
           <span className="cv-dwalletBar-triggerChev" aria-hidden>
             {open ? '▴' : '▾'}
@@ -547,7 +550,7 @@ export function DWalletContextBar({
                 <div className="cv-dwalletBar-itemHead">
                   <span className="cv-dwalletBar-itemLabel">
                     {c.curve === 'SECP256K1' || c.curve === 'ED25519'
-                      ? resolveDwalletLabel(c.dwalletId, c.curve as DwalletCurve, nameMap, indexMap)
+                      ? resolveDwalletLabel(c.dwalletId, c.curve as DwalletCurve, nameMap, indexMap, beginner)
                       : c.curve}
                   </span>
                   <ConnectedDappsPill origins={rowOrigins} />

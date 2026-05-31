@@ -8,6 +8,63 @@
   --ws-muted: rgba(234, 240, 255, 0.68);
 }
 
+/* experience-tier picker (first bootstrap step) */
+.ws-tierChoice-title {
+  font-size: 18px;
+  font-weight: 700;
+  text-align: center;
+  margin: 6px 0 2px;
+}
+.ws-tierChoice-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+}
+.ws-tierChoice-card {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: left;
+  width: 100%;
+  padding: 14px 16px;
+  border-radius: 12px;
+  cursor: pointer;
+  color: inherit;
+  border: 1px solid var(--ws-border, rgba(255, 255, 255, 0.14));
+  background: var(--ws-glass, rgba(255, 255, 255, 0.07));
+  transition: border-color 0.15s ease, background 0.15s ease, transform 0.08s ease;
+}
+.ws-tierChoice-card:hover {
+  border-color: var(--ws-accent-a, rgba(132, 94, 247, 0.95));
+  background: rgba(132, 94, 247, 0.12);
+}
+.ws-tierChoice-card:active {
+  transform: translateY(1px);
+}
+.ws-tierChoice-cardTitle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 700;
+  font-size: 14px;
+}
+.ws-tierChoice-cardBlurb {
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--ws-muted, rgba(234, 240, 255, 0.68));
+}
+.ws-tierChoice-rec {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: rgba(132, 94, 247, 0.24);
+  color: #d6c8ff;
+}
+
 .ws-choose-brand {
   display: flex;
   justify-content: center;

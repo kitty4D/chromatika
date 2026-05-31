@@ -9,6 +9,7 @@ import { trpc } from '@/lib/trpc';
 import type { VaultSummary } from '@/ui/VaultPicker';
 import type { AppearanceMode } from '@/background/appearance-mode';
 import type { IkaBaseMode } from '@/background/ika-base-mode';
+import type { UserMode } from '@/background/user-mode';
 import { TitleBar } from '@/ui/components/TitleBar';
 import { CollapsibleIkaLabDrawer } from '@/ui/components/WalletChromeIkaLabStrip';
 import { BottomNav } from '@/ui/components/BottomNav';
@@ -76,7 +77,8 @@ export type MainWalletShellProps = {
   balanceError: string | null;
   networks: Networks | null;
   advanced: boolean;
-  onAdvancedChange: (v: boolean) => void;
+  userMode: UserMode;
+  onUserModeChange: (v: UserMode) => void;
   uiHelpHints: boolean;
   onUiHelpHintsChange: (v: boolean) => void;
   appearance: AppearanceMode;
@@ -117,7 +119,8 @@ export function MainWalletShell({
   balanceError,
   networks,
   advanced,
-  onAdvancedChange,
+  userMode,
+  onUserModeChange,
   uiHelpHints,
   onUiHelpHintsChange,
   appearance,
@@ -154,6 +157,8 @@ export function MainWalletShell({
    */
   const [sendNav, setSendNav] = useState<SendNav | null>(null);
   const vaultNameHints = useVaultNameHints(vaultSummaries);
+  // beginner tier hides multi-vault / dWallet / raw-address jargon across the shell.
+  const beginner = userMode === 'beginner';
 
   useEffect(() => {
     if (balances?.locked) onSessionLockDetected?.();
@@ -244,6 +249,7 @@ export function MainWalletShell({
         onVaultSwitched={onVaultSwitched}
         nameHints={vaultNameHints}
         onAddVault={onAddVaultForBase}
+        beginner={beginner}
       />
       <DWalletContextBar
         balances={balances}
@@ -254,6 +260,7 @@ export function MainWalletShell({
         onNavigateDwallet={goDwalletTab}
         onSwitched={onDwalletBarSwitched}
         recordingStubCaps={recordingStubCaps}
+        beginner={beginner}
       />
       <AlertBanner onOpenHistory={openSettings} />
       <OperationProgressBanner
@@ -341,6 +348,7 @@ export function MainWalletShell({
                       onOpenPolicyVault={() => setTab('policy')}
                       uiHelpHints={uiHelpHints}
                       recordingStubCaps={recordingStubCaps}
+                      beginner={beginner}
                     />
                   )}
                   {tab === 'dwallet' && (
@@ -376,7 +384,8 @@ export function MainWalletShell({
                       advanced={advanced}
                       appearance={appearance}
                       setAppearance={setAppearance}
-                      onAdvancedChange={onAdvancedChange}
+                      userMode={userMode}
+                      onUserModeChange={onUserModeChange}
                       uiHelpHints={uiHelpHints}
                       onUiHelpHintsChange={onUiHelpHintsChange}
                       onRefresh={refresh}
@@ -391,16 +400,19 @@ export function MainWalletShell({
         </div>
       </main>
       <div className={`sp-bottomNavShell${bottomIkaLabOpen ? ' sp-bottomNavShell--drawerOpen' : ''}`}>
-        <CollapsibleIkaLabDrawer
-          expanded={bottomIkaLabOpen}
-          onToggleExpanded={() => setBottomIkaLabOpen((o) => !o)}
-          titleBarHeightPx={titleBarH}
-          onOpenIkaStaking={openIkaStaking}
-          onOpenLab={openLab}
-          onOpenPayments={openPayments}
-          onOpenAgents={openAgents}
-        />
-        <BottomNav active={tab} onChange={onNavChange} />
+        {/* beginner tier: hide the ika-lab drawer (IKA staking, Chroma Lab, x402 payments, MCP agents) - all advanced. */}
+        {!beginner && (
+          <CollapsibleIkaLabDrawer
+            expanded={bottomIkaLabOpen}
+            onToggleExpanded={() => setBottomIkaLabOpen((o) => !o)}
+            titleBarHeightPx={titleBarH}
+            onOpenIkaStaking={openIkaStaking}
+            onOpenLab={openLab}
+            onOpenPayments={openPayments}
+            onOpenAgents={openAgents}
+          />
+        )}
+        <BottomNav active={tab} onChange={onNavChange} beginner={beginner} />
       </div>
       {devPolicyPromptCurve ? (
         <PostCreatePolicyVaultPrompt

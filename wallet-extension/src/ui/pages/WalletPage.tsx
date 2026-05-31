@@ -34,6 +34,7 @@ export function WalletPage({
   onOpenPolicyVault,
   uiHelpHints,
   recordingStubCaps,
+  beginner = false,
 }: {
   balances: Balances | null;
   balanceError?: string | null;
@@ -53,6 +54,8 @@ export function WalletPage({
   /** when false, inline tips (HelpBubble) are hidden, see settings, screen help */
   uiHelpHints: boolean;
   recordingStubCaps?: ListedDwalletCap[];
+  /** beginner tier: collapse dWallet/vault jargon to plain "account" wording. */
+  beginner?: boolean;
 }) {
   const [showSwap, setShowSwap] = useState(false);
   const [receiveOpen, setReceiveOpen] = useState(false);
@@ -182,9 +185,9 @@ export function WalletPage({
   const labelForCap = useCallback(
     (cap: (typeof ownedCaps)[number]) =>
       cap.curve === 'SECP256K1' || cap.curve === 'ED25519'
-        ? resolveDwalletLabel(cap.dwalletId, cap.curve as DwalletCurve, dwalletNameMap, indexMap)
+        ? resolveDwalletLabel(cap.dwalletId, cap.curve as DwalletCurve, dwalletNameMap, indexMap, beginner)
         : cap.dwalletId,
-    [dwalletNameMap, indexMap],
+    [dwalletNameMap, indexMap, beginner],
   );
 
   const onDwalletNamesChanged = useCallback(() => {
@@ -267,6 +270,7 @@ export function WalletPage({
         vaultId={activeVaultId}
         vaultLabel={vaultLabel}
         showHelpOverlay={uiHelpHints}
+        beginner={beginner}
         onBalancesRefresh={() => {
           onRefresh();
           void refreshCaps();
@@ -329,12 +333,18 @@ export function WalletPage({
         <div className="wallet-bento__span">
           <HelpBubble show={uiHelpHints} variant="bento">
             <p className="cd-helpBubble-text">
-              The <strong>dWallets</strong> below are the identities you use to connect to sites and apps. A vault can
-              have as many dWallets as you want to create.
+              {beginner ? (
+                'These are your accounts. Use them to send, receive, and connect to apps.'
+              ) : (
+                <>
+                  The <strong>dWallets</strong> below are the identities you use to connect to sites and apps. A vault can
+                  have as many dWallets as you want to create.
+                </>
+              )}
             </p>
           </HelpBubble>
           <div className="cd-sectionTitleRow" style={{ marginTop: 8 }}>
-            <span className="cd-sectionTitle cd-sectionTitle--inline cd-sectionTitle--dwalletsMixed">your dWallets</span>
+            <span className="cd-sectionTitle cd-sectionTitle--inline cd-sectionTitle--dwalletsMixed">{beginner ? 'your accounts' : 'your dWallets'}</span>
             <button
               type="button"
               className="cd-sectionManageBtn"
@@ -353,32 +363,39 @@ export function WalletPage({
                     onCreated={handleDWalletCreated}
                     onDismissed={setPromptLocallyDismissed}
                     onError={(msg) => setCapsErr(msg)}
+                    beginner={beginner}
                   />
                 ) : (
                   // promptDismissed === true OR still loading (null) -> show the existing
                   // single-button fallback. while null we keep the fallback visible so the
                   // 3-option prompt doesn't briefly flash for users who already dismissed.
                   <>
-                    <p className="cv-dwalletsEmpty-title">No dWallets yet</p>
+                    <p className="cv-dwalletsEmpty-title">{beginner ? 'No accounts yet' : 'No dWallets yet'}</p>
                     <p className="cv-dwalletsEmpty-text">
-                      Your vault is funded — you can create your first dWallet to start signing.
+                      {beginner
+                        ? "You're funded - create your first account to get started."
+                        : 'Your vault is funded — you can create your first dWallet to start signing.'}
                     </p>
                     <button
                       type="button"
                       className="sp-btn sp-btnPrimary cv-dwalletsEmpty-btn"
                       onClick={onOpenDWalletMgmt}
                     >
-                      Create a dWallet
+                      {beginner ? 'Create an account' : 'Create a dWallet'}
                     </button>
                   </>
                 )
               ) : (
                 <>
-                  <p className="cv-dwalletsEmpty-title">No dWallets yet</p>
+                  <p className="cv-dwalletsEmpty-title">{beginner ? 'No accounts yet' : 'No dWallets yet'}</p>
                   <p className="cv-dwalletsEmpty-text">
-                    {ikaBaseSolana
-                      ? 'Fund this vault with devnet SOL above before you can create your first dWallet.'
-                      : 'Fund this vault with SUI and IKA above before you can create your first dWallet.'}
+                    {beginner
+                      ? (ikaBaseSolana
+                          ? 'Add devnet SOL above before you can create your first account.'
+                          : 'Add SUI and IKA above before you can create your first account.')
+                      : (ikaBaseSolana
+                          ? 'Fund this vault with devnet SOL above before you can create your first dWallet.'
+                          : 'Fund this vault with SUI and IKA above before you can create your first dWallet.')}
                   </p>
                 </>
               )}

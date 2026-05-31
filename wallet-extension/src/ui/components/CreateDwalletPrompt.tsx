@@ -23,6 +23,7 @@ export function CreateDwalletPrompt({
   onCreated,
   onDismissed,
   onError,
+  beginner = false,
 }: {
   /** called after a successful DKG. Receives the curve so the parent can branch
    *  follow-up flows (e.g. the post-creation Policy Vault prompt fires only for SECP256K1). */
@@ -31,6 +32,8 @@ export function CreateDwalletPrompt({
   onDismissed: () => void;
   /** surfaces a DKG error string to the parent (mirrors capsErr in WalletPage). */
   onError: (msg: string) => void;
+  /** beginner tier: plain "account" wording instead of dWallet jargon. */
+  beginner?: boolean;
 }) {
   const [busy, setBusy] = useState<BusyKind>(null);
   /** if checked when the user taps "I'll do this manually later", we also persist the
@@ -75,10 +78,11 @@ export function CreateDwalletPrompt({
 
   return (
     <>
-      <p className="cv-dwalletsEmpty-title">Create your first dWallets?</p>
+      <p className="cv-dwalletsEmpty-title">{beginner ? 'Set up your account?' : 'Create your first dWallets?'}</p>
       <p className="cv-dwalletsEmpty-text">
-        Your vault is funded. Pick the chains you want to start with - one dWallet covers all
-        chains in its group. You can add the other group anytime later.
+        {beginner
+          ? "You're funded. Pick which chains to start with - each account covers a group of chains. You can add the other anytime."
+          : 'Your vault is funded. Pick the chains you want to start with - one dWallet covers all chains in its group. You can add the other group anytime later.'}
       </p>
       <div
         role="group"
@@ -98,8 +102,10 @@ export function CreateDwalletPrompt({
           onClick={() => void runCreate('SECP256K1')}
         >
           {busy === 'SECP256K1'
-            ? 'Creating BTC + EVM dWallet…'
-            : 'Create a dWallet for Bitcoin and Ethereum/EVM'}
+            ? (beginner ? 'Setting up…' : 'Creating BTC + EVM dWallet…')
+            : beginner
+              ? 'Set up Bitcoin + Ethereum'
+              : 'Create a dWallet for Bitcoin and Ethereum/EVM'}
         </button>
         <button
           type="button"
@@ -108,8 +114,10 @@ export function CreateDwalletPrompt({
           onClick={() => void runCreate('ED25519')}
         >
           {busy === 'ED25519'
-            ? 'Creating Sol + Sui + Aptos dWallet…'
-            : 'Create a dWallet for Solana, Sui, and Aptos'}
+            ? (beginner ? 'Setting up…' : 'Creating Sol + Sui + Aptos dWallet…')
+            : beginner
+              ? 'Set up Solana, Sui + Aptos'
+              : 'Create a dWallet for Solana, Sui, and Aptos'}
         </button>
         <label
           style={{

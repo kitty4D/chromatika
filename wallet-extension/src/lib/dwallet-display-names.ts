@@ -39,13 +39,20 @@ export function resolveDwalletLabel(
   curve: DwalletCurve,
   customNames: Readonly<Record<string, string>>,
   indexMap: Map<string, number>,
+  beginner = false,
 ): string {
-  const prefix = dwalletChainPrefix(curve);
   const raw = customNames[dwalletId]?.trim();
-  if (raw) {
-    const cleaned = stripChainPrefix(raw);
-    if (cleaned) return `${prefix} ${cleaned}`;
+  const cleaned = raw ? stripChainPrefix(raw) : '';
+  // beginner tier: drop the [BTC.EVM] / [SOL.SUI.APT] + "Wallet #" jargon. a custom name
+  // shows as-is; otherwise the account is named by the chains it holds.
+  if (beginner) {
+    if (cleaned) return cleaned;
+    const group = curve === 'SECP256K1' ? 'Bitcoin + Ethereum' : 'Solana, Sui + Aptos';
+    const idx = indexMap.get(dwalletId) ?? 1;
+    return idx > 1 ? `${group} ${idx}` : group;
   }
+  const prefix = dwalletChainPrefix(curve);
+  if (cleaned) return `${prefix} ${cleaned}`;
   const idx = indexMap.get(dwalletId) ?? 1;
   return `${prefix} Wallet #${idx}`;
 }

@@ -12,6 +12,7 @@ import { lazy, Suspense } from 'react';
 import { cardStyle, type WalletSetupSurface, type WalletSetupMode } from './wallet-setup-flow/internal';
 import { useWalletSetup } from './wallet-setup-flow/use-wallet-setup';
 import { ChooseStep } from './wallet-setup-flow/steps/choose';
+import { TierChoiceStep } from './wallet-setup-flow/steps/tier-choice';
 import { PasswordStep } from './wallet-setup-flow/steps/password';
 import { BackupStep } from './wallet-setup-flow/steps/backup';
 import { ImportStep } from './wallet-setup-flow/steps/import';
@@ -85,6 +86,7 @@ export function WalletSetupFlow({
   const box = cardStyle(surface);
   const { step } = hook;
 
+  if (step === 'tier') return <TierChoiceStep surface={surface} box={box} hook={hook} />;
   if (step === 'choose') return <ChooseStep surface={surface} box={box} onDismiss={onDismiss} hook={hook} />;
   if (step === 'password') return <PasswordStep surface={surface} box={box} hook={hook} />;
   if (step === 'backup') return <BackupStep surface={surface} box={box} hook={hook} />;

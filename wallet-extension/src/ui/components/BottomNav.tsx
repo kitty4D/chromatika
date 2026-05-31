@@ -30,12 +30,15 @@ const NAV: NavItem[] = [
 
 const navPressEase = [0.22, 1, 0.36, 1] as const;
 
-export function BottomNav({ active, onChange }: { active: Tab; onChange: (t: Tab) => void }) {
+export function BottomNav({ active, onChange, beginner = false }: { active: Tab; onChange: (t: Tab) => void; beginner?: boolean }) {
   const reduceMotion = useReducedMotion();
+  // beginner tier: hide the Policy Vault entry (an advanced safety concept - spend caps,
+  // panic button, rescue address). reachable again once the user switches to Advanced.
+  const items = beginner ? NAV.filter((n) => n.id !== 'policy') : NAV;
 
   return (
     <nav className="sp-bottomNav" aria-label="main">
-      {NAV.map((n) => {
+      {items.map((n) => {
         const isActive = active === n.id;
         const Icon = n.Icon;
         return (
@@ -54,7 +57,7 @@ export function BottomNav({ active, onChange }: { active: Tab; onChange: (t: Tab
             <span className="sp-navIcon" aria-hidden>
               <Icon strokeWidth={isActive ? 2.25 : 2} />
             </span>
-            <span className={`sp-navLabel${n.id === 'dwallet' ? ' sp-navLabel--dwallet' : ''}`}>{n.label}</span>
+            <span className={`sp-navLabel${n.id === 'dwallet' ? ' sp-navLabel--dwallet' : ''}`}>{beginner && n.id === 'dwallet' ? 'accounts' : n.label}</span>
             {isActive ? <span className="sp-navIndicator" /> : null}
           </motion.button>
         );

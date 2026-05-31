@@ -25,6 +25,7 @@ import type { VaultSummary } from '@/ui/VaultPicker';
 import type { Balances, Networks } from '@/ui/types';
 import type { IkaBaseMode } from '@/background/ika-base-mode';
 import type { AppearanceMode } from '@/background/appearance-mode';
+import type { UserMode } from '@/background/user-mode';
 
 const DEFAULT_AUTO_LOCK_MINUTES = 30;
 
@@ -48,7 +49,7 @@ export interface UseWalletAppStateOpts {
     networks?: Networks | null;
     vaultSummaries?: VaultSummary[] | null;
     activeVaultId?: string | null;
-    advanced?: boolean;
+    userMode?: UserMode;
   };
   /** when true, skip walletExists probe + lockState + balance refresh + visibility refresh.
    *  popup approval surfaces (hwsign / txapprove) own routing entirely and do not need this work. */
@@ -86,7 +87,8 @@ export interface WalletAppState {
   setBalanceError: Dispatch<SetStateAction<string | null>>;
   networks: Networks | null;
   advanced: boolean;
-  setAdvanced: Dispatch<SetStateAction<boolean>>;
+  userMode: UserMode;
+  setUserMode: Dispatch<SetStateAction<UserMode>>;
   uiHelpHints: boolean;
   setUiHelpHints: Dispatch<SetStateAction<boolean>>;
   vaultSummaries: VaultSummary[] | null;
@@ -143,9 +145,12 @@ export function useWalletAppState(opts: UseWalletAppStateOpts): WalletAppState {
   const [networks, setNetworks] = useState<Networks | null>(
     devMode ? dev?.networks ?? null : null,
   );
-  const [advanced, setAdvanced] = useState<boolean>(
-    devMode ? dev?.advanced ?? false : false,
+  const [userMode, setUserMode] = useState<UserMode>(
+    devMode ? dev?.userMode ?? 'advanced' : 'advanced',
   );
+  // `advanced` (raw addresses + debug panels) is just the Pro tier of `userMode`;
+  // every existing advanced-gated surface keeps reading this derived boolean.
+  const advanced = userMode === 'pro';
   const [uiHelpHints, setUiHelpHints] = useState(true);
   const [vaultSummaries, setVaultSummaries] = useState<VaultSummary[] | null>(
     devMode ? dev?.vaultSummaries ?? null : null,
@@ -186,7 +191,7 @@ export function useWalletAppState(opts: UseWalletAppStateOpts): WalletAppState {
       if (devMode) return;
       refreshBalances({ clearStaleError: rOpts?.clearStaleBalanceError });
       trpc.getNetworks.query().then(setNetworks).catch(() => setNetworks(null));
-      trpc.getAdvancedMode.query().then(setAdvanced).catch(() => {});
+      trpc.getUserMode.query().then(setUserMode).catch(() => {});
       trpc.getUiHelpHints.query().then(setUiHelpHints).catch(() => {});
       loadVaults();
     },
@@ -501,7 +506,8 @@ export function useWalletAppState(opts: UseWalletAppStateOpts): WalletAppState {
     setBalanceError,
     networks,
     advanced,
-    setAdvanced,
+    userMode,
+    setUserMode,
     uiHelpHints,
     setUiHelpHints,
     vaultSummaries,

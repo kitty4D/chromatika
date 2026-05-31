@@ -18,6 +18,7 @@ import { NeedIkaBaseVaultGate } from '@/ui/NeedIkaBaseVaultGate';
 import { ikaModeFromActiveVault } from '@/lib/derive-ika-mode-from-vault';
 import { shouldShowUnlockScreen, useWalletAppState } from '@/ui/use-wallet-app-state';
 import type { Tab, Balances, Networks } from '@/ui/types';
+import type { UserMode } from '@/background/user-mode';
 import { RECORDING_STUB_DWALLET_CAPS } from '@/ui/wallet-recording-stub-caps';
 import './wallet.css';
 
@@ -50,7 +51,8 @@ function SidePanelMain() {
 
   function asSetupStep(v: string | null): WalletSetupStep | null {
     if (
-      v === 'choose'
+      v === 'tier'
+      || v === 'choose'
       || v === 'password'
       || v === 'backup'
       || v === 'import'
@@ -70,6 +72,12 @@ function SidePanelMain() {
   function asSettingsTab(v: string | null): SettingsTab | null {
     if (v === 'main' || v === 'networks' || v === 'dapps') return v;
     return null;
+  }
+
+  /** dev-only: drive the UX tier from the URL (`?userMode=beginner|advanced|pro`) so the
+   *  shell can be screenshotted / snapshot-tested in each mode with synthetic data. */
+  function asUserMode(v: string | null): UserMode | null {
+    return v === 'beginner' || v === 'advanced' || v === 'pro' ? v : null;
   }
 
   const devTab = asTab(params.get('tab')) ?? 'vault';
@@ -182,7 +190,9 @@ function SidePanelMain() {
       networks: devMode ? DEV_NETWORKS : null,
       vaultSummaries: devMode ? DEV_VAULTS : null,
       activeVaultId: devMode ? DEV_VAULTS[0]?.id ?? null : null,
-      advanced: devMode ? params.get('advanced') === '1' : false,
+      userMode: devMode
+        ? asUserMode(params.get('userMode')) ?? (params.get('advanced') === '1' ? 'pro' : 'advanced')
+        : 'advanced',
     },
   });
 
@@ -206,7 +216,8 @@ function SidePanelMain() {
     setBalances,
     networks,
     advanced,
-    setAdvanced,
+    userMode,
+    setUserMode,
     uiHelpHints,
     setUiHelpHints,
     vaultSummaries,
@@ -296,10 +307,10 @@ function SidePanelMain() {
               }}
             >
           <div style={{ textAlign: 'center', marginBottom: 20 }}>
-            <img src="/chromatika-clean-key.png" alt="" width={100} height={100} style={{ display: 'block', margin: '0 auto', borderRadius: 0 }} />
+            <img src="/chromatika.svg" alt="" width={100} height={100} style={{ display: 'block', margin: '0 auto', borderRadius: 0 }} />
             <div className="sp-unlockTitle" style={{ marginTop: 12 }}>welcome to chromatika</div>
             <p className="sp-muted" style={{ fontSize: 13, lineHeight: 1.5, marginTop: 10 }}>
-              Multi-chain wallet with ika dWallets. Create a <strong>dWallet Vault</strong> here, or open the full
+              Multi-chain wallet with ika dWallets. Create a wallet here, or open the full
               onboarding tab from the extension popup for the guided tour.
             </p>
             <button
@@ -483,7 +494,8 @@ function SidePanelMain() {
       balanceError={balanceError}
       networks={networks}
       advanced={advanced}
-      onAdvancedChange={setAdvanced}
+      userMode={userMode}
+      onUserModeChange={setUserMode}
       uiHelpHints={uiHelpHints}
       onUiHelpHintsChange={setUiHelpHints}
       appearance={appearance}

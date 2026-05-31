@@ -29,6 +29,7 @@ import { getSession } from '@/background/session';
 import { broadcastToTabs } from '@/background/broadcast';
 import { getMediaSafetyMode, setMediaSafetyMode } from '@/background/services/media-safety';
 import { getAdvancedMode, setAdvancedMode } from '@/background/advanced-mode';
+import { getUserMode, setUserMode } from '@/background/user-mode';
 import { getUiHelpHints, setUiHelpHints } from '@/background/ui-help-hints';
 import { getIkaBaseMode, setIkaBaseMode } from '@/background/ika-base-mode';
 import { getAppearance, setAppearance } from '@/background/appearance-mode';
@@ -200,6 +201,15 @@ export const networkProcedures = {
     .input(z.object({ enabled: z.boolean() }))
     .mutation(async ({ input }) => {
       await setAdvancedMode(input.enabled);
+      return { ok: true as const };
+    }),
+
+  getUserMode: publicProcedure.query(() => getUserMode()),
+
+  setUserMode: publicProcedure
+    .input(z.object({ mode: z.enum(['beginner', 'advanced', 'pro']) }))
+    .mutation(async ({ input }) => {
+      await setUserMode(input.mode);
       return { ok: true as const };
     }),
 

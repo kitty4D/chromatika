@@ -36,6 +36,7 @@ export function VaultPicker({
   onSwitched,
   nameHints,
   onAddVault,
+  beginner = false,
 }: {
   vaults: VaultSummary[];
   activeVaultId: string | null;
@@ -48,6 +49,8 @@ export function VaultPicker({
    * with `vaultBaseChainOverride` preselected.
    */
   onAddVault?: (baseChain: BaseChain) => void;
+  /** beginner tier: plain "accounts" wording instead of "<chain>-base dWallet Vaults". */
+  beginner?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -183,7 +186,7 @@ export function VaultPicker({
           {err && <div className="sp-error" style={{ padding: '6px 10px' }}>{err}</div>}
           {/* primary group: active chain's vaults */}
           <div className="sp-vaultPickerGroup" role="presentation">
-            <div className="sp-vaultPickerGroupLabel">{VAULTS_GROUP_LABEL[activeChain]}</div>
+            <div className="sp-vaultPickerGroupLabel">{beginner ? `${BASE_LABEL[activeChain]} accounts` : VAULTS_GROUP_LABEL[activeChain]}</div>
             {primaryVaults.map((v) => (
               <VaultPickerItem
                 key={v.id}
@@ -198,7 +201,7 @@ export function VaultPicker({
           <div className="sp-vaultPickerDivider" role="presentation" />
           {/* secondary group: other chain's vaults OR a CTA when empty */}
           <div className="sp-vaultPickerGroup" role="presentation">
-            <div className="sp-vaultPickerGroupLabel">{VAULTS_GROUP_LABEL[otherChain]}</div>
+            <div className="sp-vaultPickerGroupLabel">{beginner ? `${BASE_LABEL[otherChain]} accounts` : VAULTS_GROUP_LABEL[otherChain]}</div>
             {secondaryVaults.length > 0 ? (
               secondaryVaults.map((v) => (
                 <VaultPickerItem
@@ -220,11 +223,11 @@ export function VaultPicker({
                 }}
               >
                 <Plus size={14} strokeWidth={2} aria-hidden />
-                <span>Create a dWallet Vault on {BASE_LABEL[otherChain]}</span>
+                <span>{beginner ? 'Create an account on' : 'Create a dWallet Vault on'} {BASE_LABEL[otherChain]}</span>
                 <span className="sp-vaultPickerCtaArrow" aria-hidden>→</span>
               </button>
             ) : (
-              <div className="sp-vaultPickerEmpty">no {BASE_LABEL[otherChain]}-base Vaults</div>
+              <div className="sp-vaultPickerEmpty">{beginner ? `no ${BASE_LABEL[otherChain]} accounts` : `no ${BASE_LABEL[otherChain]}-base Vaults`}</div>
             )}
           </div>
         </div>

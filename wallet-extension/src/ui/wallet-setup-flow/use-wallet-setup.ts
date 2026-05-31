@@ -54,7 +54,11 @@ export function useWalletSetup(props: WalletSetupHookProps) {
     vaultBaseChainOverride,
   } = props;
 
-  const [step, setStep] = useState<WalletSetupStep>(initialStep ?? 'choose');
+  // bootstrap (first vault) opens with the experience-tier picker; addVault skips it
+  // (the user already has a wallet + a chosen tier).
+  const [step, setStep] = useState<WalletSetupStep>(
+    initialStep ?? (mode === 'bootstrap' ? 'tier' : 'choose'),
+  );
   const [intent, setIntent] = useState<WalletSetupIntent | null>(initialIntent ?? null);
   const [password, setPassword] = useState('');
   const [password2, setPassword2] = useState('');

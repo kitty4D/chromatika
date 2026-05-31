@@ -30,6 +30,7 @@ import {
 import { GraphqlPaginationDebugPanel } from '@/ui/graphql-pagination-debug-panel';
 import type { MediaSafetyMode } from '@/background/services/media-safety';
 import type { AppearanceMode } from '@/background/appearance-mode';
+import type { UserMode } from '@/background/user-mode';
 import type { Networks } from '@/ui/types';
 import { BiometricUnlockSettings } from '@/ui/components/BiometricUnlockSettings';
 import { AlertsSettingsSection } from '@/ui/components/AlertsSettingsSection';
@@ -76,6 +77,26 @@ export type SettingsTab =
   | 'help'
   | 'advanced'
   | 'notifications';
+
+/** the three UX tiers shown in Settings -> experience mode. plain-english copy so a
+ * non-crypto-native reader can self-select; order runs least -> most surface. */
+const USER_MODE_OPTIONS: ReadonlyArray<{ id: UserMode; title: string; desc: string }> = [
+  {
+    id: 'beginner',
+    title: 'Beginner',
+    desc: 'Just the essentials: one simple account view, crypto jargon tucked away. Best if wallets are new to you.',
+  },
+  {
+    id: 'advanced',
+    title: 'Advanced',
+    desc: 'The full wallet: multiple accounts, every chain, network controls, and dapp connections.',
+  },
+  {
+    id: 'pro',
+    title: 'Pro',
+    desc: 'Everything in Advanced plus raw addresses, dev details, and debug panels.',
+  },
+];
 
 const PILOT_KEY = STORAGE_KEYS.ROCKET_PILOT_HEAD_V1;
 const PASSENGER_KEY = STORAGE_KEYS.ROCKET_PASSENGER_HEAD_V1;
@@ -159,7 +180,8 @@ export function SettingsPage({
   advanced,
   appearance,
   setAppearance,
-  onAdvancedChange,
+  userMode,
+  onUserModeChange,
   uiHelpHints,
   onUiHelpHintsChange,
   onRefresh,
@@ -170,7 +192,8 @@ export function SettingsPage({
   advanced: boolean;
   appearance: AppearanceMode;
   setAppearance: (v: AppearanceMode) => void | Promise<void>;
-  onAdvancedChange: (v: boolean) => void;
+  userMode: UserMode;
+  onUserModeChange: (v: UserMode) => void;
   uiHelpHints: boolean;
   onUiHelpHintsChange: (v: boolean) => void;
   onRefresh: () => void;
@@ -187,6 +210,9 @@ export function SettingsPage({
   const [rocketAnim, setRocketAnim] = useState(true);
   const [explorerPrefs, setExplorerPrefs] = useState<ExplorerPreferences>(DEFAULT_EXPLORER_PREFERENCES);
   const [priceOrder, setPriceOrder] = useState<PriceSourceId[]>(DEFAULT_PRICE_SOURCE_ORDER);
+  // beginner tier: hide advanced settings pages (network switching, explorers/prices,
+  // x402 payments, confidential compute). core settings + the experience-mode switcher stay.
+  const beginner = userMode === 'beginner';
 
   useEffect(() => {
     trpc.getMediaSafetyMode.query().then(setSafetyMode).catch(() => {});
@@ -207,10 +233,10 @@ export function SettingsPage({
     setSafetyMode(mode);
   }
 
-  async function onToggleAdvanced() {
-    const next = !advanced;
-    await trpc.setAdvancedMode.mutate({ enabled: next });
-    onAdvancedChange(next);
+  async function onSelectUserMode(mode: UserMode) {
+    if (mode === userMode) return;
+    await trpc.setUserMode.mutate({ mode });
+    onUserModeChange(mode);
   }
 
   async function onToggleUiHelpHints() {
@@ -692,17 +718,30 @@ export function SettingsPage({
   if (stab === 'advanced') {
     return (
       <div className="sp-page">
-        <SubScreenHeader title="advanced" onBack={() => setStab('main')} />
+        <SubScreenHeader title="experience mode" onBack={() => setStab('main')} />
 
         <div className="sp-section">
-          <div className="sp-sectionTitle">advanced mode</div>
+          <div className="sp-sectionTitle">experience mode</div>
           <p className="sp-muted" style={{ fontSize: 12, marginBottom: 10, lineHeight: 1.45 }}>
-            shows raw addresses, dev details, and additional debug panels across the app.
+            controls how much of the wallet you see. you can change this any time.
           </p>
-          <label className="sp-toggle">
-            <input type="checkbox" checked={advanced} onChange={onToggleAdvanced} />
-            <span>{advanced ? 'on - raw addresses + dev details visible' : 'off'}</span>
-          </label>
+          <div className="sp-userModeOptions">
+            {USER_MODE_OPTIONS.map((opt) => {
+              const active = userMode === opt.id;
+              return (
+                <button
+                  key={opt.id}
+                  type="button"
+                  className={`sp-userModeOption${active ? ' sp-userModeOption--active' : ''}`}
+                  aria-pressed={active}
+                  onClick={() => void onSelectUserMode(opt.id)}
+                >
+                  <span className="sp-userModeOption__title">{opt.title}</span>
+                  <span className="sp-userModeOption__desc">{opt.desc}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="sp-section">
@@ -775,9 +814,9 @@ export function SettingsPage({
       <h2 className="sp-pageTitle">settings</h2>
 
       <div className="sp-menuList">
-        <div className="sp-menuGroupLabel">wallet</div>
+        {!beginner && <div className="sp-menuGroupLabel">wallet</div>}
 
-        {onOpenVaultManagement &&
+        {!beginner && onOpenVaultManagement &&
           gateSettingsMainMenuRow(
             <MenuRow
               icon={<Wallet size={16} strokeWidth={2} />}
@@ -818,9 +857,9 @@ export function SettingsPage({
           />,
         )}
 
-        <div className="sp-menuGroupLabel">network</div>
+        {!beginner && <div className="sp-menuGroupLabel">network</div>}
 
-        {gateSettingsMainMenuRow(
+        {!beginner && gateSettingsMainMenuRow(
           <MenuRow
             icon={<Globe size={16} strokeWidth={2} />}
             title="dWallet network"
@@ -832,7 +871,7 @@ export function SettingsPage({
           />,
         )}
 
-        {gateSettingsMainMenuRow(
+        {!beginner && gateSettingsMainMenuRow(
           <MenuRow
             icon={<Boxes size={16} strokeWidth={2} />}
             title="vault network"
@@ -844,7 +883,7 @@ export function SettingsPage({
           />,
         )}
 
-        {gateSettingsMainMenuRow(
+        {!beginner && gateSettingsMainMenuRow(
           <MenuRow
             icon={<ExternalLink size={16} strokeWidth={2} />}
             title="explorers & prices"
@@ -864,7 +903,7 @@ export function SettingsPage({
           />,
         )}
 
-        {gateSettingsMainMenuRow(
+        {!beginner && gateSettingsMainMenuRow(
           <MenuRow
             icon={<CreditCard size={16} strokeWidth={2} />}
             title="payments (x402)"
@@ -873,7 +912,7 @@ export function SettingsPage({
           />,
         )}
 
-        {gateSettingsMainMenuRow(
+        {!beginner && gateSettingsMainMenuRow(
           <MenuRow
             icon={<EyeOff size={16} strokeWidth={2} />}
             title="confidential compute"
@@ -905,8 +944,8 @@ export function SettingsPage({
         {gateSettingsMainMenuRow(
           <MenuRow
             icon={<Wrench size={16} strokeWidth={2} />}
-            title="advanced"
-            desc={`raw addresses + dev tools: ${advanced ? 'on' : 'off'}`}
+            title="experience mode"
+            desc={`beginner / advanced / pro: ${userMode}`}
             onClick={() => setStab('advanced')}
           />,
         )}

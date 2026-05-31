@@ -10,6 +10,7 @@ import { BUILTIN_BITCOIN } from '@/config/networks';
 import { getDwalletSecpPublicKey } from '@/background/chains/bitcoin';
 import { signBitcoinTxSighashPreimage } from '@/background/chains/signing';
 import { witnessV0Preimage } from '@/background/chains/btc-witness-preimage';
+import { normalizeEcdsaLowS } from '@/background/chains/ecdsa-lows';
 import { enqueueHardwareSign } from '@/background/hardware/pending-queue';
 
 const DUST_SATS = 546n;
@@ -230,7 +231,12 @@ export async function sendBtcNativeTransfer(toAddress: string, amountBtc: string
       });
       const hex = sigHex.startsWith('0x') ? sigHex.slice(2) : sigHex;
       if (hex.length !== 128) throw new Error('Unexpected ika signature length for BTC tx');
-      const sig64 = Uint8Array.from(hex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16)));
+      // normalize to low-S before DER-encoding: bitcoinjs won't do it for us, and relays reject
+      // high-S (malleable) txs. ika's wasm output is almost certainly low-S already, but this
+      // removes any reliance on that for whether the tx is even broadcastable. see ecdsa-lows.ts.
+      const sig64 = normalizeEcdsaLowS(
+        Uint8Array.from(hex.match(/.{1,2}/g)!.map((b) => parseInt(b, 16))),
+      );
       const encodedSig = script.signature.encode(sig64, sighashType);
       psbt.updateInput(i, {
         partialSig: [{ pubkey: Buffer.from(pubkey), signature: encodedSig }],

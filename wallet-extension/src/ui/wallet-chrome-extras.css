@@ -3124,6 +3124,14 @@ html[data-ika-chain='solana'] .dp-receiveSheet {
   animation: vault-total-pulse 1.4s ease-in-out infinite;
 }
 
+/* beginner: header balance pill sits right-aligned, in the disconnected row's
+   fee-payer-address slot, next to the account selector. */
+.cv-contextHeaderTotalInline {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
 @keyframes vault-total-pulse {
   0%, 100% { opacity: 1; }
   50% { opacity: 0.45; }

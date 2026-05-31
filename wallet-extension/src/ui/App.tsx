@@ -128,7 +128,7 @@ export function App() {
       vaultExists: devMode ? devVaultExists : null,
       unlocked: devMode ? devUnlocked : null,
       balances: devMode ? DEV_BALANCES : null,
-      advanced: devMode ? params.get('advanced') === '1' : false,
+      userMode: devMode && params.get('advanced') === '1' ? 'pro' : 'advanced',
     },
   });
 
@@ -152,7 +152,8 @@ export function App() {
     setBalanceError,
     networks,
     advanced,
-    setAdvanced,
+    userMode,
+    setUserMode,
     uiHelpHints,
     setUiHelpHints,
     vaultSummaries,
@@ -535,7 +536,8 @@ export function App() {
       balanceError={balanceError}
       networks={networks}
       advanced={advanced}
-      onAdvancedChange={setAdvanced}
+      userMode={userMode}
+      onUserModeChange={setUserMode}
       uiHelpHints={uiHelpHints}
       onUiHelpHintsChange={setUiHelpHints}
       appearance={appearance}

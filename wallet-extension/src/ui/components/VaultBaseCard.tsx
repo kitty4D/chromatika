@@ -61,6 +61,7 @@ export function VaultBaseCard({
   swapOpen,
   onSendClick,
   onReceiveClick,
+  beginner = false,
 }: {
   balances: Balances;
   network: string;
@@ -78,6 +79,8 @@ export function VaultBaseCard({
   onSendClick?: () => void;
   /** when provided, the receive button is enabled and opens the address sheet for the vault. */
   onReceiveClick?: () => void;
+  /** beginner tier: plain "Account" wording, no MPC/keyring jargon in the help overlay. */
+  beginner?: boolean;
 }) {
   const funded = balances.funding?.ready === true;
   const fee = balances.feePayerAddress ?? '';
@@ -148,7 +151,9 @@ export function VaultBaseCard({
 
   return (
     <div className="cv-cockpitAndCard">
-      <VaultTimeCircuits vaultId={vaultId} />
+      {/* beginner tier: hide the mainnet/testnet time-circuits totals; the single balance
+          lives in the header pill instead. */}
+      {!beginner && <VaultTimeCircuits vaultId={vaultId} />}
       <RocketSeatGauge
         suiFillPct={funded ? gaugeFill(sHealth) : 0}
         ikaFillPct={funded ? gaugeFill(iHealth) : 0}
@@ -169,17 +174,25 @@ export function VaultBaseCard({
             <CircleHelp size={14} strokeWidth={2} />
           </span>
           <p className="cv-cockpitHelpOverlay-text">
-            Your <strong>dWallet Vault</strong> is the owner keyring that pays fees.{' '}
-            {isSolanaPreAlpha ? (
+            {beginner ? (
               <>
-                <strong>SOL</strong> pays solana network gas; <strong>ika</strong> pays the MPC signing network.
+                This is your <strong>account</strong>. The bars show what's available to cover network fees.
               </>
             ) : (
               <>
-                <strong>SUI</strong> pays sui network gas; <strong>IKA</strong> pays the MPC signing network.
+                Your <strong>dWallet Vault</strong> is the owner keyring that pays fees.{' '}
+                {isSolanaPreAlpha ? (
+                  <>
+                    <strong>SOL</strong> pays solana network gas; <strong>ika</strong> pays the MPC signing network.
+                  </>
+                ) : (
+                  <>
+                    <strong>SUI</strong> pays sui network gas; <strong>IKA</strong> pays the MPC signing network.
+                  </>
+                )}{' '}
+                Both gauges are for the active vault only.
               </>
-            )}{' '}
-            Both gauges are for the active vault only.
+            )}
           </p>
         </aside>
       ) : null}
@@ -196,7 +209,11 @@ export function VaultBaseCard({
       ) : null}
       {!funded && !isSolanaPreAlpha ? (
         <div className="cv-fundingPill" role="status">
-          Add <strong>SUI</strong> (for sui gas) and <strong>IKA</strong> (for MPC signing) before this vault can run.
+          {beginner ? (
+            <>Add <strong>SUI</strong> and <strong>IKA</strong> above before this account can be used.</>
+          ) : (
+            <>Add <strong>SUI</strong> (for sui gas) and <strong>IKA</strong> (for MPC signing) before this vault can run.</>
+          )}
         </div>
       ) : null}
 
@@ -207,7 +224,11 @@ export function VaultBaseCard({
               <div className="cv-baseCard-vaultName">{vaultLabel}</div>
             )}
             <div className="cv-baseCard-kicker">
-              {isSolanaPreAlpha ? 'Solana devnet fee payer (ika pre-alpha)' : 'dWallet Vault Account'}
+              {isSolanaPreAlpha
+                ? 'Solana devnet fee payer (ika pre-alpha)'
+                : beginner
+                  ? 'Account'
+                  : 'dWallet Vault Account'}
             </div>
             <div className="cv-baseCard-addrRow">
               {fee ? (

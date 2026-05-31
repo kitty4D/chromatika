@@ -22,7 +22,14 @@ function loadFormatPref(): VaultTotalFormat {
   }
 }
 
-export function VaultHeaderTotalPill({ vaultId }: { vaultId: string | null }) {
+export function VaultHeaderTotalPill({
+  vaultId,
+  hideKicker = false,
+}: {
+  vaultId: string | null;
+  /** drop the "MAIN" kicker (beginner header already sits next to a "MAIN" network selector). */
+  hideKicker?: boolean;
+}) {
   const { snap, pending } = useVaultTotalSnapshot(vaultId);
   const format = useMemo<VaultTotalFormat>(loadFormatPref, []);
 
@@ -49,7 +56,7 @@ export function VaultHeaderTotalPill({ vaultId }: { vaultId: string | null }) {
       }
       aria-label="vault mainnet total"
     >
-      <span className="cv-headerTotalPill-kicker">MAIN</span>
+      {!hideKicker && <span className="cv-headerTotalPill-kicker">MAIN</span>}
       <span className="cv-headerTotalPill-amt">{text}</span>
     </span>
   );

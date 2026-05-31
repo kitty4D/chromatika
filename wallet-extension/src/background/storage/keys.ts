@@ -32,6 +32,7 @@ export const STORAGE_KEYS = {
 
   // app modes + appearance
   ADVANCED_MODE_V1: 'chromatika_advanced_mode_v1',
+  USER_MODE_V1: 'chromatika_user_mode_v1',
   APPEARANCE_V1: 'chromatika_appearance_v1',
   BALANCE_PRIVACY_V1: 'chromatika_balance_privacy_v1',
   IKA_BASE_MODE_V1: 'chromatika_ika_base_mode_v1',
